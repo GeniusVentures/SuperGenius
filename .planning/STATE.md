@@ -1,68 +1,79 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
-current_phase: 15
-status: Awaiting next milestone
-stopped_at: Completed 15-18-PLAN.md
-last_updated: "2026-10-05T17:38:23.386Z"
-last_activity: 2026-10-05 — Milestone v1.1 completed and archived
+milestone: v1.2
+milestone_name: Light-node transaction pruning
+current_phase: 20
+status: executing
+stopped_at: Phase 20 context gathered
+last_updated: "2026-10-24T16:18:53.681Z"
+last_activity: 2026-10-24 -- Phase 20 planning complete
 progress:
-  total_phases: 18
-  completed_phases: 6
-  total_plans: 52
-  completed_plans: 37
-  percent: 33
+  total_phases: 25
+  completed_phases: 4
+  total_plans: 29
+  completed_plans: 24
+  percent: 16
 ---
 
-# State: SuperGenius — Multi-Signature Secure CRDT Storage
+# State: SuperGenius — Light-node Transaction Pruning
 
-**Last updated:** 2026-08-12
-**Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
-**Current Phase:** 15
+**Last updated:** 2026-10-15
+**Milestone:** v1.2 — Light-node transaction pruning
+**Current Phase:** 20
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-20)
-**Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Milestone complete
+See: .planning/PROJECT.md (updated 2026-10-15)
+**Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
+**Current focus:** Phase 20 — reclamation proof & e2e hardening
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-05 — Milestone v1.1 completed and archived
+Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
+Plan: Not started
+Status: Ready to execute
+Last activity: 2026-10-24 -- Phase 20 planning complete
+
+Progress: [██████████] 100%
 
 ## Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 8 | MultiSig Primitive | complete | MSIG-01, MSIG-02, MSIG-03 |
-| 9 | SecureCRDT Layer | complete | SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04 |
-| 10 | TrustedPeerRegistry | complete | TPR-01, TPR-02, TPR-03 |
-| 11 | BurnConfig Quorum Wiring | complete | BURN-01, BURN-02, BURN-03 |
-| 12 | ValidatorRegistry Migration | complete | MIG-05, MIG-06 |
-| 13 | Trusted-peer genesis, quorum policy, and production integration | complete (29/29), ready for verification | BOOT-01..04, POLICY-01, VALID-01, TEST-01 and audited v1.1 closures |
+| 16 | Erasure Primitives & Bookkeeping Hardening | not started | PRUNE-02, GATE-03 |
+| 17 | Eligibility, Policy & Gating (Dry-Run) | not started | PRUNE-01, PRUNE-03, GATE-01, GATE-04, GATE-06 |
+| 18 | TxPruner Service & First Real Prune | not started | PRUNE-04, PRUNE-05, RECL-03, RECL-04 |
+| 19 | Pruned-Node Survival & Recovery Hardening | not started | GATE-05, SURV-01, SURV-02, SURV-03 |
+| 20 | Reclamation Proof & E2E Hardening | not started | GATE-02, RECL-01, RECL-02 |
 
 ## Key Decisions
 
-- Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle — `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance
-- Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks); no new networking/RPC
-- `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) — matches `ValidatorRegistry`'s existing per-type style
-- `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set — different concerns (economic-parameter signers vs. consensus validators)
-- `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback — avoids a CRDT read on every `PayEscrow` call
+Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work (v1.2):
+
+- Only light nodes prune; full/archive never erase history — light nodes are disk-constrained consumers, full/archive remain the complete sync/audit source
+- Erase both levels — CRDT value + raw ipfs-lite block — via the existing tx→CID map (already exists at `TransactionManager.cpp:4322/4433`; extended with a deletion lifecycle, not replaced)
+- Erase requires all outputs genuinely spent (`IsOutPointGenuinelyConsumed`) AND depth/finality window elapsed (priority vs `maxHeight`); `spent_epoch`/`spent_by_txid` are dead schema — never populated, do not build on them
+- Pruning is a local RocksDB operation, never the CRDT tombstone path — `DeleteKey`/`DeleteTransaction` publish network-wide tombstones that would erase history on full/archive nodes too
+- Seal markers (`<cid>sealed`) are never erased — they are the traversal terminator that prevents re-fetch storms on the single DAG worker
+- A delta block erases only when every element it carries is prune-eligible (parse the block at prune time; no persistent reverse index — the block is the source of truth)
+- Ordering invariants: own-frontier survival fix (cert-slot previous_hash resolution) lands before the first real prune; block-parse eligibility gate lands before any block deletion
+- One shared RocksDB, two facades (`globaldb.cpp:322`) — a single WriteBatch erases atomically and a single whole-DB CompactRange reclaims
+- Reclamation is proven in measured bytes (SST/`du` before-vs-after) via explicit `CompactRange` with `bottommost_level_compaction = kForce` — deletes alone reclaim nothing
+- Never trigger prune work from CRDT element callbacks (they fire pre-batch-commit — proven invariant, cert-receipt memory)
 
 ## Notes
 
-- This milestone continues phase numbering from an undocumented prior body of work (`.planning/phases/01` through `07`, bridge-relayer/consensus-voting features). Phases 8-13 in this milestone are unrelated to those directories; do not reuse or renumber them.
-- Precedent to build from: `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`) already does signature+quorum-gated CRDT updates; `ConsensusAuth.hpp` has the reusable signing-bytes/SHA-256/verify primitives.
-- Brownfield codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS).
-- Sequential dependency chain completed through Phase 12; Phase 13 is the audited production/security closure and depends on Phase 12.
+- **Parallel milestone:** v1.3 (Security Remediation & Network Readiness, Phases 21-29) is planned on `develop` while this branch executes v1.2 — both milestones run in parallel. This STATE.md tracks the v1.2 branch position; v1.3's primary STATE/PROJECT/ROADMAP live on develop (snapshot: `.planning/milestones/v1.2-ROADMAP.md` covers this milestone's numbering). REQUIREMENTS.md on this branch carries both: the v1.3 doc plus a parallel v1.2 section. Do not execute v1.3 phases here.
+- Phase numbering continues across milestones: v1.1's highest phase was 15; v1.2 phases are 16-20. Do not reset or renumber. (Phases 01-07 predate formal GSD milestone tracking — bridge-relayer/consensus-voting work, unrelated.)
+- Research synthesis (`.planning/research/SUMMARY.md`, HIGH confidence) converged the 5-phase structure; the two hard ordering constraints (block-parse gate before block deletion; own-frontier fix before first real prune) are encoded in the roadmap's execution order.
+- Research flags deeper research during planning for Phases 17 (own-frontier mechanism choice, window definition, lock/re-verify protocol), 18 (re-delivery guard placement and state source), and 19 (checkpoint-rebuild guard mechanism); Phases 16 and 20 follow standard patterns (skip research-phase).
+- `TxPruner` is a new owning module in `src/transaction/` beside `TransactionManager` — not a `GeniusNode` lambda (god-class facade already flagged in CONCERNS.md).
+- Every pruning test uses a fresh temp DB with three-part assertions (present-before, absent-after in both stores, seal-marker-still-present) plus a negative control.
+- Brownfield codebase map exists at `.planning/codebase/`; v1.2 research at `.planning/research/` (SUMMARY, STACK, ARCHITECTURE, PITFALLS, FEATURES).
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan the first phase: /gsd:plan-phase 16
 
 ### Quick Tasks Completed
 
@@ -73,9 +84,9 @@ Last activity: 2026-10-05 — Milestone v1.1 completed and archived
 
 ## Session
 
-**Last session:** 2026-10-02T20:25:23.466Z
-**Stopped At:** Completed 15-18-PLAN.md
-**Resume File:** None
+**Last session:** 2026-10-24T13:48:12.510Z
+**Stopped At:** Phase 20 context gathered
+**Resume File:** .planning/phases/20-reclamation-proof-e2e-hardening/20-CONTEXT.md
 
 ## Accumulated Context
 
@@ -87,6 +98,8 @@ Last activity: 2026-10-05 — Milestone v1.1 completed and archived
 
 - Phase 13 added: Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps
 - Phase 14 added: Account-generation publication and retired-manager lifecycle safety
+- Milestone v1.2 roadmap created: Phases 16-20 (erasure primitives → dry-run policy/gating → first real prune → survival hardening → reclamation proof)
+- Milestone v1.3 roadmap created on develop (Phases 21-29, security remediation) in parallel with v1.2 execution on this branch — both milestones accommodated in one planning root
 
 ### v1.0 History
 
@@ -125,6 +138,17 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P28 | 34min | 2 tasks | 4 files |
 | Phase 13 P29 | 31min | 2 tasks | 3 files |
 | Phase 15 P18 | 27min | 2 tasks | 2 files |
+| Phase 16 P01 | 12min | 3 tasks | 6 files |
+| Phase 16 P02 | 18min | 3 tasks | 7 files |
+| Phase 16 P03 | 40min | 3 tasks | 5 files |
+| Phase 16 P04 | 71min | 3 tasks | 6 files |
+| Phase 19 P01 | 17min | 2 tasks | 3 files |
+| Phase 19 P02 | 19min | 3 tasks | 4 files |
+| Phase 19 P03 | 34min | 3 tasks | 6 files |
+| Phase 19 P04 | 53min | 3 tasks | 5 files |
+| Phase 19 P07 | 82min | 2 tasks | 1 files |
+| Phase 19 P05 | 105min | 3 tasks tasks | 7 files files |
+| Phase 19 P06 | 34min | 2 tasks | 1 files |
 
 ## Decisions
 
@@ -191,6 +215,26 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Plan 13-29 structural guards trace named expected values and delegated helpers through semantic assertions without weakening exact behaviors.
 - [Phase 15]: Wrong-PSK GlobalDB test nodes must release db (ShutdownNow+reset) and graphsync Network BEFORE pubsub Stop - StopImpl destroys its io_context right after its own host ref, so a host surviving Stop via a retained Network member destroys parked never-negotiated pnet handshake connections against a dead kqueue reactor (15-18 ordered teardown)
 - [Phase 15]: UAT-1 closed by GlobalDB-level composition (no Blockchain/genesis): NetworkMembershipFilterFlowTest case 11 joins real-data-path scoped job replication (TaskQueueImpl+SubTaskResultStorageImpl on the scoped topic), data-level public-node isolation (live public GlobalDB, both-direction dials, multi-key negative window), and deny-all teardown on a still-live GlobalDB - mutation-verified non-vacuous
+- [Phase 16]: Erase-prefix scans carry a trailing '/' so sibling keys sharing a name prefix (key vs key2) are never swept; StageEraseElement stages all four CRDT key families unconditionally into the caller's batch and never fires the delete hook (RevertTransaction hazard).
+- [Phase 16]: StageBlockRemoval stages exactly the CID::toBytes() block-bytes key into the caller's batch under dagMutex_; the seal marker is never constructed and the removeNode chain stays dormant (cannot join an external WriteBatch).
+- [Phase 16]: StageBlockRemoval is the one SuperGNUS-side home of the vendored block-key format; RemoveProcessedTransactionEntry is a revert-free plain tracked-map erase (missing key = success no-op).
+- [Phase 16]: EraseEntry composes all four guards (all-topic head scan, pending/active root job, LRU cache, isResolved) fail-closed before staging into ONE BufferBatch with a single sync commit and a post-commit seal re-assert; key shapes are built by the caller — GlobalDB stays generic (D-01).
+- [Phase 16]: EraseTransactionEntry completes the tx->CID map deletion lifecycle (resolve CID, atomic GlobalDB erase, revert-free tracked-map cleanup); the test-only interrupt hook aborts before commit so the dying batch proves all-or-nothing (D-03/D-C4).
+- [Phase 16]: The erase pending/active guard protects the EXTERNAL root path only (pendingRootQueue_/activeRootCID_); self-created Put jobs live in selfCreatedJobList_ — the 16-04 guard proof stalls a mirrored receiver's getNode, the fetch entry the DAG worker reaches with the root job active
+- [Phase 16]: The source-scan gate roots at PROJECT_ROOT, never CMAKE_SOURCE_DIR — this repo drives CMake from build/OSX/ (out-of-root driver), so CMAKE_SOURCE_DIR/src does not exist and would make the gate vacuously green
+- [Phase 16]: GlobalDB end-to-end erase seeds must Put on a real topic: an empty-topics Put creates no destinations, so UpdateCRDTHeads records no head and writes no seal — the integration-file topic recipe is load-bearing for guard and seal assertions
+- [Phase 19]: Preserve-clear (19-01): ClearUnspentKeepConsumed is unconditional and owner-vended in UTXOManager; SetUTXOs wipe semantics stay byte-identical for existing callers
+- [Phase 19]: SetUTXOs wipes only index-resident entries — ConsumeUTXOs leaves CONSUMED entries orphaned from address_outpoints_; the real-world wipe path is post-restart (LoadUTXOs indexes CONSUMED before the mismatch clear), so D-01 tests must seed the reload shape
+- [Phase 19]: D-02 half 1 — preflight failures (witness/size) return typed Error::PRE_BROADCAST_VALIDATION; TickOnce rolls back and STAYS READY (error-code comparison across the Commit boundary cannot classify — same errc codes fire both sides)
+- [Phase 19]: D-02 half 2 — bounded SYNCING exit (60s knob, SetSyncingExitTimeoutForTest seam) anchors to GetLocalConfirmedNonce and never touches pending_nonces_; held reservations stay held so the next reserved nonce is strictly greater
+- [Phase 19]: SC-5 retry guard (19-03): RetryDueFailedRoots consults isResolved BEFORE the counter site; pruned/sealed roots are terminal (entry cleared), the fetch-attempt counter never moves for them, and the isResolved error branch stays fail-safe (re-armed, never enqueued)
+- [Phase 19]: Post-18-01, no natural path can place a sealed root on the retry ladder (the broadcast intake guard blocks sealed CIDs) — 19-03 added ForTest ladder-seeding seams + ladder-count observables on CrdtDatastore; the pass under test stays the real DAG worker loop
+- [Phase 19]: AccountMessenger's HandleBlockLikeRequest is private and InterfaceMethods has no response-send callback (19-03 plan assumptions) — the pruned-serving row is proven over real loopback pubsub with the responder's sign_ callback as the public capture point for the empty signed BlockResponse
+- [Phase 19]: (19-07): Broadcast-order sequencing is unreproducible on this gossip layer (graft relays all cached publishes at once) -- peer-refusal proofs split into a hermetic ordered-AddRoute + direct-getNode walk beside an ordering-free mesh E2E
+- [Phase 19]: (19-07): PrunedMesh determinism needs a full-node-owned serving topic (dual-topic put links the mesh history under one serving head); single-shared-topic wiring makes the Pitfall-6 ladder ride a coin flip
+- [Phase 19]: (19-07): A directly-fetched block silences the broadcast intake for that CID (HasBlock skip, delta never merges) -- discard the LRU copy (DeleteCIDBlock, the RetryDueFailedRoots idiom) between proof phases
+- [Phase 19]: (19-05): Tri-state lookup result carries the invariant violation on the verdict (VALUE_PRESENT_INVARIANT_VIOLATION + found tx) so the loud case is observable on the result, not only in logs; a present value always outranks a marker
+- [Phase 19]: (19-05): TransactionLookupResult uses an opaque PrunedLookup forward declaration (not a PruneEligibility.hpp include) -- the include leaks rapidjson into every TM.hpp consumer and broke the migration build; the single construction site always sets verdict
 
 ## Deferred Items
 

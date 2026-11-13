@@ -18,6 +18,8 @@
 #include <eth/rpc_http_transport.hpp>
 
 #include "account/GeniusTransaction.hpp"
+#include "base/DevMintPolicy.hpp"
+#include "base/sgns_version.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "base/blob.hpp"
@@ -36,6 +38,62 @@ namespace sgns
         {
             static const auto logger = base::createLogger( "InputValidator" );
             return logger;
+        }
+
+        /**
+         * @brief The two legacy GatherVerificationEvidence bypass legs, net-scoped
+         *        by the D-03 dev-mint policy.
+         * @param[in] tx Transaction claiming a public-chain source.
+         * @param[in] source_reference External source reference (may be empty).
+         * @return Evidence when a bypass leg fired — valid only on designated
+         *         dev-mint nets (the refusal returns the default-invalid
+         *         evidence untouched, the no-endpoints reject shape);
+         *         std::nullopt when neither leg applies.
+         */
+        std::optional<RpcVerificationEvidence> LocalBypassEvidence( const GeniusTransaction &tx,
+                                                                    const std::string       &source_reference )
+        {
+            auto logger = InputValidatorLogger();
+
+            if ( source_reference.empty() )
+            {
+                // Nothing to verify against a public chain: the claim is accepted but
+                // no endpoint confirmed anything, so every slot stays empty.
+                // D-03: the acceptance is net-scoped — only designated dev-mint nets
+                // may certify burn-less claims.
+                if ( !DevMintBurnlessPermitted() )
+                {
+                    logger->debug( "GatherVerificationEvidence refused the empty-source bypass on net {}: "
+                                   "dev-mint policy permits it only on designated nets",
+                                   version::GetNetworkID() );
+                    return RpcVerificationEvidence{};
+                }
+                logger->debug( "GatherVerificationEvidence skipped because source reference is empty" );
+                RpcVerificationEvidence evidence;
+                evidence.valid = true;
+                return evidence;
+            }
+
+            const auto chain_id = tx.GetChainId();
+            if ( chain_id.empty() || chain_id == "supergenius" )
+            {
+                // D-03: the local-chain bypass carries the same net predicate —
+                // non-designated nets reject instead of certifying unbacked claims.
+                if ( !DevMintBurnlessPermitted() )
+                {
+                    logger->debug( "GatherVerificationEvidence refused the local-chain bypass for chain_id={} "
+                                   "on net {}: dev-mint policy permits it only on designated nets",
+                                   chain_id,
+                                   version::GetNetworkID() );
+                    return RpcVerificationEvidence{};
+                }
+                logger->debug( "GatherVerificationEvidence bypassed for local chain_id={}", chain_id );
+                RpcVerificationEvidence evidence;
+                evidence.valid = true;
+                return evidence;
+            }
+
+            return std::nullopt;
         }
     } // namespace
 
@@ -316,22 +374,12 @@ namespace sgns
                        tx.GetChainId(),
                        PreviewValue( source_reference ) );
 
-        if ( source_reference.empty() )
+        if ( auto bypassed = LocalBypassEvidence( tx, source_reference ); bypassed.has_value() )
         {
-            // Nothing to verify against a public chain: the claim is accepted but
-            // no endpoint confirmed anything, so every slot stays empty.
-            logger->debug( "GatherVerificationEvidence skipped because source reference is empty" );
-            evidence.valid = true;
-            return evidence;
+            return bypassed.value();
         }
 
         const auto chain_id = tx.GetChainId();
-        if ( chain_id.empty() || chain_id == "supergenius" )
-        {
-            logger->debug( "GatherVerificationEvidence bypassed for local chain_id={}", chain_id );
-            evidence.valid = true;
-            return evidence;
-        }
 
         auto chain_it = rpc_endpoints_.find( chain_id );
         if ( chain_it == rpc_endpoints_.end() || chain_it->second.empty() )

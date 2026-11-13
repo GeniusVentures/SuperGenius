@@ -248,7 +248,12 @@ namespace sgns
                                             result.error().message() );
                             return outcome::failure( result.error() );
                         }
-                        return outcome::failure( result.error() );
+                        // Demotion succeeded: the certified conflict outranks this tx, so the
+                        // decision is final. Reject (not failure) — an error return would make
+                        // the certificate handler retry forever, re-confirming and re-demoting
+                        // the tx on every pass (ProcessCommittedCertificate treats only
+                        // Stalled/error as retryable).
+                        return ConsensusManager::Check::Reject;
                     }
                 }
                 else

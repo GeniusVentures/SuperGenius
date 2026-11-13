@@ -1356,6 +1356,24 @@ namespace sgns
             }
             return outcome::failure( value.error() );
         }
+        // Memoize the definitive verdict keyed by the durable bytes' digest:
+        // the replay loops call this per slot on every timer tick, and
+        // ValidateCertificate re-verifies every vote signature — for a slot
+        // holding a rejected (or not-yet-releasable) certificate that burns
+        // O(votes) ECDSA per tick indefinitely. Validation is deterministic
+        // over immutable content (registry pinned by CID), so the verdict only
+        // changes when the stored bytes change. Retryable outcomes below are
+        // deliberately NOT memoized. The cache lock is never held across the
+        // validation.
+        const auto content_digest = crypto::sha2_256( value.value().data(), value.value().size() );
+        {
+            std::lock_guard cache_lock( certificate_verdict_cache_mutex_ );
+            auto            it = certificate_verdict_cache_.find( slot_key );
+            if ( it != certificate_verdict_cache_.end() && it->second.content_digest == content_digest )
+            {
+                return it->second.accepted;
+            }
+        }
         Certificate certificate;
         if ( !certificate.ParseFromArray( value.value().data(), value.value().size() ) ||
              !ValidateCertificateKey( certificate, key ) )
@@ -1367,7 +1385,12 @@ namespace sgns
         {
             return outcome::failure( std::errc::resource_unavailable_try_again );
         }
-        return validation == Check::Approve;
+        const bool accepted = validation == Check::Approve;
+        {
+            std::lock_guard cache_lock( certificate_verdict_cache_mutex_ );
+            certificate_verdict_cache_[slot_key] = CertificateVerdict{ content_digest, accepted };
+        }
+        return accepted;
     }
 
     outcome::result<bool> ConsensusManager::ReleaseActiveVoteForAcceptedSlot( const std::string &slot_key )
@@ -1764,6 +1787,20 @@ namespace sgns
             return;
         }
 
+        // Durable vote records chosen this pass. The persist itself runs OUTSIDE
+        // proposals_mutex_ (see EraseDurableActiveVoteRecord's note: the
+        // datastore write can wait on a CRDT worker while every
+        // proposals_mutex_ consumer — vote/proposal ingress — blocks), so the
+        // locked pass only records what to persist.
+        struct PersistIntent
+        {
+            std::string slot_key;
+            Proposal    proposal;
+            Vote        vote;
+            uint64_t    deadline_ms = 0;
+        };
+        std::vector<PersistIntent> persist_intents;
+
         std::vector<ActiveVoteState> publish;
         std::vector<Vote>            replay_votes;
         std::vector<std::string>     unwinnable_slots;
@@ -1852,33 +1889,14 @@ namespace sgns
                 {
                     continue;
                 }
-                const auto deadline_ms = now_ms + static_cast<uint64_t>( candidate_window_.count() );
-                auto active_vote = PersistOrLoadExactActiveVote( slot_key, *winner, vote.value(), deadline_ms );
-                if ( active_vote.has_error() )
-                {
-                    logger_->error( "{}: failed to persist active vote slot={}: {}",
-                                                     __func__, slot_key, active_vote.error().message() );
-                    continue;
-                }
-                if ( stop_timer_.load() )
-                {
-                    return;
-                }
-                slot_state.active_vote_locked = true;
-                slot_state.voted_proposal_ids.insert( active_vote.value().proposal.proposal_id() );
-                active_vote.value().next_retry_at = now_steady + active_vote_retry_interval_;
-                publish.push_back( active_vote.value() );
-                active_votes_[slot_key] = std::move( active_vote.value() );
-                // Peers that voted for this winner while it was not the local winner (a
-                // previous attempt, or a peer that froze first) were recorded but never
-                // tallied; re-tally them now so the weight already gathered counts.
-                for ( const auto &[voter_id, observed_vote] : slot_state.observed_votes )
-                {
-                    if ( observed_vote.proposal_id() == slot_state.best_proposal_id )
-                    {
-                        replay_votes.push_back( observed_vote );
-                    }
-                }
+                // Installation (lock latching, active_votes_, replay tally) happens
+                // after the persist, under the lock, re-validated against the
+                // current slot state — the lock is released during the write.
+                persist_intents.push_back(
+                    PersistIntent{ slot_key,
+                                   *winner,
+                                   vote.value(),
+                                   now_ms + static_cast<uint64_t>( candidate_window_.count() ) } );
             }
 
             for ( auto &[slot_key, active_vote] : active_votes_ )
@@ -1912,6 +1930,78 @@ namespace sgns
             }
 
             CollectUnwinnableSlotsLocked( unwinnable_slots );
+        }
+
+        // Durable write phase — outside proposals_mutex_. Serialized by
+        // active_vote_persist_mutex_ so concurrent ProcessDueVoteWork passes
+        // (round timer + subject continuation) cannot interleave their
+        // get-then-put pairs and both "succeed" with different records.
+        std::vector<std::pair<std::string, ActiveVoteState>> persisted;
+        if ( !persist_intents.empty() )
+        {
+            std::lock_guard persist_lock( active_vote_persist_mutex_ );
+            for ( auto &intent : persist_intents )
+            {
+                auto active_vote = PersistOrLoadExactActiveVote( intent.slot_key,
+                                                                 intent.proposal,
+                                                                 intent.vote,
+                                                                 intent.deadline_ms );
+                if ( active_vote.has_error() )
+                {
+                    logger_->error( "{}: failed to persist active vote slot={}: {}",
+                                    __func__,
+                                    intent.slot_key,
+                                    active_vote.error().message() );
+                    continue;
+                }
+                persisted.emplace_back( intent.slot_key, std::move( active_vote.value() ) );
+            }
+        }
+        if ( stop_timer_.load() )
+        {
+            return;
+        }
+
+        // Installation phase — back under proposals_mutex_, re-validating each
+        // slot: the lock was released during the persist, so the slot may have
+        // been cleared, certified, re-arbitrated, or locked by a concurrent
+        // pass in the meantime. A skipped install leaves the durable record in
+        // place; recovery (RecoverActiveVotes) or unwinnable-slot release
+        // re-owns it later.
+        if ( !persisted.empty() )
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto &[slot_key, active_vote] : persisted )
+            {
+                auto slot_it = slot_states_.find( slot_key );
+                if ( slot_it == slot_states_.end() )
+                {
+                    continue;
+                }
+                auto &slot_state = slot_it->second;
+                if ( slot_state.active_vote_locked || !slot_state.candidates_frozen ||
+                     slot_state.best_proposal_id != active_vote.proposal.proposal_id() )
+                {
+                    // Already installed by a concurrent pass, re-opened for
+                    // arbitration, or re-frozen on a different winner.
+                    continue;
+                }
+                slot_state.active_vote_locked = true;
+                slot_state.voted_proposal_ids.insert( active_vote.proposal.proposal_id() );
+                active_vote.next_retry_at = now_steady + active_vote_retry_interval_;
+                publish.push_back( active_vote );
+                active_votes_[slot_key] = std::move( active_vote );
+                // Peers that voted for this winner while it was not the local winner (a
+                // previous attempt, or a peer that froze first) were recorded but never
+                // tallied; re-tally them now so the weight already gathered counts.
+                for ( const auto &[voter_id, observed_vote] : slot_state.observed_votes )
+                {
+                    if ( observed_vote.proposal_id() == slot_state.best_proposal_id )
+                    {
+                        replay_votes.push_back( observed_vote );
+                    }
+                }
+            }
         }
 
         ReleaseUnwinnableSlots( unwinnable_slots );
@@ -2375,37 +2465,15 @@ namespace sgns
             }
         }
 
-        QuorumTally tally;
-        tally.total_weight    = total_weight;
-        tally.approved_weight = approved_weight;
-        tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
-        // Phase 6 (D-06): bridge-mint subjects route the quorum decision through
-        // the cumulative slot model (EvaluateSlotQuorum) instead of the
-        // single-pool weight sum. The signature-verified approved_weight above is
-        // retained for observability; the slot tally is authoritative for
-        // has_quorum on bridge mints. TallyVotes (certificate creation) and the
-        // incremental HandleVote tally agree via this same dispatcher (Pitfall 1).
-        // Both slot helpers consume verified_votes only: they count membership
-        // and weight but never signatures, so unverified entries must never
-        // reach them.
-        if ( IsBridgeMintSubject( proposal ) )
-        {
-            const auto slot_result = registry_->EvaluateSlotQuorum( verified_votes, registry );
-            tally.approved_weight  = slot_result.total_voting_reputation;
-            tally.qualified_sum    = slot_result.qualified_sum;
-            tally.slot_threshold   = slot_result.threshold;
-            // D-06 governs only while the mesh's slot evidence can structurally
-            // reach quorum: the maximum attainable qualified_sum is the reputation
-            // whose votes carry slot hashes. When that ceiling cannot pass the
-            // threshold the cumulative model is unreachable for this vote set —
-            // e.g. an evidence-starved mesh where vote slot population silently
-            // no-ops — and the single-pool result stands; every approve voter has
-            // still passed the public-chain witness validation in that case.
-            if ( SlotEvidenceReputation( verified_votes, registry ) > slot_result.threshold )
-            {
-                tally.has_quorum = slot_result.has_quorum;
-            }
-        }
+        // Phase 6 (D-06): the single authoritative quorum verdict, shared with
+        // the incremental HandleVote tally (see DecideQuorum). verified_votes is
+        // the signature-verified subset: the slot helpers DecideQuorum feeds
+        // never verify signatures themselves.
+        QuorumTally tally = DecideQuorum( IsBridgeMintSubject( proposal ),
+                                          approved_weight,
+                                          total_weight,
+                                          verified_votes,
+                                          registry );
         logger_->debug(
             "{}: Votes tallied for hash {} proposal_id={} approved_weight={} total_weight={} quorum={}",
             __func__,
@@ -2466,68 +2534,46 @@ namespace sgns
         return IsPublicChainMintChainId( mint.chain_id() );
     }
 
-    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::EvaluateQuorum(
-        const Proposal                    &proposal,
-        const std::vector<Vote>           &votes,
-        const ValidatorRegistry::Registry &registry ) const
+    ConsensusManager::QuorumTally ConsensusManager::DecideQuorum( bool                     bridge_mint,
+                                                                  uint64_t                 pool_approved_weight,
+                                                                  uint64_t                 pool_total_weight,
+                                                                  const std::vector<Vote> &verified_votes,
+                                                                  const ValidatorRegistry::Registry &registry ) const
     {
         QuorumTally tally;
-
-        if ( IsBridgeMintSubject( proposal ) )
+        const bool  pool_quorum = registry_->IsQuorum( pool_approved_weight, pool_total_weight );
+        tally.total_weight      = pool_total_weight;
+        tally.approved_weight   = pool_approved_weight;
+        tally.has_quorum        = pool_quorum;
+        if ( !bridge_mint )
         {
-            // Bridge-mint subject: cumulative slot tally (D-06). The slot model
-            // never verifies signatures itself, so only the signature-verified
-            // subset may enter it.
-            const auto verified_votes = SignatureVerifiedVotes( proposal, votes );
-            const auto slot_result    = registry_->EvaluateSlotQuorum( verified_votes, registry );
-            tally.total_weight     = ValidatorRegistry::TotalWeight( registry );
-            tally.approved_weight  = slot_result.total_voting_reputation;
-            tally.has_quorum       = slot_result.has_quorum;
-            tally.qualified_sum    = slot_result.qualified_sum;
-            tally.slot_threshold   = slot_result.threshold;
-            logger_->debug( "{}: bridge-mint slot tally hash {} proposal_id={} qualified_sum={} "
-                                             "threshold={} total_voting_rep={} has_quorum={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ),
-                                             slot_result.qualified_sum,
-                                             slot_result.threshold,
-                                             slot_result.total_voting_reputation,
-                                             slot_result.has_quorum );
             return tally;
         }
 
-        // Non-bridge subject: single-pool IsQuorum path. NOTE: unlike
-        // TallyVotes' own loop, this branch does NOT re-verify vote signatures —
-        // callers that need signature-checked tallies (certificate validation)
-        // keep using TallyVotes' verified loop for non-bridge subjects.
-        const uint64_t                  total_weight    = ValidatorRegistry::TotalWeight( registry );
-        uint64_t                        approved_weight = 0;
-        std::unordered_set<std::string> seen;
-        for ( const auto &vote : votes )
+        // D-06: bridge-mint subjects route the quorum decision through the
+        // cumulative slot model (EvaluateSlotQuorum). The signature-verified
+        // pool approved weight is replaced by the slot total for observability.
+        const auto slot_result = registry_->EvaluateSlotQuorum( verified_votes, registry );
+        tally.approved_weight  = slot_result.total_voting_reputation;
+        tally.qualified_sum    = slot_result.qualified_sum;
+        tally.slot_threshold   = slot_result.threshold;
+        // D-06 governs only while the mesh's slot evidence can structurally
+        // reach quorum: the maximum attainable qualified_sum is the reputation
+        // whose votes carry slot hashes. When that ceiling cannot pass the
+        // threshold the cumulative model is unreachable for this vote set and
+        // the single-pool result stands (see DecideQuorum's header note).
+        if ( SlotEvidenceReputation( verified_votes, registry ) > slot_result.threshold )
         {
-            if ( vote.proposal_id() != proposal.proposal_id() )
-            {
-                continue;
-            }
-            if ( !seen.insert( vote.voter_id() ).second )
-            {
-                continue;
-            }
-            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
-            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
-            {
-                continue;
-            }
-            if ( vote.approve() )
-            {
-                approved_weight += validator->weight();
-            }
+            tally.has_quorum = slot_result.has_quorum;
         }
-        tally.total_weight    = total_weight;
-        tally.approved_weight = approved_weight;
-        tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
-        // qualified_sum / slot_threshold remain zero for non-bridge (observability).
+        logger_->debug( "{}: bridge-mint slot tally qualified_sum={} threshold={} "
+                        "total_voting_rep={} pool_quorum={} has_quorum={}",
+                        __func__,
+                        slot_result.qualified_sum,
+                        slot_result.threshold,
+                        slot_result.total_voting_reputation,
+                        pool_quorum,
+                        tally.has_quorum );
         return tally;
     }
 
@@ -2574,37 +2620,6 @@ namespace sgns
                                          vote.voter_id().substr( 0, 8 ),
                                          vote.proposal_id() );
         return sgns::VoteSigningBytes( vote );
-    }
-
-    std::vector<ConsensusManager::Vote> ConsensusManager::SignatureVerifiedVotes(
-        const Proposal          &proposal,
-        const std::vector<Vote> &votes )
-    {
-        std::vector<Vote>               verified;
-        std::unordered_set<std::string> seen;
-        verified.reserve( votes.size() );
-        for ( const auto &vote : votes )
-        {
-            if ( vote.proposal_id() != proposal.proposal_id() )
-            {
-                continue;
-            }
-            if ( !seen.insert( vote.voter_id() ).second )
-            {
-                continue;
-            }
-            auto signing_bytes = VoteSigningBytes( vote );
-            if ( signing_bytes.has_error() )
-            {
-                continue;
-            }
-            if ( !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
-            {
-                continue;
-            }
-            verified.push_back( vote );
-        }
-        return verified;
     }
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::VoteBundleSigningBytes( const VoteBundle &bundle )
@@ -3171,6 +3186,30 @@ namespace sgns
                 auto            it = proposals_.find( state.proposal.proposal_id() );
                 if ( it != proposals_.end() )
                 {
+                    // The quorum_reached latch can outlive the authoritative
+                    // verdict: quorum may have been reached under the single-pool
+                    // rule while the slot-evidence ceiling was below the
+                    // threshold, and a later slot-bearing vote then raises the
+                    // ceiling so the cumulative slot tally becomes authoritative
+                    // (D-06) while still below it. Re-decide over the LIVE vote
+                    // set (the snapshot may be stale) so a stale latch cannot
+                    // create and reject certificates every round forever.
+                    const auto live_tally     = DecideQuorum( IsBridgeMintSubject( it->second.proposal ),
+                                                          it->second.approved_weight,
+                                                          it->second.total_weight,
+                                                          it->second.votes,
+                                                          proposal_registry );
+                    it->second.quorum_reached = live_tally.has_quorum;
+                    if ( !live_tally.has_quorum )
+                    {
+                        it->second.quorum_reached_ts_ms = 0;
+                        logger_->debug( "{}: quorum no longer holds under D-06 for hash {} proposal_id={}; "
+                                        "unlatching",
+                                        __func__,
+                                        GetPrintableSubjectHash( state.proposal.subject() ),
+                                        state.proposal.proposal_id().substr( 0, 8 ) );
+                        continue;
+                    }
                     it->second.last_attempt_round = round;
                 }
             }
@@ -3666,17 +3705,17 @@ namespace sgns
             if ( is_active_validator )
             {
                 it->second.approved_weight += validator->weight();
-                has_quorum = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
-                if ( !has_quorum && IsBridgeMintSubject( proposal_state.proposal ) )
-                {
-                    // Phase 6 (D-06): bridge-mint subjects decide quorum through the
-                    // cumulative slot tally, not the single-pool weight sum. Recompute
-                    // over the full admitted vote vector so slot dedup/grouping rules
-                    // see every vote (admission here is O(votes^2); acceptable for the
-                    // validator set sizes in play).
-                    const auto slot_result = registry_->EvaluateSlotQuorum( it->second.votes, proposal_registry );
-                    has_quorum             = slot_result.has_quorum;
-                }
+                // D-06: decide through the same dispatcher TallyVotes uses so the
+                // incremental tally can never announce a quorum the certificate
+                // tally would reject (or withhold one it would accept). Slot
+                // evaluation over the admitted vote vector is O(votes^2);
+                // acceptable for the validator set sizes in play.
+                const auto tally = DecideQuorum( IsBridgeMintSubject( proposal_state.proposal ),
+                                                 it->second.approved_weight,
+                                                 it->second.total_weight,
+                                                 it->second.votes,
+                                                 proposal_registry );
+                has_quorum       = tally.has_quorum;
                 if ( has_quorum )
                 {
                     if ( !it->second.quorum_reached )
@@ -3862,6 +3901,14 @@ namespace sgns
             {
                 ids_to_remove.insert( kv.first );
             }
+        }
+
+        // The slot is finalized: its memoized certificate verdict will never be
+        // consulted again, so drop it to bound the cache (lock order is safe —
+        // the cache lock is never held across proposals_mutex_).
+        {
+            std::lock_guard cache_lock( certificate_verdict_cache_mutex_ );
+            certificate_verdict_cache_.erase( slot_key );
         }
 
         for ( const auto &proposal_id : ids_to_remove )

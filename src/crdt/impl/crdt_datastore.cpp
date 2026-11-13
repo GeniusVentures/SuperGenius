@@ -7,6 +7,7 @@
 #include "storage/database_error.hpp"
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <atomic>
 #include <thread>
 #include <utility>
 #include <boost/format.hpp>
@@ -716,6 +717,29 @@ namespace sgns::crdt
                     continue;
                 }
 
+                // D-02 re-delivery guard: the block is absent (HasBlock miss
+                // above) but the never-erased seal marker may still record a
+                // root this node processed and later pruned. Such a root is
+                // terminal -- re-fetching it would resurrect pruned state on
+                // the single DAG worker, so skip before any cache, pending, or
+                // enqueue consult. The seal markers are the dedup of record;
+                // no new durable state.
+                auto resolved_result = dagSyncer_->isResolved( bCastHeadCID );
+                if ( resolved_result.has_failure() )
+                {
+                    logger_->error( "{}: error checking resolved state for CID {}",
+                                    __func__,
+                                    bCastHeadCID.toString().value() );
+                    continue;
+                }
+                if ( resolved_result.value() )
+                {
+                    logger_->trace( "{}: Pruned root {} re-delivered - terminal, skipping",
+                                    __func__,
+                                    bCastHeadCID.toString().value() );
+                    continue;
+                }
+
                 if ( dagSyncer_->IsCIDInCache( bCastHeadCID ) )
                 {
                     // If the CID request was already triggered but node didn't finish processing
@@ -1378,6 +1402,28 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
+    outcome::result<void> CrdtDatastore::StageEraseElement( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                            const std::string                           &aKey )
+    {
+        if ( set_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        return set_->StageEraseElement( aDataStore, aKey );
+    }
+
+    std::unique_lock<std::recursive_mutex> CrdtDatastore::MakeComposeLock()
+    {
+        if ( set_ == nullptr )
+        {
+            // Non-owning guard -- the caller fails closed on !owns_lock().
+            return std::unique_lock<std::recursive_mutex>{};
+        }
+
+        return set_->MakeComposeLock();
+    }
+
     outcome::result<CID> CrdtDatastore::PutKey( const HierarchicalKey                 &aKey,
                                                 const Buffer                          &aValue,
                                                 const std::unordered_set<std::string> &topics )
@@ -1562,11 +1608,19 @@ namespace sgns::crdt
 
         std::vector<std::pair<CID, std::string>> headsWithTopics;
 
+        // Link EVERY live head as a parent, never a subset: a head is retired
+        // only when a new node's links reach it (UpdateCRDTHeads walks the new
+        // node's ancestry), so any concurrent head left out of the parent set
+        // survives forever — re-broadcast in every announcement, re-fetched by
+        // peers, and unreachable from the newest head (its branch syncs only
+        // while its own head announcement is not lost). Linking all heads makes
+        // each new node a merge point that collapses the head set back to one
+        // per topic.
         for ( const auto &[topic_name, cid_set] : head_map )
         {
-            if ( !cid_set.empty() )
+            for ( const auto &cid : cid_set )
             {
-                headsWithTopics.emplace_back( *std::min_element( cid_set.begin(), cid_set.end() ), topic_name );
+                headsWithTopics.emplace_back( cid, topic_name );
             }
         }
 
@@ -1786,6 +1840,25 @@ namespace sgns::crdt
 
         for ( const auto &cid : due )
         {
+            // SC-5 retry guard: the never-erased seal marker may have appeared
+            // since this root failed (processed through another root's walk,
+            // since pruned). Terminal BEFORE the fetch-attempt counter site:
+            // evidence first, never a doomed fetch on unknown state.
+            auto resolved_result = dagSyncer_->isResolved( cid );
+            if ( resolved_result.has_failure() )
+            {
+                logger_->error( "RetryDueFailedRoots: error checking resolved state for CID {}",
+                                cid.toString().value() );
+                continue;
+            }
+            if ( resolved_result.value() )
+            {
+                logger_->info( "RetryDueFailedRoots: pruned/resolved root {} terminal, skipping",
+                               cid.toString().value() );
+                std::lock_guard lock( dagWorkerMutex_ );
+                ClearFailedRootRetryLocked( cid );
+                continue;
+            }
             // EnqueueRootCID flips a FAILED pending_jobs_ entry back to PENDING itself.
             (void) dagSyncer_->DeleteCIDBlock( cid );
             if ( EnqueueRootCID( cid ) )
@@ -2216,6 +2289,10 @@ namespace sgns::crdt
         return false;
     }
 
+    /// Test-only fetch-attempt counter (SC-3); declared in the header beside
+    /// its accessors. Relaxed ordering suffices: tests only read deltas.
+    std::atomic<uint64_t> CrdtDatastore::root_fetch_attempts_for_test_{ 0 };
+
     bool CrdtDatastore::EnqueueRootCID( const CID &cid )
     {
         std::unique_lock lk( dagWorkerMutex_ );
@@ -2230,12 +2307,52 @@ namespace sgns::crdt
         {
             pending_jobs_[cid] = JobStatus::PENDING;
         }
+        // Test-only observable (SC-3): count only fetch attempts that actually
+        // reached the pending root queue (this return-true branch).
+        root_fetch_attempts_for_test_.fetch_add( 1, std::memory_order_relaxed );
         return true;
+    }
+
+    uint64_t CrdtDatastore::GetRootFetchAttemptsForTest()
+    {
+        return root_fetch_attempts_for_test_.load( std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::ResetRootFetchAttemptsForTest()
+    {
+        root_fetch_attempts_for_test_.store( 0, std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::ScheduleFailedRootRetryForTest( CrdtDatastore &datastore, const CID &cid )
+    {
+        std::lock_guard lock( datastore.dagWorkerMutex_ );
+        datastore.ScheduleFailedRootRetryLocked( cid );
+    }
+
+    void CrdtDatastore::ScheduleStalledDeltaRetryForTest( CrdtDatastore &datastore, const CID &cid )
+    {
+        std::lock_guard lock( datastore.dagWorkerMutex_ );
+        datastore.ScheduleStalledDeltaRetryLocked( cid );
+    }
+
+    size_t CrdtDatastore::GetFailedRootRetryCountForTest() const
+    {
+        return failedRootRetryCount_.load( std::memory_order_relaxed );
+    }
+
+    size_t CrdtDatastore::GetStalledDeltaRetryCountForTest() const
+    {
+        return stalledDeltaRetryCount_.load( std::memory_order_relaxed );
     }
 
     outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()
     {
         return heads_->GetList();
+    }
+
+    outcome::result<uint64_t> CrdtDatastore::GetPriority( const std::string &aKey ) const
+    {
+        return set_->GetPriority( aKey );
     }
 
     outcome::result<void> CrdtDatastore::RemoveHead( const CID &aCid, const std::string &topic )
@@ -2291,5 +2408,27 @@ namespace sgns::crdt
             result.emplace_back( elem.key(), valueBuffer );
         }
         return result;
+    }
+
+    outcome::result<std::vector<std::string>> CrdtDatastore::GetLocalDeltaKeys( const std::string &cid_string )
+    {
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+
+        BOOST_OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
+
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node, true ) );
+        const auto &delta = filtered.delta;
+
+        std::vector<std::string> keys;
+        keys.reserve( delta.elements().size() + delta.tombstones().size() );
+        for ( const auto &element : delta.elements() )
+        {
+            keys.emplace_back( element.key() );
+        }
+        for ( const auto &tombstone : delta.tombstones() )
+        {
+            keys.emplace_back( tombstone.key() );
+        }
+        return keys;
     }
 }

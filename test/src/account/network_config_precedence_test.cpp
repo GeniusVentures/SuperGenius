@@ -68,7 +68,8 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
 
-    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    NodeTeardownGuard teardown{ node };
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
@@ -92,7 +93,8 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/20000, /*auto_dht=*/false );
     sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
 
-    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    NodeTeardownGuard teardown{ node };
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
@@ -110,7 +112,8 @@ TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
 
-    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    NodeTeardownGuard teardown{ node };
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
@@ -143,7 +146,8 @@ namespace
                                                /*rpc_catchup=*/false,
                                                TEST_PRIVATE_KEY );
 
-        auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+        auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+        NodeTeardownGuard teardown{ node };
         EXPECT_NE( node, nullptr );
         if ( !node )
         {

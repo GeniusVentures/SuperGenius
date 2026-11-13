@@ -12,12 +12,14 @@
 #include <boost/dll.hpp>
 #include <boost/format.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <chrono>
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <thread>
 #include <fstream>
+#include <future>
 #include <openssl/sha.h>
 #include <random>
 
@@ -29,6 +31,7 @@
 #include "base/hexutil.hpp"
 #include "base/logger.hpp"
 #include "base/sgns_version.hpp"
+#include "testutil/globaldb_node_shutdown.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 #include "crypto/hasher.hpp"
@@ -180,12 +183,7 @@ public:
         {
             for ( auto &node : nodes_ )
             {
-                if ( node.db )
-                {
-                    node.db->ShutdownNow();
-                }
-                node.db.reset();
-                node.pubsub->Stop();
+                sgns::test::stopGlobalDBNode( node.db, node.pubsub );
             }
 
             nodes_.clear();
@@ -239,6 +237,42 @@ TEST_F( GlobalDBIntegrationTest, OperationsAreRejectedAfterShutdown )
     EXPECT_EQ( db->BeginTransaction(), nullptr );
     EXPECT_EQ( db->GetCRDTDataStore(), nullptr );
     EXPECT_EQ( db->GetBroadcaster(), nullptr );
+}
+
+TEST_F( GlobalDBIntegrationTest, NodeTeardownKeepsDatabaseAliveUntilIOThreadStops )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_teardown_node" );
+    ASSERT_EQ( testNodes->getNodes().size(), 1 );
+
+    const auto                             pubsub = testNodes->getNodes().front().pubsub;
+    const auto                             io     = pubsub->GetAsioContext();
+    const std::weak_ptr<sgns::crdt::GlobalDB> db     = testNodes->getNodes().front().db;
+    auto entered        = std::make_shared<std::promise<void>>();
+    auto observed       = std::make_shared<std::promise<bool>>();
+    auto enteredFuture  = entered->get_future();
+    auto observedFuture = observed->get_future();
+
+    // Keep a host callback active until teardown stops PubSub. Its transport
+    // dependencies must remain alive until Stop() joins this I/O thread.
+    boost::asio::post( *io,
+                       [pubsub, db, entered, observed]()
+                       {
+                           entered->set_value();
+                           const bool stopping = ::waitForCondition(
+                               [&]() { return !pubsub->IsStarted(); }, std::chrono::seconds( 5 ) );
+                           observed->set_value( stopping && !db.expired() );
+                       } );
+
+    ASSERT_EQ( enteredFuture.wait_for( std::chrono::seconds( 5 ) ), std::future_status::ready )
+        << "Host callback did not start";
+    testNodes.reset();
+
+    ASSERT_EQ( observedFuture.wait_for( std::chrono::seconds( 5 ) ), std::future_status::ready )
+        << "Host callback did not finish during teardown";
+    EXPECT_TRUE( observedFuture.get() ) << "GlobalDB was destroyed before its host callback finished";
+    EXPECT_TRUE( db.expired() );
+    EXPECT_TRUE( io->stopped() );
 }
 
 TEST_F( GlobalDBIntegrationTest, ConvergentImmutableConcurrentWritesConvergeWhenAThenBSynchronize )

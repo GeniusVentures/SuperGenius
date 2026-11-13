@@ -11,6 +11,7 @@ import {
   buildEnvelope,
   classifyAge,
   FRESH_SEC,
+  MAX_IDS_PER_REQUEST,
   STALE_SEC,
   nowSec,
   usableRows,
@@ -20,7 +21,13 @@ import {
 import { fetchUpstream, UpstreamError } from "./upstream";
 import type { Env } from "./index";
 
-const MAX_IDS_PER_BATCH = 100; // > MAX_IDS_PER_REQUEST(50): one request always fits
+// The batch IS one upstream request: flush() sends every collected id in a
+// single fetchUpstream URL, so the batch cap must equal the per-request cap
+// (SRVC-08). Concurrent client requests joining one collecting window would
+// otherwise coalesce past the cap and dispatch an oversized URL (403/414 risk)
+// — "one request always fits" only ever held per single client request. Excess
+// ids beyond the budget are simply not refreshed that round (stale-serve).
+const MAX_IDS_PER_BATCH = MAX_IDS_PER_REQUEST;
 
 /** Collecting window, overridable via env (test seam only; prod = BATCH_WINDOW_MS). */
 function batchWindowMs(env: Env): number {
@@ -39,7 +46,6 @@ const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
 export class PriceCoordinator extends DurableObject<Env> {
   private collecting: { ids: Set<string>; waiters: Waiter[] } | null = null;
-  private inflight = false;
   private holdOffUntil = 0; // epoch ms — 429/403 back-pressure (Landmine 9)
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
   private initialized = false;
@@ -139,7 +145,6 @@ export class PriceCoordinator extends DurableObject<Env> {
     const currency = this.pendingCurrency;
     this.collecting = null;
     if (!batch || currency === null) return;
-    this.inflight = true;
     try {
       const fresh = await fetchUpstream([...batch.ids], currency, this.env);
       persistRows(this.ctx.storage.sql, fresh);
@@ -154,8 +159,6 @@ export class PriceCoordinator extends DurableObject<Env> {
         this.holdOffUntil = Date.now() + FRESH_SEC * 1000; // Landmine 9
       }
       for (const w of batch.waiters) w.reject(e);
-    } finally {
-      this.inflight = false;
     }
   }
 }

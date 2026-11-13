@@ -6,6 +6,8 @@
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/in_memory_datastore.hpp>
 #include "ipfs_lite/ipld/ipld_node.hpp"
+#include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
 
@@ -28,6 +30,12 @@ namespace sgns::crdt
          * @param service shared pointer to IPFS datastore
          */
         explicit CustomDagSyncer( std::shared_ptr<IpfsDatastore> service );
+
+        /**
+         * @brief Destructor; releases any armed root-fetch stall so a worker
+         *        parked in the gate cannot outlive this double.
+         */
+        ~CustomDagSyncer() override;
 
         /**
          * @brief Check if block exists
@@ -101,7 +109,27 @@ namespace sgns::crdt
 
         outcome::result<void> markResolved( const CID &cid ) override;
         outcome::result<bool> isResolved( const CID &cid ) const override;
+
+        /**
+         * @brief Arm the test-only root-fetch stall: getNode calls (the DAG
+         *        worker's fetch-a-root entry, CrdtDatastore::CreateRootJob)
+         *        block inside the worker thread until ReleaseRootFetchStall
+         *        runs. Default behavior is completely unchanged while the
+         *        stall is never armed.
+         * @note Test-only; no production code path can reach this double.
+         */
+        void ArmRootFetchStall();
+
+        /**
+         * @brief Release an armed root-fetch stall and unblock the worker.
+         *        Idempotent and inert when no stall is armed.
+         */
+        void ReleaseRootFetchStall();
+
     private:
+        /// Blocks the calling worker thread while the stall is armed.
+        void WaitAtRootFetchStallIfArmed() const;
+
         // The shared backing store models remote blocks, not this peer's local
         // processing state. A sender's writes and seals must not resolve a
         // receiver's DAG before its filters and merges have run.
@@ -110,6 +138,12 @@ namespace sgns::crdt
         std::set<CID>        requested_cids_;
         std::set<CID>        local_cids_;
         std::set<CID>        resolved_cids_;
+
+        /// Fast-path flag: zero synchronization cost while never armed.
+        mutable std::atomic_bool        stall_enabled_{ false };
+        mutable std::mutex              stall_mutex_;
+        mutable std::condition_variable stall_cv_;
+        mutable bool                    stall_release_requested_{ false };
     };
 
 } // namespace sgns::crdt

@@ -3,6 +3,8 @@
  * @brief      CRDT-backed TransactionManager recovery integration tests.
  * @details    Covers send recovery, nonce reconciliation, previous-hash recovery,
  *             and transaction deletion without full GeniusNode startup.
+ *             D-02 adds pre-broadcast failure classification (READY-preserving)
+ *             and the bounded SYNCING exit on the durable confirmed nonce.
  * @date       2026-06-16
  */
 
@@ -51,6 +53,36 @@ namespace sgns
         static void TickOnce( TransactionManager &manager )
         {
             manager.TickOnce();
+        }
+
+        static void RunInitializeUTXOs( TransactionManager &manager )
+        {
+            manager.InitializeUTXOs();
+        }
+
+        static void RunInitTransactions( TransactionManager &manager )
+        {
+            manager.InitTransactions();
+        }
+
+        static void SetMissingTxMaxAttempts( uint8_t max_attempts )
+        {
+            TransactionManager::SetMissingTxMaxAttemptsForTest( max_attempts );
+        }
+
+        static void SetSyncingExitTimeout( std::chrono::milliseconds timeout )
+        {
+            TransactionManager::SetSyncingExitTimeoutForTest( timeout );
+        }
+
+        static void RestoreSyncingExitTimeout()
+        {
+            TransactionManager::SetSyncingExitTimeoutForTest( TransactionManager::k_syncing_exit_timeout );
+        }
+
+        static bool SyncingWindowIsArmed( TransactionManager &manager )
+        {
+            return manager.syncing_since_.has_value();
         }
 
         static outcome::result<void> ChangeTransactionState( TransactionManager                       &manager,
@@ -945,4 +977,198 @@ TEST_F( TransactionManagerPreviousHashTest, EscrowChainIdDefaultAndScopedOverrid
     // Public-node equivalence: the PUBLIC ScopedChainId value equals the TransactionManager
     // genius chain id, so an empty-scope HoldEscrow keeps routing unchanged.
     EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ScopedChainId( "" ), "supergenius" );
+}
+
+// GATE-05 live incident (2026-10-20/22): a READY UTXO whose creating
+// transaction never existed (a fabricated burn reference leaked before the
+// 18-05 fix) used to wedge the TransactionManager in INITIALIZING forever —
+// InitTransactions unconditionally returned below a TODO comment, never
+// requesting the missing tx and never transitioning. Bounded recovery must
+// reach READY and drop the unresolvable hash so neither boot nor the prune
+// tick (HasMissingTxHashes gate) stays wedged.
+TEST_F( TransactionManagerRecoveryTest, MissingCreatingTxDoesNotWedgeBoot )
+{
+    sgns::TransactionManagerPendingLifecycleTestAccess::SetMissingTxMaxAttempts( 0 );
+
+    const auto fake_hash_result = sgns::base::Hash256::fromReadableString( std::string( 64, 'a' ) );
+    ASSERT_TRUE( fake_hash_result.has_value() );
+    const auto fake_tx_hash = fake_hash_result.value();
+
+    ASSERT_TRUE( account_->GetUTXOManager()
+                     .PutUTXO( sgns::GeniusUTXO( fake_tx_hash, 0, 30000, kTokenId, account_->GetAddress() ) )
+                     .has_value() );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState( *manager_,
+                                                                     sgns::TransactionManager::State::INITIALIZING );
+    sgns::TransactionManagerPendingLifecycleTestAccess::RunInitializeUTXOs( *manager_ );
+    EXPECT_TRUE( manager_->HasMissingTxHashes() );
+
+    // This fixture has no messenger, so CheckNonce cannot pass here — the
+    // READY transition is the fixture's own SetUp idiom (direct ChangeState).
+    // The GATE-05 property under test is the wedge fix itself: the recovery
+    // path below the former dead return now runs and DROPS the unresolvable
+    // hash, so neither boot nor the HasMissingTxHashes-gated prune tick can
+    // stay wedged. (Live READY acceptance: the operator's previously-wedged
+    // staging node boots with this fix — 18-HUMAN-UAT item 1.)
+    sgns::TransactionManagerPendingLifecycleTestAccess::RunInitTransactions( *manager_ );
+
+    EXPECT_FALSE( manager_->HasMissingTxHashes() );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::SetMissingTxMaxAttempts( 12 );
+}
+
+namespace
+{
+    /// Restores the process-wide SYNCING-exit window when a test scope ends,
+    /// including fatal-assertion paths (the knob is static, like the
+    /// missing-tx attempt cap).
+    class SyncingExitWindowGuard
+    {
+    public:
+        explicit SyncingExitWindowGuard( std::chrono::milliseconds timeout )
+        {
+            sgns::TransactionManagerPendingLifecycleTestAccess::SetSyncingExitTimeout( timeout );
+        }
+
+        ~SyncingExitWindowGuard()
+        {
+            sgns::TransactionManagerPendingLifecycleTestAccess::RestoreSyncingExitTimeout();
+        }
+    };
+} // namespace
+
+// D-02 half 1 (folded todo failed-send-wedges-tm-in-syncing): a send that
+// fails BEFORE broadcast — here an oversized payload tripping the preflight
+// size gate before any CRDT Put/Commit — must leave the manager READY, never
+// SYNCING, with the tx FAILED and its reserved nonce released, so the next
+// send reuses the nonce cleanly. (The witness gate needs a consensus mock
+// this fixture does not carry; the size gate is the deterministic driver.)
+TEST_F( TransactionManagerRecoveryTest, PreBroadcastFailureKeepsManagerReadyWithNonceRelease )
+{
+    const auto reserved_nonce = account_->ReserveNextNonce();
+    ASSERT_EQ( reserved_nonce, 1U );
+
+    auto oversized_dag = MakeDAG( reserved_nonce );
+    oversized_dag.set_uncle_hash( std::string( 70 * 1024, 'x' ) );
+    auto oversized = std::make_shared<sgns::MintTransaction>(
+        sgns::MintTransaction::New( 1,
+                                    std::string( sgns::GeniusTransaction::GENIUS_CHAIN_ID ),
+                                    kTokenId,
+                                    std::move( oversized_dag ) ) );
+    oversized->MakeSignature( *account_ );
+    ASSERT_TRUE( oversized->SerializeToEmbeddedTransaction().ByteSizeLong() > 64 * 1024 );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, oversized, db_->BeginTransaction() );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( oversized->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+    // The incident's wedge: this tick used to land in SYNCING (one tick is the
+    // discriminator — SYNCING would only resolve on a LATER sync pass).
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+
+    // The FAILED transition released the reserved nonce: the next reservation
+    // hands out the same nonce again.
+    EXPECT_EQ( account_->ReserveNextNonce(), reserved_nonce );
+
+    // A subsequent valid send reuses the nonce and proceeds normally.
+    auto retry = MakeTransaction( reserved_nonce );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, retry, db_->BeginTransaction() );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( retry->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::SENDING );
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+}
+
+// D-02 half 1 negative control: a failure that is NOT a typed pre-broadcast
+// error (a CRDT Put failure on an already-committed transaction — send
+// territory where something may have been staged) still takes the SYNCING
+// recovery path exactly as before.
+TEST_F( TransactionManagerRecoveryTest, PreBroadcastNegativeControlNonTypedFailureStillEntersSyncing )
+{
+    auto transaction = MakeTransaction();
+
+    auto committed_transaction = MakeCommittedTransaction();
+    ASSERT_TRUE( committed_transaction );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
+                                                                 transaction,
+                                                                 std::move( committed_transaction ) );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::SYNCING );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+}
+
+// D-02 half 2: a SYNCING state with no confirming nonce advance within the
+// (ForTest-shrunk) window falls back to the last DURABLE confirmed nonce,
+// WARNs (window + anchor + READY return are in the log line), and returns to
+// READY. Held reservations survive the fallback untouched — the next reserved
+// nonce is strictly greater (the collision proof: releasing or resetting
+// pending nonces here would hand a held nonce to the next sender).
+TEST_F( TransactionManagerRecoveryTest, SyncingExitFallsBackToDurableNonceAfterWindow )
+{
+    SyncingExitWindowGuard window_guard( std::chrono::milliseconds( 100 ) );
+
+    // Enter SYNCING through the real send-failure path (non-typed error) —
+    // this is the machinery that arms syncing_since_ at the D-02 wiring site.
+    auto transaction           = MakeTransaction();
+    auto committed_transaction = MakeCommittedTransaction();
+    ASSERT_TRUE( committed_transaction );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
+                                                                 transaction,
+                                                                 std::move( committed_transaction ) );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::SYNCING );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::SyncingWindowIsArmed( *manager_ ) );
+
+    // Hold a reservation across the fallback fire: proposed stays above
+    // confirmed+1 with no confirming advance, so the sync can never resolve
+    // normally (CheckTransactionValidity only flips tracked status, never the
+    // confirmed nonce).
+    const auto held_nonce = account_->ReserveNextNonce();
+    ASSERT_GT( held_nonce, 0U );
+
+    sgns::test::assertWaitForCondition(
+        [&]
+        {
+            sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+            return manager_->GetState() == sgns::TransactionManager::State::READY;
+        },
+        std::chrono::seconds( 5 ),
+        "bounded SYNCING exit did not return to READY" );
+    EXPECT_FALSE( sgns::TransactionManagerPendingLifecycleTestAccess::SyncingWindowIsArmed( *manager_ ) );
+
+    // Durable anchor unchanged: the fallback read it, never advanced it.
+    ASSERT_TRUE( account_->GetLocalConfirmedNonce().has_value() );
+    EXPECT_EQ( account_->GetLocalConfirmedNonce().value(), 0U );
+
+    // Collision proof: the reservation held across the fallback fire kept the
+    // nonce out of circulation — the next reservation is strictly greater.
+    EXPECT_GT( account_->ReserveNextNonce(), held_nonce );
+}
+
+// D-02 half 2 negative control: the normal SYNCING-to-READY resolution
+// (proposed == confirmed+1) is unchanged and does not wait out the window —
+// with nothing held, the first sync pass after entry exits immediately, and
+// the exit clears the window arm so no stale timestamp leaks onward.
+TEST_F( TransactionManagerRecoveryTest, SyncingExitNormalSyncPathDoesNotDependOnWindow )
+{
+    SyncingExitWindowGuard window_guard( std::chrono::seconds( 60 ) );
+
+    auto transaction           = MakeTransaction();
+    auto committed_transaction = MakeCommittedTransaction();
+    ASSERT_TRUE( committed_transaction );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
+                                                                 transaction,
+                                                                 std::move( committed_transaction ) );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+    ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::SYNCING );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::SyncingWindowIsArmed( *manager_ ) );
+
+    // No reservation is held: the normal resolution must fire on this pass —
+    // the 60s window never gates it.
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+    EXPECT_FALSE( sgns::TransactionManagerPendingLifecycleTestAccess::SyncingWindowIsArmed( *manager_ ) );
 }

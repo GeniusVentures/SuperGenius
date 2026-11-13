@@ -25,6 +25,7 @@
 #include <limits>
 
 #include "account/NodeType.hpp"
+#include "base/blob.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crdt/globaldb/crdt_work_journal.hpp"
@@ -418,26 +419,46 @@ namespace sgns
         static bool IsBridgeMintSubject( const Proposal &proposal );
 
         /**
-         * @brief Phase 6 (D-06): single quorum dispatcher.
+         * @brief Phase 6 (D-06): the single authoritative quorum verdict.
          *
-         * For non-bridge subjects: computes the single-pool tally (total weight,
-         * approved weight, IsQuorum) -- identical to the pre-Phase-6 behavior.
-         * For bridge-mint subjects: delegates to ValidatorRegistry::EvaluateSlotQuorum
-         * (cumulative slot model with 50/25/75 weighting and >=2-validator PUBLIC
-         * deduplication).
+         * The single-pool rule (IsQuorum over the signature-verified approve
+         * weight) stands for every subject unless the proposal is a bridge mint
+         * whose slot evidence can structurally reach the slot threshold: when
+         * SlotEvidenceReputation exceeds the threshold, the cumulative slot tally
+         * (ValidatorRegistry::EvaluateSlotQuorum, 50/25/75 weighting with
+         * >=2-validator PUBLIC deduplication) is authoritative for has_quorum —
+         * including overriding an already-reached single-pool quorum downward,
+         * and vice versa. When that ceiling cannot pass the threshold the
+         * cumulative model is unreachable for this vote set — e.g. an
+         * evidence-starved mesh where vote slot population silently no-ops — and
+         * the single-pool result stands; every approve voter has still passed the
+         * public-chain witness validation in that case.
          *
-         * Used by BOTH TallyVotes (certificate creation) and the incremental
-         * HandleVote tally so the two sites agree on bridge-mint quorum
-         * (RESEARCH Pitfall 1 mitigation / T-06-10).
+         * Used by BOTH TallyVotes (certificate creation/validation) and the
+         * incremental HandleVote tally so the two sites can never disagree on
+         * bridge-mint quorum (RESEARCH Pitfall 1 mitigation / T-06-10): a
+         * HandleVote quorum announcement that TallyVotes would reject creates and
+         * rejects certificates forever, and the reverse withholds finality.
          *
-         * @param[in] proposal Proposal being evaluated.
-         * @param[in] votes   Votes to tally.
-         * @param[in] registry Registry snapshot used for weight resolution.
-         * @return Quorum tally result.
+         * @param[in] bridge_mint          IsBridgeMintSubject(proposal); passed in so
+         *                                 this helper needs no subject decoding.
+         * @param[in] pool_approved_weight Single-pool approved weight over the
+         *                                 signature-verified votes.
+         * @param[in] pool_total_weight    Registry total weight.
+         * @param[in] verified_votes       Signature-verified, proposal-bound votes.
+         *                                 The slot helpers resolve membership and
+         *                                 weight but never verify signatures, so
+         *                                 unverified entries must never reach them.
+         * @param[in] registry             Registry snapshot for weight resolution.
+         * @return QuorumTally with the verdict and bridge observability fields
+         *         (approved_weight becomes the slot total_voting_reputation for
+         *         bridge mints; qualified_sum/slot_threshold stay zero otherwise).
          */
-        outcome::result<QuorumTally> EvaluateQuorum( const Proposal                    &proposal,
-                                                     const std::vector<Vote>           &votes,
-                                                     const ValidatorRegistry::Registry &registry ) const;
+        QuorumTally DecideQuorum( bool                               bridge_mint,
+                                  uint64_t                           pool_approved_weight,
+                                  uint64_t                           pool_total_weight,
+                                  const std::vector<Vote>           &verified_votes,
+                                  const ValidatorRegistry::Registry &registry ) const;
 
         /**
          * @brief Computes canonical bytes to sign a proposal.
@@ -451,21 +472,6 @@ namespace sgns
          * @return Signing bytes on success, otherwise an error.
          */
         static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
-        /**
-         * @brief Filters a vote vector down to proposal-bound, deduplicated,
-         *        signature-verified entries.
-         * @details Slot-quorum helpers (EvaluateSlotQuorum/SlotEvidenceReputation)
-         *          resolve registry membership and weight but never verify vote
-         *          signatures, so any remotely-received vote vector fed to them
-         *          must pass through this filter first — otherwise fabricated
-         *          votes attributed to real ACTIVE validators reach bridge-mint
-         *          quorum with zero valid signatures.
-         * @param[in] proposal Proposal the votes must be bound to.
-         * @param[in] votes    Raw vote vector; may contain fabricated entries.
-         * @return Signature-verified votes (possibly empty).
-         */
-        static std::vector<Vote> SignatureVerifiedVotes( const Proposal          &proposal,
-                                                         const std::vector<Vote> &votes );
         /**
          * @brief Computes canonical bytes to sign a vote bundle.
          * @param[in] bundle Vote bundle to encode.
@@ -990,6 +996,15 @@ namespace sgns
         std::string ActiveVoteStorageKey( std::string_view slot_key ) const;
         /**
          * @brief Checks the authoritative certificate value for a canonical slot.
+         * @details The definitive verdict (Approve/Reject) is memoized per slot
+         *          keyed by the durable certificate bytes' digest: validation is
+         *          deterministic over immutable content (the registry is pinned
+         *          by CID), so a verdict only changes when the stored bytes
+         *          change. Retryable outcomes (registry not yet loadable, data
+         *          errors) are never memoized. This keeps the per-tick replay
+         *          loops from re-verifying every certificate signature on every
+         *          pass while a slot stays uncertified or holds a rejected
+         *          certificate.
          */
         outcome::result<bool> HasAcceptedCertificateForSlot( const std::string &slot_key ) const;
         /**
@@ -1241,6 +1256,13 @@ namespace sgns
         /// next tick; beyond it the stall carries an exponential backoff lease.
         static constexpr uint64_t kHandlerFailureFastRetries{ 8 };
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
+        /// Serializes durable active-vote persistence across concurrent
+        /// ProcessDueVoteWork passes (round timer + subject continuation). The
+        /// datastore write itself runs OUTSIDE proposals_mutex_ (see
+        /// EraseDurableActiveVoteRecord's note); this mutex keeps the
+        /// get-then-put pair of PersistOrLoadExactActiveVote atomic so two
+        /// passes cannot both "succeed" with different records for one slot.
+        std::mutex active_vote_persist_mutex_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.
@@ -1262,6 +1284,16 @@ namespace sgns
         std::atomic<bool>         timer_parked_for_test_{ false }; ///< Test seam: holds the round timer at its loop top.
         bool                      timer_parked_ack_ = false;       ///< Park acknowledgement, guarded by `timer_mutex_`.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
+        /// Memoized HasAcceptedCertificateForSlot verdicts: slot key -> digest of
+        /// the durable certificate bytes + definitive verdict. Guarded by
+        /// certificate_verdict_cache_mutex_; never held across validation.
+        struct CertificateVerdict
+        {
+            base::Hash256 content_digest{};
+            bool          accepted = false;
+        };
+        mutable std::mutex                                          certificate_verdict_cache_mutex_;
+        mutable std::unordered_map<std::string, CertificateVerdict> certificate_verdict_cache_;
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
         std::mutex                close_mutex_;                   ///< Serializes round timer ownership during shutdown.

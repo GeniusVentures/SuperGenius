@@ -14,6 +14,11 @@ namespace sgns::crdt
 {
     CustomDagSyncer::CustomDagSyncer( std::shared_ptr<IpfsDatastore> service ) : dagService_( std::move( service ) ) {}
 
+    CustomDagSyncer::~CustomDagSyncer()
+    {
+        ReleaseRootFetchStall();
+    }
+
     outcome::result<bool> CustomDagSyncer::HasBlock( const CID &cid ) const
     {
         std::lock_guard lock( state_mutex_ );
@@ -34,6 +39,11 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<IPLDNode>> CustomDagSyncer::getNode( const CID &cid ) const
     {
+        // Test-only stall point: CrdtDatastore's DAG worker enters here to
+        // fetch an external root (CreateRootJob -> getNode) with the root job
+        // already recorded as active, so a stalled getNode pins the
+        // pending/active erase guard true. Inert unless armed.
+        WaitAtRootFetchStallIfArmed();
         std::lock_guard lock( shared_datastore_mutex );
         return dagService_.getNode( cid );
     }
@@ -156,6 +166,35 @@ namespace sgns::crdt
     {
         std::lock_guard lock( state_mutex_ );
         return resolved_cids_.count( cid ) != 0;
+    }
+
+    void CustomDagSyncer::ArmRootFetchStall()
+    {
+        {
+            std::lock_guard lock( stall_mutex_ );
+            stall_release_requested_ = false;
+        }
+        stall_enabled_.store( true, std::memory_order_release );
+    }
+
+    void CustomDagSyncer::ReleaseRootFetchStall()
+    {
+        {
+            std::lock_guard lock( stall_mutex_ );
+            stall_release_requested_ = true;
+        }
+        stall_enabled_.store( false, std::memory_order_release );
+        stall_cv_.notify_all();
+    }
+
+    void CustomDagSyncer::WaitAtRootFetchStallIfArmed() const
+    {
+        if ( !stall_enabled_.load( std::memory_order_acquire ) )
+        {
+            return;
+        }
+        std::unique_lock lock( stall_mutex_ );
+        stall_cv_.wait( lock, [&] { return stall_release_requested_; } );
     }
 
     void CustomDagSyncer::Stop() {}

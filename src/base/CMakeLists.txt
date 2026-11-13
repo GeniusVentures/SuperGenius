@@ -75,6 +75,7 @@ endif()
 add_library(sgns_version
     sgns_version.cpp
     sgns_version.hpp
+    DevMintPolicy.hpp
     ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
 )
 

@@ -189,11 +189,16 @@ namespace sgns
          * @param[in]   infos Vector of UTXO information to be consumed
          * @param       address Address to consume UTXOs from
          * @param[in]   type Only consume UTXOs of this type (default NORMAL)
+         * @param[in]   consuming_txid Identity of the spending transaction,
+         *              recorded into each consumed entry's spent_by_txid
+         *              (D-02 Candidate-B spend-recency carrier, Phase 17);
+         *              nullopt leaves the field unset
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
-                                            const std::string                &address,
-                                            UTXOType                          type = UTXOType::UTXO_NORMAL );
+        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo>   &infos,
+                                            const std::string                  &address,
+                                            UTXOType                            type           = UTXOType::UTXO_NORMAL,
+                                            const std::optional<base::Hash256> &consuming_txid = std::nullopt );
 
         /**
          * @brief Restores previously consumed inputs when their consuming transaction is reverted.
@@ -272,6 +277,24 @@ namespace sgns
         }
 
         /**
+         * @brief       Clears unspent UTXOs for an address while preserving consumed spend evidence.
+         * @details     D-01 substrate (GATE-05 checkpoint-rebuild half): unlike
+         *              SetUTXOs — which wipes every entry for the address,
+         *              including CONSUMED records and their spent_by_txid
+         *              evidence — this clear drops READY and RESERVED entries
+         *              and their transient reservations but keeps every
+         *              UTXO_CONSUMED entry (spender binding intact) in memory
+         *              and on disk, so a checkpoint-mismatch rebuild can never
+         *              resurrect a spent output (PutUTXO's existing-entry check
+         *              refuses re-creation by construction). Preservation is
+         *              unconditional: consumed evidence is never wrong to keep.
+         *              Existing SetUTXOs callers keep wipe-everything semantics.
+         * @param[in]   address The address whose unspent entries are cleared
+         * @return      Success, or the persistence error; in-memory state is restored on failure
+         */
+        outcome::result<void> ClearUnspentKeepConsumed( const std::string &address );
+
+        /**
          * @brief       Create the input and output parameters for a single-output transfer, selecting from available UTXOs.
          * @param[in]   amount The amount to transfer
          * @param[in]   dest_address The destination address for the transfer
@@ -342,6 +365,29 @@ namespace sgns
                             UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
+         * @brief       Releases and removes the burn UTXOs a failed local bridge mint inserted.
+         * @details     RollbackUTXOs only returns a reserved outpoint to READY — a
+         *              MintFunds-inserted UTXO_BRIDGE entry then survives the
+         *              failure in memory and on disk (live incident 2026-10-20:
+         *              a consensus-rejected dev burn ref stayed READY, survived
+         *              restart, and wedged boot). This variant owns the
+         *              failed-mint end state: for each input outpoint that is a
+         *              UTXO_BRIDGE entry still in READY or RESERVED state it
+         *              erases the entry, its transient reservation, and the
+         *              address index, then persists the owner's snapshot. A
+         *              RESERVED entry is only taken when its holder id matches
+         *              @p reservation_id; CONSUMED entries are never touched —
+         *              a sibling mint's spend evidence keeps blocking duplicate
+         *              burns. No-op (success) when nothing matches.
+         * @param[in]   inputs The failed mint's input outpoints (the burn reference).
+         * @param[in]   reservation_id The reservation id MintFunds claimed under
+         *              (the burn hash string — the D-18 reservation contract).
+         * @return      Success, or the persistence error; memory is restored on failure.
+         */
+        outcome::result<void> RemoveBurnUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                                               const std::string                &reservation_id );
+
+        /**
          * @brief       Verifies ownership and signatures for UTXO transaction parameters using the default address.
          * @param[in]   params The transaction parameters to verify, including inputs and outputs
          * @return      true if all signatures are valid and correspond to the default address, false otherwise
@@ -395,6 +441,54 @@ namespace sgns
          * @return      true only when the outpoint is CONSUMED with real metadata.
          */
         bool IsOutPointGenuinelyConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+
+        /**
+         * @brief       Returns the transaction that spent an outpoint, if recorded.
+         * @details     Read side of the D-02 Candidate-B spend-recency carrier:
+         *              ConsumeUTXOs records the consuming transaction's hash in
+         *              each consumed entry's spent_by_txid, and this reports it
+         *              per outpoint. Synthesized zero-amount tombstones carry a
+         *              spender too — pair with IsOutPointGenuinelyConsumed to
+         *              distinguish genuine spends from tombstones.
+         * @param[in]   utxo_id Transaction-hash part of the outpoint.
+         * @param[in]   output_idx Output index part of the outpoint.
+         * @return      The spending transaction's hash, or nullopt when the
+         *              outpoint is untracked or no spender was recorded.
+         */
+        std::optional<base::Hash256> GetOutPointSpender( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+
+        /**
+         * @brief       Durable spend evidence decoded from one /utxo/ record.
+         * @details     The durable view behind the rebuild crosscheck (D-01):
+         *              the in-memory registry is the write path's own view, so
+         *              a resurrected READY entry can never carry its spender
+         *              there — only the persisted record can still name it.
+         */
+        struct DurableSpendEvidence
+        {
+            bool                         consumed{ false }; ///< Record state is UTXO_CONSUMED.
+            bool                         genuine{ false };  ///< Consumed AND non-zero amount (tombstone discriminator).
+            std::optional<base::Hash256> spender;           ///< Record's spent_by_txid, when present.
+        };
+
+        /**
+         * @brief       Reads one outpoint's durable spend evidence from its /utxo/ record.
+         * @details     D-01 rebuild belt: reads the persisted record directly so a
+         *              divergence between the in-memory registry and the durable
+         *              record (e.g. one corrupted record, or a re-created READY
+         *              entry over a still-consumed record) is observable
+         *              without mutating the registry. Writes nothing.
+         * @param[in]   utxo_id Transaction-hash part of the outpoint.
+         * @param[in]   output_idx Output index part of the outpoint.
+         * @param[in]   address Owner address whose /utxo/ prefix holds the record.
+         * @return      The decoded evidence, nullopt when no record exists for
+         *              the outpoint, or an error for read/decode failures
+         *              (malformed spent_by_txid included).
+         */
+        outcome::result<std::optional<DurableSpendEvidence>> ReadDurableSpendEvidence(
+            const base::Hash256 &utxo_id,
+            uint32_t             output_idx,
+            const std::string   &address ) const;
 
         /**
          * @brief       Compute a deterministic Merkle root for unspent UTXOs owned by this node address
@@ -498,8 +592,10 @@ namespace sgns
                                                  const std::vector<std::pair<OutPoint, UTXOEntry>> &entries );
 
         /// @brief Captures and persists an address snapshot while utxos_mutex_ is exclusively held.
-        outcome::result<void> StoreUTXOsLocked( const std::string    &address,
-                                                std::function<void()> before_store_hook = {} );
+        /// @details The before-store test hooks fire at the PutUTXO/ConsumeUTXOs call
+        ///          sites BEFORE this call — see UTXOManager.cpp for why the hook must
+        ///          not run inside the fail-fault sequence.
+        outcome::result<void> StoreUTXOsLocked( const std::string &address );
 
         // Friend-only fault and barrier seams for certificate durability regression coverage.
         void SetFailNextPutUTXOStoreForTest( bool fail );

@@ -249,6 +249,54 @@ else()
     )
 endif()
 
+# Phase 17 (17-04): PRUNE-01 dry-run eligibility evaluator — same link set as
+# transaction_manager_certificate_fallback_test (the fixture family it copies).
+addtest(prune_eligibility_test
+    prune_eligibility_test.cpp
+)
+
+target_link_libraries(prune_eligibility_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(prune_eligibility_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(prune_eligibility_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(prune_eligibility_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+# Phase 18 (18-02): D-03 net-scoped dev-mint policy — same link set as
+# prune_eligibility_test (the registration block it copies verbatim).
+addtest(dev_mint_policy_test
+    dev_mint_policy_test.cpp
+)
+
+target_link_libraries(dev_mint_policy_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(dev_mint_policy_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(dev_mint_policy_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(dev_mint_policy_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(network_config_precedence_test
     network_config_precedence_test.cpp
 )
@@ -342,6 +390,79 @@ elseif(APPLE)
     target_link_options(payout_outputs_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 else()
     target_link_options(payout_outputs_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+# Phase 18 (18-06): TxPruner service suites — same link set as
+# prune_eligibility_test (the fixture family it copies).
+addtest(tx_pruner_test
+    tx_pruner_test.cpp
+)
+
+target_link_libraries(tx_pruner_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(tx_pruner_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(tx_pruner_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(tx_pruner_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+# Phase 19 (19-03): SC-5 AccountMessenger methods-wired serving test — same
+# link set as transaction_manager_certificate_fallback_test (the registration
+# block it copies).
+addtest(account_messenger_test
+    account_messenger_test.cpp
+)
+
+target_link_libraries(account_messenger_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(account_messenger_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(account_messenger_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(account_messenger_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+# Phase 19 (19-05): D-03 tri-state tx-lookup suites — same link set as
+# tx_pruner_test (the fixture family it copies).
+addtest(tx_lookup_tri_state_test
+    tx_lookup_tri_state_test.cpp
+)
+
+target_link_libraries(tx_lookup_tri_state_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(tx_lookup_tri_state_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(tx_lookup_tri_state_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(tx_lookup_tri_state_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"

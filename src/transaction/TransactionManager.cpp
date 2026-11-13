@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "transaction/TransactionManager.hpp"
+#include "transaction/PruneEligibility.hpp"
 #include "transaction/TransactionConsensusHandler.hpp"
 
 #include <algorithm>
@@ -25,6 +26,7 @@
 #include "account/MintTransactionV2.hpp"
 #include "account/MigrationTransaction.hpp"
 #include "account/MigrationInputValidator.hpp"
+#include "account/DevMintInputValidator.hpp"
 #include "account/RegistrationTransaction.hpp"
 #include "account/RevokeTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
@@ -48,6 +50,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransactionManager::Error, e )
     {
         case sgns::TransactionManager::Error::TRUST_POLICY_NOT_READY:
             return "TRUST_POLICY_NOT_READY";
+        case sgns::TransactionManager::Error::PRE_BROADCAST_VALIDATION:
+            return "PRE_BROADCAST_VALIDATION";
     }
     return "Unknown TransactionManager error";
 }
@@ -71,6 +75,7 @@ namespace sgns
         /// already-claimed chain id must not skip the other built-in.
         [[maybe_unused]] const bool kGeniusValidatorRegistered    = GeniusInputValidator::Register();
         [[maybe_unused]] const bool kMigrationValidatorRegistered = MigrationInputValidator::Register();
+        [[maybe_unused]] const bool kDevMintValidatorRegistered   = DevMintInputValidator::Register();
 
         using utxo_merkle::OutPointKey;
 
@@ -575,6 +580,52 @@ namespace sgns
                         break;
                     }
 
+                    // D-02 half 1: a typed pre-broadcast failure never published
+                    // anything (staged Puts die with the uncommitted
+                    // AtomicTransaction), so waiting for a nonce confirmation
+                    // that cannot arrive would wedge every later send (the
+                    // failed-send-wedges-tm-in-syncing incident). Roll back and
+                    // STAY READY; the FAILED transition releases the reserved
+                    // nonce, so the next send reuses it cleanly.
+                    if ( err == make_error_code( Error::PRE_BROADCAST_VALIDATION ) )
+                    {
+                        m_logger->warn( "Pre-broadcast validation failed for tx {} ({}). Rolling back, staying READY",
+                                        tx_queue_m.front().first.front().first->GetHash(),
+                                        err.message() );
+
+                        auto rollback_result = RollbackTransactions( tx_queue_m.front() );
+                        if ( rollback_result.has_error() )
+                        {
+                            // WR-03 (review): the failure is deterministic —
+                            // without a cap this re-fails every ~300ms forever.
+                            // Drop the batch after 3 consecutive rollback
+                            // failures (loudly) so the manager stays usable;
+                            // the nonce was already released by FAILED.
+                            static constexpr uint32_t kMaxRollbackFailures = 3;
+                            ++pre_broadcast_rollback_failures_;
+                            m_logger->error( "{} error, couldn't roll back pre-broadcast failure "
+                                             "(attempt {}/{}) - {}",
+                                             __func__,
+                                             pre_broadcast_rollback_failures_,
+                                             kMaxRollbackFailures,
+                                             pre_broadcast_rollback_failures_ >= kMaxRollbackFailures
+                                                 ? "dropping the batch"
+                                                 : "retrying" );
+                            if ( pre_broadcast_rollback_failures_ >= kMaxRollbackFailures )
+                            {
+                                pre_broadcast_rollback_failures_ = 0;
+                                tx_queue_m.pop_front();
+                            }
+                            break;
+                        }
+                        pre_broadcast_rollback_failures_ = 0;
+                        tx_queue_m.pop_front();
+                        break;
+                    }
+
+                    // D-02 half 2: record when SYNCING recovery started so
+                    // SyncNonce's bounded exit can measure the window.
+                    syncing_since_ = std::chrono::steady_clock::now();
                     ChangeState( State::SYNCING );
 
                     m_logger->error( "Error in SendTransactionItem: {}", err.message() );
@@ -1031,6 +1082,14 @@ namespace sgns
 
         // Capture input info for potential rollback (mint_inputs may be moved below)
         auto rollback_inputs = mint_inputs;
+        // The reservation id must be COPIED before the try block: the mint
+        // construction below moves transaction_hash into the DAG payload
+        // (FillDAGStruct's optional<string> parameter move-constructs the
+        // heap-backed hash string), so the catch path would otherwise roll
+        // back under an EMPTY id — RemoveBurnUTXOs reads a mismatched holder
+        // as "held by another" and silently skips the entry, leaving the
+        // dangling UTXO_BRIDGE record this cleanup exists to close.
+        const std::string burn_reservation_id = transaction_hash;
 
         auto txId = std::string{};
         try
@@ -1044,17 +1103,33 @@ namespace sgns
                                         destination ) );
 
             mint_transaction->MakeSignature( *account_m );
+            // TEST SEAM (CR-01 regression): fires AFTER transaction_hash was
+            // moved into the mint payload, deterministically driving the catch
+            // path (no natural throw site exists in this try). Throw from the
+            // hook to exercise the rollback.
+            if ( mint_funds_post_move_exception_hook_for_test_ )
+            {
+                mint_funds_post_move_exception_hook_for_test_();
+            }
             txId = mint_transaction->GetHash();
             EnqueueTransaction( std::make_pair( std::move( mint_transaction ), std::nullopt ) );
         }
         catch ( const std::exception &e )
         {
-            account_m->GetUTXOManager().RollbackUTXOs( rollback_inputs,
-                                                       transaction_hash,
-                                                       sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
+            // Same end state as the FAILED-transition cleanup: the inserted burn
+            // entry must not survive a mint that never enqueued (release-only
+            // rollback left the dangling UTXO_BRIDGE record the incident showed).
+            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( rollback_inputs, burn_reservation_id );
+                 removal.has_error() )
+            {
+                m_logger->error( "{}: MintFunds rollback failed to remove burn UTXO for tx_hash={}: {}",
+                                 __func__,
+                                 burn_reservation_id,
+                                 removal.error().message() );
+            }
             m_logger->error( "{}: MintFunds failed — rolled back reservation for tx_hash={}: {}",
                              __func__,
-                             transaction_hash,
+                             burn_reservation_id,
                              e.what() );
             return outcome::failure( std::errc::operation_canceled );
         }
@@ -1687,13 +1762,16 @@ namespace sgns
 
     std::string TransactionManager::GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const
     {
-        // Registration transactions persist at reg/{src_addr}, not tx/{hash}
-        // (SendTransactionItem routes them there), so a nonce chain that passes
-        // through a registration (e.g. RegisterChild then a mint) cannot resolve
-        // its predecessor through the tx/ namespace. Resolve the registration
-        // through its canonical slot certificate: the cert embeds the exact
-        // certified transaction hash, which binds the chain link the same way
-        // CertificateMatchesTransaction does for tx/-namespace predecessors.
+        // The canonical slot certificate is the value-independent authority for
+        // the predecessor hash. A tx/ value cannot always answer: registration
+        // transactions persist at reg/{src_addr}, never under tx/{hash}
+        // (SendTransactionItem routes them there), and a pruned frontier
+        // transaction's value is gone from tx/ entirely (GATE-04) -- while a
+        // certificate at /cert/<addr>:<nonce-1> is never pruned. The cert embeds
+        // the exact certified transaction hash, which binds the chain link the
+        // same way CertificateMatchesTransaction does. Any certified embedded
+        // transaction type resolves; every binding check below fails closed to
+        // "" (never a guessed hash).
         if ( nonce == 0 || !globaldb_m )
         {
             return "";
@@ -1717,7 +1795,7 @@ namespace sgns
         }
 
         auto embedded = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
-        if ( embedded.has_error() || !embedded.value() || embedded.value()->GetType() != "registration" )
+        if ( embedded.has_error() || !embedded.value() )
         {
             return "";
         }
@@ -2027,7 +2105,7 @@ namespace sgns
                                  transaction->GetHash(),
                                  preflight_embedded_tx.ByteSizeLong(),
                                  MAX_PUBSUB_TX_BYTES );
-                return outcome::failure( std::errc::message_size );
+                return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
             }
 
             if ( transaction->HasUTXOParameters() )
@@ -2038,7 +2116,7 @@ namespace sgns
                                      __func__,
                                      transaction->GetHash(),
                                      transaction->GetType() );
-                    return outcome::failure( std::errc::invalid_argument );
+                    return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
                 }
 
                 const auto &[preflight_chain, preflight_validator] = SelectInputValidator( *transaction );
@@ -2049,7 +2127,7 @@ namespace sgns
                                      __func__,
                                      transaction->GetHash(),
                                      transaction->GetType() );
-                    return outcome::failure( std::errc::invalid_argument );
+                    return outcome::failure( Error::PRE_BROADCAST_VALIDATION );
                 }
             }
         }
@@ -2622,7 +2700,43 @@ namespace sgns
                                             return utxo_mgr.GetOutPointState( output.GetTxID(), output.GetOutputIdx() )
                                                 .has_value();
                                         } );
+            // D-01 derived hazard: a checkpoint-mismatch clear preserves the
+            // CONSUMED evidence, so the legitimate spender's OWN rebuild replay
+            // finds its inputs consumed by itself while the outputs-present
+            // heuristic above can never pass (the clear just dropped every
+            // READY entry, its outputs included). Spend evidence naming THIS
+            // transaction as the spender of every consumed input is proof of
+            // idempotent replay: proceed and let the consume + produce below
+            // re-apply. Any other spender-of-record stays a genuine double
+            // spend and still rejects.
+            bool own_replay = false;
             if ( !replayed )
+            {
+                std::optional<base::Hash256> own_txid;
+                if ( auto parsed = base::Hash256::fromReadableString( transfer_tx->GetHash() ); parsed.has_value() )
+                {
+                    own_txid = parsed.value();
+                }
+                own_replay = own_txid.has_value() &&
+                             std::all_of( inputs.begin(),
+                                          inputs.end(),
+                                          [&]( const InputUTXOInfo &input )
+                                          {
+                                              if ( !utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ ) )
+                                              {
+                                                  return true;
+                                              }
+                                              auto spender = utxo_mgr.GetOutPointSpender( input.txid_hash_,
+                                                                                          input.output_idx_ );
+                                              return spender.has_value() && spender.value() == own_txid.value();
+                                          } );
+                if ( own_replay )
+                {
+                    m_logger->info( "Recognized own rebuild replay of transfer {} over preserved spend evidence",
+                                    transfer_tx->GetHash() );
+                }
+            }
+            if ( !own_replay && !replayed )
             {
                 m_logger->error( "Rejected double-spending transfer {}", transfer_tx->GetHash() );
                 return std::errc::invalid_argument;
@@ -2634,7 +2748,19 @@ namespace sgns
             m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
             m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
-        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs, TransferInputOwner( *transfer_tx ) ) );
+        auto transfer_txid = base::Hash256::fromReadableString( transfer_tx->GetHash() );
+        if ( transfer_txid.has_error() )
+        {
+            // WR-01: data_hash is raw dag bytes that migration seeds or
+            // corruption can leave malformed — fail closed through the
+            // outcome channel, never throw through the processing stack.
+            m_logger->error( "Transfer {} has malformed data_hash", transfer_tx->GetHash() );
+            return outcome::failure( transfer_txid.error() );
+        }
+        BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs,
+                                                  TransferInputOwner( *transfer_tx ),
+                                                  sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                  transfer_txid.value() ) );
         BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
         for ( const auto &dest_info : dest_infos )
         {
@@ -2653,8 +2779,18 @@ namespace sgns
 
             if ( !params.first.empty() )
             {
-                BOOST_OUTCOME_TRY(
-                    account_m->GetUTXOManager().ConsumeUTXOs( params.first, migration_tx->GetSrcAddress() ) );
+                // WR-01: checked decode — a malformed data_hash is an outcome
+                // failure, never a throw through the processing stack.
+                auto migration_txid = base::Hash256::fromReadableString( migration_tx->GetHash() );
+                if ( migration_txid.has_error() )
+                {
+                    m_logger->error( "Migration {} has malformed data_hash", migration_tx->GetHash() );
+                    return outcome::failure( migration_txid.error() );
+                }
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first,
+                                                                             migration_tx->GetSrcAddress(),
+                                                                             sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                             migration_txid.value() ) );
             }
 
             m_logger->info( "Created tokens (migration), amount {} balance {}",
@@ -2666,7 +2802,18 @@ namespace sgns
         if ( auto mint_tx_v2 = dynamic_cast<const MintTransactionV2 *>( &tx ) )
         {
             auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
-            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
+            // WR-01: checked decode — data_hash here is raw dag_st.data_hash(),
+            // which migration-seeded or corrupt records can leave malformed;
+            // surface that as an outcome failure, never std::invalid_argument
+            // through the processing stack. The decoded hash feeds every use
+            // below (replay check, consume, and produced UTXOs).
+            auto mint_v2_hash = base::Hash256::fromReadableString( mint_tx_v2->GetHash() );
+            if ( mint_v2_hash.has_error() )
+            {
+                m_logger->error( "Mint-v2 {} has malformed data_hash", mint_tx_v2->GetHash() );
+                return outcome::failure( mint_v2_hash.error() );
+            }
+            auto hash = mint_v2_hash.value();
 
             // Inputs BEFORE outputs, with two discriminators:
             //  - A genuinely-consumed burn input (CONSUMED with real, non-zero
@@ -2701,7 +2848,8 @@ namespace sgns
                         auto consumed,
                         account_m->GetUTXOManager().ConsumeUTXOs( inputs,
                                                                   mint_tx_v2->GetSrcAddress(),
-                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE ) );
+                                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE,
+                                                                  hash ) );
                     if ( !consumed )
                     {
                         m_logger->warn( "Mint-v2 {} did not consume every burn input (missing or mismatched "
@@ -2868,7 +3016,18 @@ namespace sgns
 
         if ( !params.first.empty() )
         {
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first, escrow_tx->GetSrcAddress() ) );
+            // WR-01: checked decode — a malformed data_hash is an outcome
+            // failure, never a throw through the processing stack.
+            auto escrow_txid = base::Hash256::fromReadableString( escrow_tx->GetHash() );
+            if ( escrow_txid.has_error() )
+            {
+                m_logger->error( "Escrow {} has malformed data_hash", escrow_tx->GetHash() );
+                return outcome::failure( escrow_txid.error() );
+            }
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first,
+                                                                         escrow_tx->GetSrcAddress(),
+                                                                         sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                         escrow_txid.value() ) );
         }
 
         return outcome::success();
@@ -3145,11 +3304,37 @@ namespace sgns
         return TransactionStatus::INVALID;
     }
 
+    std::atomic<uint8_t> TransactionManager::missing_tx_max_attempts_for_test_{ k_init_tx_request_max_attempts };
+
+    void TransactionManager::SetMissingTxMaxAttemptsForTest( uint8_t max_attempts )
+    {
+        missing_tx_max_attempts_for_test_.store( max_attempts );
+    }
+
+    uint8_t TransactionManager::GetMissingTxMaxAttemptsForTest()
+    {
+        return missing_tx_max_attempts_for_test_.load();
+    }
+
+    std::atomic<std::chrono::milliseconds::rep> TransactionManager::syncing_exit_timeout_for_test_{
+        k_syncing_exit_timeout.count() };
+
+    void TransactionManager::SetSyncingExitTimeoutForTest( std::chrono::milliseconds timeout )
+    {
+        syncing_exit_timeout_for_test_.store( timeout.count() );
+    }
+
+    std::chrono::milliseconds TransactionManager::GetSyncingExitTimeoutForTest()
+    {
+        return std::chrono::milliseconds( syncing_exit_timeout_for_test_.load() );
+    }
+
     void TransactionManager::InitializeUTXOs()
     {
         {
             std::lock_guard missing_lock( missing_tx_mutex_ );
             missing_tx_hashes_.clear();
+            missing_tx_attempts_.clear();
         }
         m_logger->debug( "Initializing UTXOs" );
 
@@ -3161,6 +3346,11 @@ namespace sgns
 
         bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
         auto monitored_networks = GetMonitoredNetworkIDs();
+
+        // Set when the checkpoint-mismatch clear below ran: only that path
+        // gap-fills a UTXO set that previously held spend evidence, so only it
+        // earns the post-rebuild crosscheck (D-01).
+        bool mismatch_rebuild = false;
 
         if ( has_local_utxos )
         {
@@ -3175,11 +3365,16 @@ namespace sgns
                 const auto local_root = account_m->GetUTXOManager().ComputeUTXOMerkleRoot( account_m->GetAddress() );
                 if ( local_root != checkpoint_result.value()->utxo_merkle_root )
                 {
-                    m_logger->warn(
-                        "Local UTXO root mismatch with checkpoint during init. Clearing local UTXOs and rebuilding" );
+                    m_logger->warn( "Local UTXO root mismatch with checkpoint during init. Clearing unspent UTXOs "
+                                    "and rebuilding (consumed spend evidence preserved)" );
 
-                    auto clear_result = account_m->GetUTXOManager().SetUTXOs( std::vector<GeniusUTXO>{},
-                                                                              account_m->GetAddress() );
+                    // D-01 (GATE-05 rebuild half): the clear must preserve
+                    // CONSUMED records — with their spent_by_txid evidence — so
+                    // PutUTXO's existing-entry duplicate check refuses
+                    // re-creation of spent outpoints during the rebuild below.
+                    // SetUTXOs' wipe-everything clear would drop that evidence
+                    // and open the double-spend window instead.
+                    auto clear_result = account_m->GetUTXOManager().ClearUnspentKeepConsumed( account_m->GetAddress() );
                     if ( clear_result.has_error() )
                     {
                         m_logger->error( "Failed to clear local UTXOs after checkpoint mismatch: {}",
@@ -3187,7 +3382,8 @@ namespace sgns
                     }
                     else
                     {
-                        has_local_utxos = false;
+                        has_local_utxos  = false;
+                        mismatch_rebuild = true;
                     }
                 }
             }
@@ -3197,6 +3393,12 @@ namespace sgns
         {
             m_logger->info( "No local or network UTXOs found, querying transactions to mount UTXOs" );
             QueryTransactions();
+            if ( mismatch_rebuild )
+            {
+                // D-01 belt: prove the rebuild left no spent outpoint
+                // spendable-ready before boot continues.
+                (void) CrosscheckRebuiltUtxos();
+            }
             return;
         }
 
@@ -3241,12 +3443,126 @@ namespace sgns
                     // Incomplete history for another account must not prevent this account from starting.
                     if ( !processed && address == account_m->GetAddress() )
                     {
-                        std::lock_guard missing_lock( missing_tx_mutex_ );
-                        missing_tx_hashes_.insert( tx_hash );
+                        // GATE-05 / D-01: a creating tx that was pruned locally
+                        // is not relevant missing history — the durable UTXO set
+                        // is authoritative and every recovery request for it is
+                        // doomed by construction. Consult the pruned-marker
+                        // evidence (PruneEligibility is the marker's one home)
+                        // BEFORE touching the missing set; only a clean PRUNED
+                        // verdict skips. Anything else — NOT_FOUND, the
+                        // value-present invariant violation, or a lookup error —
+                        // keeps the 18-landed bounded recovery path exactly
+                        // as-is (never guess).
+                        bool pruned_locally = false;
+                        auto pruned_lookup  = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+                        if ( pruned_lookup.has_error() )
+                        {
+                            m_logger->warn( "Pruned-marker lookup failed for missing creating tx {} ({}); "
+                                            "keeping bounded recovery",
+                                            tx_hash,
+                                            pruned_lookup.error().message() );
+                        }
+                        else if ( pruned_lookup.value().first == PrunedLookup::PRUNED )
+                        {
+                            m_logger->info( "Creating tx {} pruned locally; UTXO set is authoritative - "
+                                            "not relevant, skipping recovery request",
+                                            tx_hash );
+                            pruned_locally = true;
+                        }
+                        else if ( pruned_lookup.value().first == PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
+                        {
+                            m_logger->warn( "Pruned-marker invariant violation for missing creating tx {} "
+                                            "(marker AND value both present); keeping bounded recovery",
+                                            tx_hash );
+                        }
+                        if ( !pruned_locally )
+                        {
+                            std::lock_guard missing_lock( missing_tx_mutex_ );
+                            missing_tx_hashes_.insert( tx_hash );
+                        }
                     }
                 }
             }
         }
+    }
+
+    size_t TransactionManager::CrosscheckRebuiltUtxos()
+    {
+        // D-01 belt-and-suspenders: by construction the preserved CONSUMED
+        // entries make PutUTXO's existing-entry duplicate check refuse
+        // re-creation of spent outpoints, so a healthy mismatch rebuild
+        // gap-fills only genuinely unspent outputs and this pass finds
+        // nothing. It exists for the paths construction cannot see — a
+        // divergence between the in-memory registry and the durable /utxo/
+        // record (e.g. one corrupted record) must never leave a spent outpoint
+        // spendable-ready. Every rebuilt READY outpoint of this account is
+        // checked against its DURABLE record through the UTXOManager's own
+        // accessors (a READY registry entry can never carry its spender — only
+        // the persisted record can still name one); a consumed record reverts
+        // the outpoint through the owner's consume path. Errors are logged and
+        // skipped, never swallowed into success.
+        auto      &utxo_mgr = account_m->GetUTXOManager();
+        const auto address  = account_m->GetAddress();
+        size_t     reverted = 0;
+        const auto utxo_map = utxo_mgr.GetAllUTXOs();
+        for ( const auto &[utxo_address, utxo_data_vector] : utxo_map )
+        {
+            if ( utxo_address != address )
+            {
+                continue;
+            }
+            for ( const auto &[utxo_state, utxo] : utxo_data_vector )
+            {
+                if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                auto evidence = utxo_mgr.ReadDurableSpendEvidence( utxo.GetTxID(), utxo.GetOutputIdx(), utxo_address );
+                if ( evidence.has_error() )
+                {
+                    m_logger->warn( "Rebuild crosscheck: durable spend-evidence read failed for outpoint {}:{} "
+                                    "({}); leaving the outpoint untouched",
+                                    utxo.GetTxID().toReadableString(),
+                                    utxo.GetOutputIdx(),
+                                    evidence.error().message() );
+                    continue;
+                }
+                if ( !evidence.value().has_value() || !evidence.value().value().consumed )
+                {
+                    continue;
+                }
+                const auto &record = evidence.value().value();
+                m_logger->warn(
+                    "Rebuild crosscheck: outpoint {}:{} has durable consume evidence ({} spender {}) - "
+                    "reverting to consumed",
+                    utxo.GetTxID().toReadableString(),
+                    utxo.GetOutputIdx(),
+                    record.genuine ? "genuine" : "tombstone",
+                    record.spender.has_value() ? record.spender.value().toReadableString() : std::string( "unknown" ) );
+                auto consume_result = utxo_mgr.ConsumeUTXOs( { { utxo.GetTxID(), utxo.GetOutputIdx(), {} } },
+                                                             utxo_address,
+                                                             UTXOManager::UTXOType::UTXO_NORMAL,
+                                                             record.spender );
+                if ( consume_result.has_error() )
+                {
+                    m_logger->error( "Rebuild crosscheck: failed to revert outpoint {}:{} to consumed: {}",
+                                     utxo.GetTxID().toReadableString(),
+                                     utxo.GetOutputIdx(),
+                                     consume_result.error().message() );
+                    continue;
+                }
+                ++reverted;
+            }
+        }
+        if ( reverted > 0 )
+        {
+            m_logger->warn( "Rebuild crosscheck reverted {} resurrected outpoint(s) to consumed", reverted );
+        }
+        else
+        {
+            m_logger->debug( "Rebuild crosscheck found no resurrected outpoints" );
+        }
+        return reverted;
     }
 
     void TransactionManager::InitTransactions()
@@ -3272,10 +3588,17 @@ namespace sgns
             return;
         }
 
-        // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
-        return;
-
-        m_logger->info( "Missing {} transactions during init", missing_count );
+        // GATE-05 (live incidents 2026-10-20/22): a missing or unresolvable
+        // creating transaction must NOT block boot. The durable UTXO set is
+        // authoritative; the creating tx is auxiliary witness material. The
+        // state transition above runs identically with or without missing
+        // hashes, and the recovery below is bounded background work: hashes
+        // that never resolve are dropped after the attempt budget so
+        // HasMissingTxHashes() cannot wedge readiness (or the TxPruner tick)
+        // forever. This path writes no UTXO state — a tx that arrives later
+        // is still processed and erased from the missing set by the regular
+        // CRDT arrival path, and nothing spent is ever resurrected.
+        m_logger->info( "Missing {} transactions during init (proceeding; bounded recovery)", missing_count );
 
         auto now = std::chrono::steady_clock::now();
         if ( last_init_tx_request_time_ != std::chrono::steady_clock::time_point{} &&
@@ -3289,8 +3612,31 @@ namespace sgns
         const auto request_timeout = k_init_tx_request_cooldown_ms;
         for ( const auto &tx_hash : missing_tx_hashes_copy )
         {
-            m_logger->debug( "Requesting transaction with hash {} (this: {})",
+            uint8_t attempts = 0;
+            {
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                attempts = missing_tx_attempts_[tx_hash];
+            }
+            if ( attempts >= GetMissingTxMaxAttemptsForTest() )
+            {
+                m_logger->warn( "Dropping unresolvable creating transaction {} after {} recovery attempts "
+                                "(fabricated reference, pruned elsewhere, or corrupt history); "
+                                "UTXO set remains authoritative",
+                                tx_hash,
+                                attempts );
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                missing_tx_hashes_.erase( tx_hash );
+                missing_tx_attempts_.erase( tx_hash );
+                continue;
+            }
+            {
+                std::lock_guard missing_lock( missing_tx_mutex_ );
+                ++missing_tx_attempts_[tx_hash];
+            }
+            m_logger->debug( "Requesting transaction with hash {} (attempt {}/{}, this: {})",
                              tx_hash,
+                             attempts + 1,
+                             GetMissingTxMaxAttemptsForTest(),
                              reinterpret_cast<uint64_t>( this ) );
             auto request_result = account_m->RequestTransaction( request_timeout, tx_hash );
             if ( request_result.has_error() )
@@ -3368,6 +3714,47 @@ namespace sgns
 
     void TransactionManager::SyncNonce()
     {
+        // D-02 half 2: bounded SYNCING exit. When nothing advances the
+        // confirmed nonce within the window, fall back to the last DURABLE
+        // confirmed nonce and return READY — the wedge class where a failed
+        // (or never-published) send left the manager spinning with every later
+        // send rejected. Held reservations are deliberately untouched:
+        // GetNextNonceLocked skips pending nonces, so the next send queues
+        // behind anything still in flight (no nonce collision).
+        if ( syncing_since_.has_value() )
+        {
+            const auto window  = std::chrono::milliseconds( syncing_exit_timeout_for_test_.load() );
+            const auto elapsed = std::chrono::steady_clock::now() - syncing_since_.value();
+            if ( elapsed > window )
+            {
+                // WR-02 (review): the bounded exit exists for the WEDGE class —
+                // a failed send left nothing confirmable to wait for. It must
+                // NOT fire while the local nonce is genuinely BEHIND the
+                // network (the gap branch below forbids proposing until caught
+                // up), or the next send could publish into a network-consumed
+                // nonce. Only exit when not behind.
+                const auto proposed_behind = account_m->GetProposedNonce() != UINT64_MAX &&
+                                             account_m->GetLocalConfirmedNonce().has_value() &&
+                                             account_m->GetProposedNonce() <
+                                                 account_m->GetLocalConfirmedNonce().value() + 1;
+                if ( !proposed_behind )
+                {
+                    const auto durable_nonce = account_m->GetLocalConfirmedNonce();
+                    m_logger->warn(
+                        "SYNCING exit: no confirming nonce advance within {} ms - last durable "
+                        "confirmed nonce {}, not behind - returning to READY",
+                        window.count(),
+                        durable_nonce.has_value() ? std::to_string( durable_nonce.value() ) : std::string( "none" ) );
+                    syncing_since_.reset();
+                    ChangeState( State::READY );
+                    return;
+                }
+                m_logger->warn( "SYNCING window elapsed but local nonce is behind - staying in SYNCING to catch up "
+                                "(gap recovery, not the failed-send wedge)" );
+                syncing_since_.reset(); // re-arm so the check can fire once caught up
+            }
+        }
+
         m_logger->debug( "Checking if my nonce is updated" );
 
         auto     nonce_result    = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT );
@@ -3396,6 +3783,9 @@ namespace sgns
             //Either my old txs are outdated or
             //The responder has not updated yet
             m_logger->debug( "Network nonce updated: {}", expected_next_nonce );
+            // D-02: the sync resolved normally — no stale window timestamp may
+            // survive into a later SYNCING pass.
+            syncing_since_.reset();
             ChangeState( State::READY );
         }
         else if ( proposed_nonce > expected_next_nonce )
@@ -3610,6 +4000,99 @@ namespace sgns
         }
 
         return std::optional<std::shared_ptr<GeniusTransaction>>{};
+    }
+
+    outcome::result<TransactionLookupResult> TransactionManager::LookupTransaction( const std::string &tx_hash ) const
+    {
+        if ( !globaldb_m )
+        {
+            m_logger->error( "{}: GlobalDB unavailable, cannot look up tx {}", __func__, tx_hash );
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        // D-03 / Pitfall 8: probe the VALUE first (both found-sources), THEN
+        // the marker. The Phase-16 one-batch value-XOR-marker invariant makes
+        // this order safe: a value present now cannot become marker-only
+        // without the erase batch having committed, so a value hit is
+        // authoritative regardless of marker state.
+        std::shared_ptr<GeniusTransaction> tx;
+        {
+            const std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+            tx = GetTransactionByHashNoLock( tx_hash );
+        }
+
+        if ( !tx )
+        {
+            // Found-source 2: the exact-hash CRDT probe across monitored
+            // networks. A hard error propagates — never downgraded to
+            // not-found.
+            auto crdt_tx = FetchExactTransactionFromCRDT( tx_hash );
+            if ( crdt_tx.has_error() )
+            {
+                m_logger->error( "{}: CRDT probe failed for tx {}: {}", __func__, tx_hash, crdt_tx.error().message() );
+                return outcome::failure( crdt_tx.error() );
+            }
+            tx = crdt_tx.value().value_or( nullptr );
+        }
+
+        // A found VALUE outranks any marker: FOUND regardless of marker
+        // state. The marker consult exists only to detect and loudly report
+        // the value-plus-marker invariant violation (the 17 contract) — it
+        // never changes which payload is returned.
+        if ( tx )
+        {
+            TransactionLookupResult result;
+            result.verdict    = PrunedLookup::NOT_FOUND;
+            result.tx         = tx;
+            auto pruned_entry = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+            if ( pruned_entry.has_error() )
+            {
+                m_logger->warn( "{}: pruned-marker consult failed for found tx {} ({}); verdict stays FOUND",
+                                __func__,
+                                tx_hash,
+                                pruned_entry.error().message() );
+            }
+            else if ( pruned_entry.value().first != PrunedLookup::NOT_FOUND )
+            {
+                result.verdict = PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION;
+                m_logger->error( "{}: pruned marker present while the value of tx {} was found — "
+                                 "value-XOR-marker invariant violation (reporting, never guessing)",
+                                 __func__,
+                                 tx_hash );
+            }
+            return result;
+        }
+
+        // All found-sources missed: the pruned marker is the authority that
+        // separates PRUNED from plain not-found.
+        auto pruned_entry = PruneEligibility::LookupPrunedEntry( *globaldb_m, tx_hash );
+        if ( pruned_entry.has_error() )
+        {
+            m_logger->error( "{}: pruned-marker lookup failed for tx {}: {}",
+                             __func__,
+                             tx_hash,
+                             pruned_entry.error().message() );
+            return outcome::failure( pruned_entry.error() );
+        }
+
+        TransactionLookupResult result;
+        result.verdict = pruned_entry.value().first;
+        result.record  = pruned_entry.value().second;
+        switch ( result.verdict )
+        {
+            case PrunedLookup::PRUNED:
+                m_logger->info( "{}: tx {} pruned locally - history pruned", __func__, tx_hash );
+                break;
+            case PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION:
+                m_logger->error( "{}: pruned marker for tx {} claims a value the found-sources cannot see — "
+                                 "invariant violation (reporting, never guessing)",
+                                 __func__,
+                                 tx_hash );
+                break;
+            case PrunedLookup::NOT_FOUND:
+                break;
+        }
+        return result;
     }
 
     outcome::result<std::vector<RegistrationDiscoveryEntry>> TransactionManager::GetRegistrationsForMain(
@@ -4209,6 +4692,88 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> TransactionManager::RemoveProcessedTransactionEntry( const std::string &tx_key )
+    {
+        std::unique_lock tx_lock( tx_mutex_m );
+        auto             it = tx_processed_m.find( tx_key );
+        if ( it != tx_processed_m.end() )
+        {
+            tx_processed_m.erase( it );
+            m_logger->debug( "Erased processed-transaction entry: {}", tx_key );
+        }
+        else
+        {
+            // A pruned key with no tracked entry is a legitimate no-op.
+            m_logger->debug( "Processed-transaction entry not found: {}", tx_key );
+        }
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::EraseTransactionEntryWithMarker( const std::string &tx_hash,
+                                                                               bool               stage_pruned_marker )
+    {
+        if ( !globaldb_m )
+        {
+            m_logger->error( "GlobalDB unavailable, cannot erase entry for tx {}", tx_hash );
+            return outcome::failure( std::errc::bad_file_descriptor );
+        }
+
+        // Resolve the CID the tx->CID map holds for this hash TOGETHER with
+        // the key it was found under: the map spans every monitored network,
+        // so the entry can live under a non-local network's path. Path and
+        // CID always come from the SAME network -- pairing a local-network
+        // path with another network's CID would erase mismatched keys (block
+        // bytes gone while the real network's CRDT entries and raw map entry
+        // survive: the asymmetric partial erase this lifecycle forbids).
+        // An untracked tx cannot be erased through this lifecycle.
+        BOOST_OUTCOME_TRY( auto path_and_cid, ResolveTransactionPathAndCID( tx_hash ) );
+        const auto &path = path_and_cid.first;
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( path_and_cid.second ) );
+
+        // The marker pair is built HERE — AFTER resolution — from the SAME
+        // path the erase below targets. Building it from the hash alone would
+        // format the LOCAL network's path even when the entry resolves under
+        // another monitored network, persisting a record whose tx_path names
+        // a key that never existed (WR-02: the lookup's value-presence probe
+        // would then read a vacuously absent path and the invariant detector
+        // could never fire for such markers).
+        std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> extra_entry;
+        if ( stage_pruned_marker )
+        {
+            extra_entry = PruneEligibility::BuildPruneMarkerEntry( tx_hash, path );
+        }
+
+        // Atomic two-level erase + map-entry delete in one WriteBatch; the
+        // staged extra entry (the pruned driver's marker pair) joins the SAME
+        // batch, so value XOR marker holds atomically.
+        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid, extra_entry ) );
+
+        // Revert-free tracked-map cleanup after the committed erase, keyed on
+        // the SAME path that was erased; the entry is memory-only
+        // bookkeeping, and a sweep re-runs this driver.
+        if ( auto cleanup = RemoveProcessedTransactionEntry( path ); cleanup.has_error() )
+        {
+            m_logger->warn( "Tracked-map cleanup failed for tx {}: {}", tx_hash, cleanup.error().message() );
+        }
+
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::EraseTransactionEntry( const std::string &tx_hash )
+    {
+        // The plain driver: no staged marker (existing behavior,
+        // byte-identical).
+        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/false );
+    }
+
+    outcome::result<void> TransactionManager::EraseTransactionEntryPruned( const std::string &tx_hash )
+    {
+        // The production driver: the marker pair (built by its one home,
+        // PruneEligibility, from the RESOLVED path inside the shared helper)
+        // joins the erase WriteBatch.
+        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/true );
+    }
+
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(
         crdt::CRDTCallbackManager::NewDataPair new_data )
     {
@@ -4432,6 +4997,13 @@ namespace sgns
 
     outcome::result<std::string> TransactionManager::GetTransactionCID( const std::string &tx_hash ) const
     {
+        BOOST_OUTCOME_TRY( auto path_and_cid, ResolveTransactionPathAndCID( tx_hash ) );
+        return path_and_cid.second;
+    }
+
+    outcome::result<std::pair<std::string, std::string>> TransactionManager::ResolveTransactionPathAndCID(
+        const std::string &tx_hash ) const
+    {
         auto datastore = globaldb_m->GetDataStore();
         if ( !datastore )
         {
@@ -4450,7 +5022,11 @@ namespace sgns
             auto value_res = datastore->get( key_buffer );
             if ( value_res.has_value() )
             {
-                return std::string( value_res.value().toString() );
+                // The key travels with the CID so the caller addresses the
+                // SAME entry the CID was resolved from -- mixing a CID from
+                // one network with a path from another erases mismatched
+                // keys (asymmetric partial erase).
+                return std::make_pair( key, std::string( value_res.value().toString() ) );
             }
         }
 
@@ -4613,6 +5189,11 @@ namespace sgns
     void TransactionManager::SetFetchAndProcessBeforeStateChangeHookForTest( std::function<void()> hook )
     {
         fetch_and_process_before_state_change_hook_for_test_ = std::move( hook );
+    }
+
+    void TransactionManager::SetMintFundsPostMoveExceptionHookForTest( std::function<void()> hook )
+    {
+        mint_funds_post_move_exception_hook_for_test_ = std::move( hook );
     }
 
     outcome::result<void> TransactionManager::PersistBridgeExecutedMarker( const MintTransactionV2 &mint_tx )
@@ -4824,6 +5405,7 @@ namespace sgns
                     {
                         std::lock_guard missing_lock( missing_tx_mutex_ );
                         missing_tx_hashes_.erase( tx->GetHash() );
+                        missing_tx_attempts_.erase( tx->GetHash() );
                     }
                     break;
                 }
@@ -4886,6 +5468,7 @@ namespace sgns
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
+                    missing_tx_attempts_.erase( tx->GetHash() );
                 }
                 break;
             }
@@ -4945,9 +5528,23 @@ namespace sgns
                     {
                         if ( tx->GetType() == "mint-v2" )
                         {
-                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
-                                                                       tx->dag_st.uncle_hash(),
-                                                                       UTXOManager::UTXOType::UTXO_BRIDGE );
+                            // Releasing the reservation alone left the MintFunds-inserted
+                            // burn entry READY in memory and on disk — the 2026-10-20
+                            // incident's dangling UTXO_BRIDGE that wedged the next boot.
+                            // RemoveBurnUTXOs releases the reservation AND erases the
+                            // inserted entry (idempotent; CONSUMED entries untouched). A
+                            // store hiccup must not block the FAILED marking: log and stay
+                            // failed — the next FAILED re-fire dedups above, so the leak
+                            // then matches the pre-fix release-only behavior.
+                            if ( auto removal = account_m->GetUTXOManager().RemoveBurnUTXOs( params_opt->first,
+                                                                                             tx->dag_st.uncle_hash() );
+                                 removal.has_error() )
+                            {
+                                m_logger->error( "{}: Failed to remove burn UTXO for failed mint tx={}: {}",
+                                                 FUNC,
+                                                 tx->GetHash(),
+                                                 removal.error().message() );
+                            }
                         }
                         else
                         {
@@ -4956,14 +5553,6 @@ namespace sgns
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
-
-                // Clear bridge mint reservation on failure
-                if ( tx->GetType() == "mint-v2" )
-                {
-                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    // UTXO consumed automatically via ParseMintTransactionV2's ConsumeUTXOs
-                    (void) mint_tx;
-                }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );
@@ -4975,6 +5564,7 @@ namespace sgns
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
+                    missing_tx_attempts_.erase( tx->GetHash() );
                 }
             }
 

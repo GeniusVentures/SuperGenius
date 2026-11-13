@@ -185,6 +185,13 @@ namespace sgns
         [[nodiscard]] std::string GetAddress() const;
 
         /**
+         * @brief       Get the account's processing payout destination: the stored payout
+         *              address when one is saved, otherwise the account's own address.
+         * @return      The payout address, or the storage error.
+         */
+        [[nodiscard]] outcome::result<std::string> GetPayoutAddress();
+
+        /**
          * @brief       Get the account's token
          * @return      The token of the account
          */
