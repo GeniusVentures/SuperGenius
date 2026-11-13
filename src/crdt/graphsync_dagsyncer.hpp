@@ -93,6 +93,9 @@ namespace sgns::crdt
 
         void AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> address );
 
+        /// Copies every parent route to the child, preserving its existing peer order.
+        void InheritRoutes( const CID &parent, const CID &child ) override;
+
         // DAGService interface implementation
         outcome::result<void> addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node ) override;
 
@@ -152,8 +155,12 @@ namespace sgns::crdt
 
         outcome::result<bool> HasBlock( const CID &cid ) const override;
 
+        outcome::result<bool> HasStoredBlock( const CID &cid ) const override;
+
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
             const CID &cid ) const override;
+
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetStoredNode( const CID &cid ) const override;
 
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
 

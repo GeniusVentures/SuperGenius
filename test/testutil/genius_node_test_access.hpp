@@ -2,6 +2,7 @@
 #define SGNS_TESTUTIL_GENIUS_NODE_TEST_ACCESS_HPP
 
 #include <chrono>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -22,6 +23,22 @@ namespace sgns
     class GeniusNodeTestAccess
     {
     public:
+        struct BootstrapWalkSettings
+        {
+            bool        enabled{ false };
+            std::size_t max_blocks{ 0 };
+            std::size_t max_retries{ 0 };
+        };
+
+        /// Snapshot of the recovery settings actually loaded from sgns_config.json.
+        static BootstrapWalkSettings BootstrapWalkSettingsOf( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? BootstrapWalkSettings{ node->force_bootstrap_walk_,
+                                                 node->bootstrap_walk_max_blocks_,
+                                                 node->bootstrap_walk_max_retries_ }
+                        : BootstrapWalkSettings{};
+        }
+
         /// Resolved value of the "bootstrap_background_multiplier" network_config.json key.
         /// There is no public getter because the value has no runtime consumer today (see the
         /// note on the test that uses this), so a test accessor is the only way to observe it.
@@ -76,6 +93,29 @@ namespace sgns
             const std::shared_ptr<GeniusNode> &node )
         {
             return node && node->tx_globaldb_ ? node->tx_globaldb_->GetBroadcaster() : nullptr;
+        }
+
+        /// Returns the transaction database before a TransactionManager exists, so
+        /// startup tests can verify replication while blockchain genesis is pending.
+        static std::shared_ptr<sgns::crdt::GlobalDB> TransactionDatabaseOf( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->tx_globaldb_ : nullptr;
+        }
+
+        /// Returns the configured processing topic, including any private-network scope.
+        static std::string ProcessingTopicOf( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->ScopedProcessingChannel() : std::string{};
+        }
+
+        /// Requests the production bootstrap recovery continuation after a
+        /// deliberately deferred walk, including while the node is READY.
+        static void RequestBootstrapWalk( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( node )
+            {
+                node->RequestBootstrapWalk();
+            }
         }
 
         /// Drives the REAL destruction teardown route (ShutdownForDestruction is

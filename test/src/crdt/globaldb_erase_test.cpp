@@ -17,7 +17,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/dll.hpp>
 #include <boost/asio/io_context.hpp>
+#include <atomic>
 #include <chrono>
+#include <iterator>
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <thread>
@@ -620,6 +622,137 @@ protected:
     }
 };
 
+TEST_F( GlobalDBEraseRedeliveryTest, ForcedWalkAfterReopenRecoversAncestryThroughRetainedSealedHeads )
+{
+    const std::string   processing_topic = "restart_repair_processing";
+    const std::string   trust_topic      = "restart_repair_trust";
+    std::atomic<size_t> reopened_announcements{ 0 };
+    auto                test_nodes = std::make_unique<EraseNodeCollection>();
+    test_nodes->addNode( "forced_walk_reopen_source" );
+    test_nodes->addNode( "forced_walk_reopen_receiver" );
+    ASSERT_EQ( test_nodes->getNodes().size(), 2U );
+    auto &nodes  = test_nodes->getNodes();
+    auto &source = *nodes.at( 0 ).db;
+    source.AddTopicName( processing_topic );
+    source.AddTopicName( trust_topic );
+    nodes.at( 1 ).db->AddListenTopic( processing_topic );
+    test_nodes->connectNodes( 0, 1 );
+    ASSERT_WAIT_FOR_CONDITION( [&]
+                               { return nodes.at( 0 ).pubsub->getPeerCount( fullTopicName( processing_topic ) ) >= 1; },
+                               WAIT_TIMEOUT,
+                               "source learned the receiver's processing subscription",
+                               nullptr );
+
+    // No global broadcast topics: this trust-only ancestor must never be
+    // announced independently on the receiver's processing subscription.
+    const auto parent = SeedEntryOn( source, "/restart-repair/parent", "trust ancestry", { trust_topic } );
+    const auto middle = SeedEntryOn( source,
+                                     "/restart-repair/middle",
+                                     "retained middle",
+                                     { processing_topic, trust_topic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&] { return entryApplied( *nodes.at( 1 ).db, middle ) && rawSealKeyPresent( *nodes.at( 1 ).db, middle.cid ); },
+        WAIT_TIMEOUT,
+        "first shared head was applied and sealed without trust-topic ancestry",
+        nullptr );
+    const auto root = SeedEntryOn( source, "/restart-repair/root", "retained root", { processing_topic, trust_topic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            const auto status = nodes.at( 1 ).db->GetCIDJobStatus( root.cid );
+            return entryApplied( *nodes.at( 1 ).db, root ) && rawSealKeyPresent( *nodes.at( 1 ).db, root.cid ) &&
+                   headListContains( *nodes.at( 1 ).db, root.cid ) && status.has_value() &&
+                   status.value() == sgns::crdt::CrdtDatastore::JobStatus::COMPLETED &&
+                   !nodes.at( 1 ).db->GetCRDTDataStore()->IsRootCIDPendingOrActive( root.cid );
+        },
+        WAIT_TIMEOUT,
+        "second shared head retained the omitted ancestry behind two seals",
+        nullptr );
+    ASSERT_FALSE( entryApplied( *nodes.at( 1 ).db, parent ) );
+    ASSERT_TRUE( nodes.at( 1 ).db->GetRaw( blockKeyOf( parent.cid ) ).has_error() );
+    const auto heads_before = nodes.at( 1 ).db->GetCRDTHeadList();
+    ASSERT_TRUE( heads_before.has_value() );
+    const auto original_path     = nodes.at( 1 ).basePath;
+    const auto original_identity = nodes.at( 1 ).pubsub->GetHost()->getId();
+
+    test_nodes->restartNodePendingStart( 1 );
+    ASSERT_TRUE( nodes.at( 1 ).db );
+    auto &reopened = *nodes.at( 1 ).db;
+    EXPECT_EQ( nodes.at( 1 ).basePath, original_path );
+    EXPECT_EQ( nodes.at( 1 ).pubsub->GetHost()->getId(), original_identity );
+    ASSERT_TRUE( entryApplied( reopened, middle ) );
+    ASSERT_TRUE( entryApplied( reopened, root ) );
+    ASSERT_TRUE( rawSealKeyPresent( reopened, middle.cid ) );
+    ASSERT_TRUE( rawSealKeyPresent( reopened, root.cid ) );
+    ASSERT_FALSE( entryApplied( reopened, parent ) );
+    ASSERT_TRUE( reopened.GetRaw( blockKeyOf( parent.cid ) ).has_error() );
+    const auto reopened_heads = reopened.GetCRDTHeadList();
+    ASSERT_TRUE( reopened_heads.has_value() );
+    EXPECT_EQ( reopened_heads.value(), heads_before.value() );
+    reopened.AddListenTopic( processing_topic );
+    reopened.AddTopicName( trust_topic );
+    auto announcement_observer = nodes.at( 1 )
+                                     .pubsub
+                                     ->Subscribe(
+                                         fullTopicName( processing_topic ),
+                                         [&, source_identity = nodes.at( 0 ).pubsub->GetHost()->getId().toVector()](
+                                             boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
+                                         {
+                                             if ( message && message->from == source_identity )
+                                             {
+                                                 ++reopened_announcements;
+                                             }
+                                         } )
+                                     .get();
+    ASSERT_TRUE( announcement_observer );
+    test_nodes->connectNodes( 1, 0 );
+    ASSERT_WAIT_FOR_CONDITION( [&]
+                               { return nodes.at( 0 ).pubsub->getPeerCount( fullTopicName( processing_topic ) ) >= 1; },
+                               WAIT_TIMEOUT,
+                               "source learned the reopened receiver's processing subscription",
+                               nullptr );
+    reopened.Start();
+    const auto announcement_baseline = reopened_announcements.load();
+    // This advertises only the existing head, not the missing parent. After
+    // reopening, its route must survive the known-block deduplication path.
+    ASSERT_TRUE( source.RequestHeadBroadcast( { processing_topic } ).has_value() );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return reopened_announcements.load() > announcement_baseline; },
+                               WAIT_TIMEOUT,
+                               "reopened receiver heard a fresh retained-head announcement",
+                               nullptr );
+    ASSERT_TRUE(
+        reopened.RegisterElementFilter( "^/?restart-repair/parent$",
+                                        []( const sgns::crdt::CrdtDatastore::Element & )
+                                        { return sgns::crdt::CRDTDataFilter::ElementFilterResult::Accept(); } ) );
+    ASSERT_TRUE( reopened
+                     .RequestForcedWalk(
+                         { trust_topic },
+                         []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+                         32U )
+                     .has_value() );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            const auto state = reopened.GetForcedWalkStatus().state;
+            return state == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed ||
+                   state == sgns::crdt::CrdtDatastore::ForcedWalkState::Incomplete;
+        },
+        WAIT_TIMEOUT,
+        "reopened database completed its bounded forced ancestry walk",
+        nullptr );
+    const auto repaired = reopened.GetForcedWalkStatus();
+    EXPECT_EQ( repaired.state, sgns::crdt::CrdtDatastore::ForcedWalkState::Completed );
+    EXPECT_GT( repaired.fetched, 0U );
+    EXPECT_GT( repaired.restored, 0U );
+    EXPECT_TRUE( entryApplied( reopened, parent ) );
+    EXPECT_TRUE( reopened.GetRaw( blockKeyOf( parent.cid ) ).has_value() );
+    EXPECT_TRUE( rawSealKeyPresent( reopened, middle.cid ) );
+    EXPECT_TRUE( rawSealKeyPresent( reopened, root.cid ) );
+    const auto heads_after = reopened.GetCRDTHeadList();
+    ASSERT_TRUE( heads_after.has_value() );
+    EXPECT_EQ( heads_after.value(), heads_before.value() );
+}
+
 /// Case 1 -- peer head re-broadcast of a pruned root: A's explicit head
 /// broadcast re-delivers the pruned root CID to B on the topic B has been
 /// subscribed to all along; the guard makes it terminal (zero fetch
@@ -918,6 +1051,53 @@ protected:
         return std::static_pointer_cast<sgns::crdt::GraphsyncDAGSyncer>( db.GetBroadcaster()->GetDagSyncer() );
     }
 };
+
+TEST_F( GlobalDBEraseRefusalFailoverTest, InheritedRoutesKeepExistingPeerAndAllFallbackPeers )
+{
+    const std::string topic{ std::begin( kTopic ), std::prev( std::end( kTopic ) ) };
+    auto              test_nodes = std::make_unique<EraseNodeCollection>();
+    test_nodes->addNode( "route_inheritance_requester" );
+    test_nodes->addNode( "route_inheritance_existing" );
+    test_nodes->addNode( "route_inheritance_refusing" );
+    test_nodes->addNode( "route_inheritance_serving" );
+    ASSERT_EQ( test_nodes->getNodes().size(), 4U );
+
+    auto &nodes     = test_nodes->getNodes();
+    auto &requester = *nodes.at( 0 ).db;
+    auto &existing  = *nodes.at( 1 ).db;
+    auto &serving   = *nodes.at( 3 ).db;
+    auto &syncer    = *syncerOf( requester );
+    ASSERT_TRUE( existing.AddBroadcastTopic( topic ).has_value() );
+    ASSERT_TRUE( serving.AddBroadcastTopic( topic ).has_value() );
+    const auto inherited_entry = SeedEntryOn( serving, "/routes/inherited", "all parent peers", { topic } );
+    const auto existing_entry  = SeedEntryOn( existing, "/routes/existing", "keep original peer", { topic } );
+    // The requester joins no topic: only the explicitly inherited routes can
+    // make the first child available. Its first inherited peer has no block.
+    const auto parent = makeUnseenCid( std::vector<uint8_t>( 32, 0x77 ) );
+    for ( const auto index : { 2U, 3U } )
+    {
+        const auto address = libp2p::multi::Multiaddress::create( nodes.at( index ).pubsub->GetInterfaceAddress() );
+        ASSERT_TRUE( address.has_value() );
+        syncer.AddRoute( parent, nodes.at( index ).pubsub->GetHost()->getId(), { address.value() } );
+    }
+    syncer.InheritRoutes( parent, inherited_entry.cid );
+    syncer.InheritRoutes( parent, inherited_entry.cid );
+    const auto inherited_node = syncer.getNode( inherited_entry.cid );
+    ASSERT_TRUE( inherited_node.has_value() ) << inherited_node.error().message();
+    EXPECT_EQ( inherited_node.value()->getCID(), inherited_entry.cid );
+
+    // Neither parent peer has this second block. Its independent child route
+    // must survive inheritance, including a subsequent parent with no routes.
+    const auto existing_address = libp2p::multi::Multiaddress::create( nodes.at( 1 ).pubsub->GetInterfaceAddress() );
+    ASSERT_TRUE( existing_address.has_value() );
+    syncer.AddRoute( existing_entry.cid, nodes.at( 1 ).pubsub->GetHost()->getId(), { existing_address.value() } );
+    syncer.InheritRoutes( parent, existing_entry.cid );
+    syncer.InheritRoutes( makeUnseenCid( std::vector<uint8_t>( 32, 0x78 ) ), existing_entry.cid );
+    const auto existing_node = syncer.getNode( existing_entry.cid );
+    ASSERT_TRUE( existing_node.has_value() ) << existing_node.error().message();
+    EXPECT_EQ( existing_node.value()->getCID(), existing_entry.cid );
+    EXPECT_FALSE( syncer.IsOnBlackList( nodes.at( 2 ).pubsub->GetHost()->getId() ) );
+}
 
 /// The refusal/failover scenario in three parts. Part 1 is hermetic: the
 /// requester joins no topic (empty route table, no cached broadcasts),
