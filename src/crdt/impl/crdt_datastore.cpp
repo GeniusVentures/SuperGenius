@@ -107,6 +107,9 @@ namespace sgns::crdt
                                 continue;
                             }
 
+                            // One recovery block per iteration leaves regular jobs able to progress.
+                            self->ProcessForcedWalkStep();
+
                             // Process jobs in priority order
                             if ( self->ProcessJobs( self->selfCreatedJobList_ ) )
                             {
@@ -147,7 +150,7 @@ namespace sgns::crdt
                                {
                                    return closeStarted_ || !dagWorkerJobListThreadRunning_ ||
                                           !dagWorker.dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
-                                          !rootCIDJobList_.empty() ||
+                                          !rootCIDJobList_.empty() || HasPendingForcedWalk() ||
                                           ( !activeRootCID_.has_value() && !pendingRootQueue_.empty() );
                                } );
 
@@ -204,6 +207,387 @@ namespace sgns::crdt
         }
 
         return true; // Seeded a root
+    }
+
+    outcome::result<void> CrdtDatastore::RequestForcedWalk( const std::set<std::string> &topics,
+                                                            RecoveryElementGuard         guard,
+                                                            size_t                       max_blocks,
+                                                            bool                         require_registered_filters )
+    {
+        if ( !guard || topics.empty() || max_blocks == 0 )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( shutdown_started_ || closeStarted_ )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        const auto enrolled_topics = GetTopicNames();
+        for ( const auto &topic : topics )
+        {
+            if ( enrolled_topics.count( topic ) == 0 )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+        }
+        BOOST_OUTCOME_TRY( auto heads, heads_->GetList( { topics.begin(), topics.end() } ) );
+
+        {
+            std::lock_guard lock( forcedWalkMutex_ );
+            if ( shutdown_started_ || closeStarted_ )
+            {
+                return outcome::failure( std::errc::operation_canceled );
+            }
+            if ( forcedWalkStatus_.state == ForcedWalkState::Queued ||
+                 forcedWalkStatus_.state == ForcedWalkState::Running )
+            {
+                return outcome::failure( std::errc::operation_in_progress );
+            }
+            forcedWalkStatus_                   = {};
+            forcedWalkStatus_.state             = ForcedWalkState::Queued;
+            forcedWalkTopics_                   = topics;
+            forcedWalkGuard_                    = std::move( guard );
+            forcedWalkMaxBlocks_                = max_blocks;
+            forcedWalkStepActive_               = false;
+            forcedWalkRequireRegisteredFilters_ = require_registered_filters;
+            forcedWalkScheduled_.clear();
+            forcedWalkFrontier_ = {};
+            for ( const auto &[topic, cids] : heads.first )
+            {
+                for ( const auto &cid : cids )
+                {
+                    if ( forcedWalkScheduled_.count( cid ) != 0 )
+                    {
+                        continue;
+                    }
+                    if ( forcedWalkScheduled_.size() == max_blocks )
+                    {
+                        forcedWalkStatus_.limit_reached = true;
+                        continue;
+                    }
+                    forcedWalkScheduled_.insert( cid );
+                    forcedWalkFrontier_.push( cid );
+                }
+            }
+            if ( forcedWalkStatus_.limit_reached )
+            {
+                ++forcedWalkStatus_.errors;
+                logger_->warn( "Forced walk cannot queue all retained heads: block limit {}", max_blocks );
+            }
+            logger_->info( "Forced walk queued: topics={}, retained_heads={}, max_blocks={}",
+                           topics.size(),
+                           forcedWalkFrontier_.size(),
+                           max_blocks );
+        }
+        dagWorkerCv_.notify_all();
+        return outcome::success();
+    }
+
+    CrdtDatastore::ForcedWalkStatus CrdtDatastore::GetForcedWalkStatus() const
+    {
+        std::lock_guard lock( forcedWalkMutex_ );
+        return forcedWalkStatus_;
+    }
+
+    bool CrdtDatastore::HasPendingForcedWalk() const
+    {
+        std::lock_guard lock( forcedWalkMutex_ );
+        return !forcedWalkStepActive_ && ( forcedWalkStatus_.state == ForcedWalkState::Queued ||
+                                           forcedWalkStatus_.state == ForcedWalkState::Running );
+    }
+
+    void CrdtDatastore::FinishForcedWalkLocked()
+    {
+        forcedWalkStatus_.state = forcedWalkStatus_.errors != 0 || forcedWalkStatus_.deferred != 0
+                                      ? ForcedWalkState::Incomplete
+                                      : ForcedWalkState::Completed;
+        logger_->info( "Forced walk {}: visited={}, fetched={}, restored={}, skipped_pruned={}, "
+                       "skipped_existing={}, deferred={}, errors={}, limit_reached={}",
+                       forcedWalkStatus_.state == ForcedWalkState::Completed ? "completed" : "incomplete",
+                       forcedWalkStatus_.visited,
+                       forcedWalkStatus_.fetched,
+                       forcedWalkStatus_.restored,
+                       forcedWalkStatus_.skipped_pruned,
+                       forcedWalkStatus_.skipped_existing,
+                       forcedWalkStatus_.deferred,
+                       forcedWalkStatus_.errors,
+                       forcedWalkStatus_.limit_reached );
+        forcedWalkGuard_ = {};
+        forcedWalkTopics_.clear();
+        forcedWalkScheduled_.clear();
+    }
+
+    void CrdtDatastore::CancelForcedWalkLocked()
+    {
+        if ( forcedWalkStatus_.state != ForcedWalkState::Queued && forcedWalkStatus_.state != ForcedWalkState::Running )
+        {
+            return;
+        }
+        forcedWalkStatus_.state = ForcedWalkState::Cancelled;
+        forcedWalkFrontier_     = {};
+        forcedWalkScheduled_.clear();
+        forcedWalkTopics_.clear();
+        forcedWalkGuard_ = {};
+        logger_->info( "Forced walk cancelled: visited={}, fetched={}, restored={}, deferred={}, errors={}",
+                       forcedWalkStatus_.visited,
+                       forcedWalkStatus_.fetched,
+                       forcedWalkStatus_.restored,
+                       forcedWalkStatus_.deferred,
+                       forcedWalkStatus_.errors );
+    }
+
+    void CrdtDatastore::ProcessForcedWalkStep()
+    {
+        std::unique_lock state_lock( forcedWalkMutex_ );
+        if ( shutdown_started_ || forcedWalkStepActive_ ||
+             ( forcedWalkStatus_.state != ForcedWalkState::Queued &&
+               forcedWalkStatus_.state != ForcedWalkState::Running ) )
+        {
+            return;
+        }
+        if ( forcedWalkFrontier_.empty() )
+        {
+            FinishForcedWalkLocked();
+            return;
+        }
+        forcedWalkStepActive_   = true;
+        forcedWalkStatus_.state = ForcedWalkState::Running;
+        ++forcedWalkStatus_.visited;
+        const auto cid = forcedWalkFrontier_.front();
+        forcedWalkFrontier_.pop();
+        const auto topics                     = forcedWalkTopics_;
+        const auto guard                      = forcedWalkGuard_;
+        const bool require_registered_filters = forcedWalkRequireRegisteredFilters_;
+        state_lock.unlock();
+
+        ForcedWalkStatus progress;
+        auto             result = ProcessForcedWalkCID( cid, topics, guard, require_registered_filters, progress );
+        if ( result.has_failure() && !shutdown_started_ )
+        {
+            ++progress.errors;
+            logger_->warn( "Forced walk failed for CID {}: {}", cid.toString().value(), result.error().message() );
+        }
+        {
+            std::lock_guard lock( forcedWalkMutex_ );
+            forcedWalkStepActive_               = false;
+            forcedWalkStatus_.fetched          += progress.fetched;
+            forcedWalkStatus_.restored         += progress.restored;
+            forcedWalkStatus_.skipped_pruned   += progress.skipped_pruned;
+            forcedWalkStatus_.skipped_existing += progress.skipped_existing;
+            forcedWalkStatus_.deferred         += progress.deferred;
+            forcedWalkStatus_.errors           += progress.errors;
+            if ( shutdown_started_ )
+            {
+                CancelForcedWalkLocked();
+            }
+            if ( forcedWalkStatus_.state != ForcedWalkState::Cancelled )
+            {
+                if ( forcedWalkFrontier_.empty() )
+                {
+                    FinishForcedWalkLocked();
+                }
+                else if ( forcedWalkStatus_.visited % FORCED_WALK_PROGRESS_INTERVAL == 0 )
+                {
+                    logger_->info( "Forced walk progress: visited={}, queued={}, fetched={}, restored={}",
+                                   forcedWalkStatus_.visited,
+                                   forcedWalkFrontier_.size(),
+                                   forcedWalkStatus_.fetched,
+                                   forcedWalkStatus_.restored );
+                }
+            }
+        }
+        dagWorkerCv_.notify_all();
+    }
+
+    void CrdtDatastore::QueueForcedWalkLinks( const IPLDNode &node, const std::set<std::string> &topics )
+    {
+        for ( const auto &link : node.getLinks() )
+        {
+            const auto &child = link.get().getCID();
+            if ( topics.count( link.get().getName() ) == 0 )
+            {
+                continue;
+            }
+            std::lock_guard lock( forcedWalkMutex_ );
+            if ( shutdown_started_ || forcedWalkStatus_.state == ForcedWalkState::Cancelled )
+            {
+                return;
+            }
+            if ( forcedWalkScheduled_.count( child ) != 0 )
+            {
+                dagSyncer_->InheritRoutes( node.getCID(), child );
+                continue;
+            }
+            if ( forcedWalkScheduled_.size() == forcedWalkMaxBlocks_ )
+            {
+                if ( !forcedWalkStatus_.limit_reached )
+                {
+                    forcedWalkStatus_.limit_reached = true;
+                    ++forcedWalkStatus_.errors;
+                    logger_->warn( "Forced walk stopped expanding at CID {}: block limit {}",
+                                   node.getCID().toString().value(),
+                                   forcedWalkMaxBlocks_ );
+                }
+                continue;
+            }
+            // addNode erases the parent's routes; pass them on before persisting it.
+            dagSyncer_->InheritRoutes( node.getCID(), child );
+            forcedWalkScheduled_.insert( child );
+            forcedWalkFrontier_.push( child );
+        }
+    }
+
+    outcome::result<void> CrdtDatastore::ProcessForcedWalkCID( const CID                   &cid,
+                                                               const std::set<std::string> &topics,
+                                                               const RecoveryElementGuard  &guard,
+                                                               bool                         require_registered_filters,
+                                                               ForcedWalkStatus            &progress )
+    {
+        BOOST_OUTCOME_TRY( auto cid_string, cid.toString() );
+        BOOST_OUTCOME_TRY( auto retained, dagSyncer_->HasStoredBlock( cid ) );
+        BOOST_OUTCOME_TRY( auto sealed, dagSyncer_->isResolved( cid ) );
+        if ( !retained && sealed )
+        {
+            ++progress.skipped_pruned;
+            logger_->debug( "Forced walk CID {}: missing sealed block, preserving prune boundary", cid_string );
+            return outcome::success();
+        }
+        if ( shutdown_started_ )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        logger_->debug( "Forced walk CID {}: {}", cid_string, retained ? "revisiting retained block" : "fetching" );
+        if ( !retained )
+        {
+            dagSyncer_->InitCIDBlock( cid );
+        }
+        auto node_result = retained ? dagSyncer_->GetStoredNode( cid ) : dagSyncer_->getNode( cid );
+        if ( node_result.has_failure() )
+        {
+            if ( !retained )
+            {
+                (void) dagSyncer_->DeleteCIDBlock( cid );
+            }
+            return node_result.as_failure();
+        }
+        const auto &node = node_result.value();
+        if ( !node || node->getCID() != cid )
+        {
+            if ( !retained )
+            {
+                (void) dagSyncer_->DeleteCIDBlock( cid );
+            }
+            return CrdtDatastore::Error::NODE_DESERIALIZATION;
+        }
+        Delta      delta;
+        const auto bytes = node->content();
+        if ( !delta.ParseFromArray( bytes.data(), static_cast<int>( bytes.size() ) ) )
+        {
+            if ( !retained )
+            {
+                (void) dagSyncer_->DeleteCIDBlock( cid );
+            }
+            return CrdtDatastore::Error::NODE_DESERIALIZATION;
+        }
+
+        QueueForcedWalkLinks( *node, topics );
+        if ( !retained )
+        {
+            ++progress.fetched;
+            auto persisted = dagSyncer_->addNode( node );
+            (void) dagSyncer_->DeleteCIDBlock( cid );
+            BOOST_OUTCOME_TRY( persisted );
+        }
+        return RecoverMissingElements( cid, delta, sealed, guard, require_registered_filters, progress );
+    }
+
+    outcome::result<void> CrdtDatastore::RecoverMissingElements( const CID                  &cid,
+                                                                 const Delta                &delta,
+                                                                 bool                        sealed,
+                                                                 const RecoveryElementGuard &guard,
+                                                                 bool                        require_registered_filters,
+                                                                 ForcedWalkStatus           &progress )
+    {
+        // Serialize presence/prune checks, validation side effects, and merge against pruning and puts.
+        auto compose_lock = MakeComposeLock();
+        if ( !compose_lock.owns_lock() )
+        {
+            return outcome::failure( std::errc::operation_not_permitted );
+        }
+        if ( shutdown_started_ )
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        }
+        BOOST_OUTCOME_TRY( auto cid_string, cid.toString() );
+        Delta missing;
+        missing.set_priority( delta.priority() );
+        for ( const auto &element : delta.elements() )
+        {
+            auto existing = GetKey( HierarchicalKey( element.key() ) );
+            if ( existing.has_value() )
+            {
+                ++progress.skipped_existing;
+                logger_->debug( "Forced walk CID {}: key {} already present", cid_string, element.key() );
+                continue;
+            }
+            if ( existing.error() && existing.error() != storage::DatabaseError::NOT_FOUND )
+            {
+                return existing.as_failure();
+            }
+            BOOST_OUTCOME_TRY( auto tombstoned,
+                               set_->InTombsKeyID( element.key(), element.id().empty() ? cid_string : element.id() ) );
+            if ( tombstoned || !existing.error() )
+            {
+                ++progress.skipped_pruned;
+                logger_->debug( "Forced walk CID {}: key {} has deletion evidence", cid_string, element.key() );
+                continue;
+            }
+            auto allowed = guard( element );
+            if ( allowed.has_failure() )
+            {
+                if ( allowed.error() == std::errc::resource_unavailable_try_again )
+                {
+                    ++progress.deferred;
+                    logger_->info( "Forced walk CID {}: validation not ready for key {}, deferring",
+                                   cid_string,
+                                   element.key() );
+                    continue;
+                }
+                return allowed.as_failure();
+            }
+            if ( !allowed.value() )
+            {
+                ++progress.skipped_pruned;
+                logger_->debug( "Forced walk CID {}: recovery guard preserved key {}", cid_string, element.key() );
+                continue;
+            }
+            missing.add_elements()->CopyFrom( element );
+        }
+        if ( !sealed )
+        {
+            for ( const auto &tombstone : delta.tombstones() )
+            {
+                BOOST_OUTCOME_TRY(
+                    auto existing,
+                    set_->InTombsKeyID( tombstone.key(), tombstone.id().empty() ? cid_string : tombstone.id() ) );
+                if ( !existing )
+                {
+                    missing.add_tombstones()->CopyFrom( tombstone );
+                }
+            }
+        }
+        if ( missing.elements_size() == 0 && missing.tombstones_size() == 0 )
+        {
+            return outcome::success();
+        }
+        if ( crdt_filter_.FilterElementsOnDelta( missing, require_registered_filters ) )
+        {
+            ++progress.deferred;
+            logger_->info( "Forced walk CID {}: missing dependency, another guarded walk is required", cid_string );
+        }
+        BOOST_OUTCOME_TRY( MergeDataFromDelta( cid, missing ) );
+        progress.restored += static_cast<size_t>( missing.elements_size() );
+        return outcome::success();
     }
 
     void CrdtDatastore::HandleJobProcessingFailure( const RootCIDJob &job )
@@ -533,6 +917,10 @@ namespace sgns::crdt
             activeRootCID_.has_value() );
 
         closeStarted_ = true;
+        {
+            std::lock_guard lock( forcedWalkMutex_ );
+            CancelForcedWalkLocked();
+        }
         // Signal before the waits so a worker parked in DAGSyncer::getNode() can
         // see it and unwind; the actual syncer teardown has to come after the
         // waits, or it races the workers still polling graphsync state.

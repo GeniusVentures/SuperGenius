@@ -180,7 +180,8 @@ namespace sgns
          * @param[in] node_type Deployment role of this node (Full / Light / Archive)
          * @param[in] timestamp_tolerance Time to analyze a transaction with the same nonce/key
          * @param[in] mutability_window Window of time where a transaction can be modified
-         * @return shared_ptr to the fully-wired TransactionManager instance
+         * @return shared_ptr to the fully-wired TransactionManager instance, or nullptr
+         *         when UTXO storage initialization fails.
          * @note Default timestamp_tolerance is 5 minutes (300000 ms)
          * @note Default mutability_window is 10 minutes (600000 ms)
          * @note timestamp_tolerance must be smaller than mutability_window
@@ -660,8 +661,9 @@ namespace sgns
          *        the parent transactions of each UTXO. Any transactions that cannot
          *        be found are added to missing hashes for later resolution.
          *        Falls back to a full QueryTransactions when neither source has data.
+         * @return Success after initialization, or the UTXO storage load error.
          */
-        void InitializeUTXOs();
+        outcome::result<void> InitializeUTXOs();
 
         /**
          * @brief Post-rebuild belt of the GATE-05 checkpoint-mismatch path (D-01):

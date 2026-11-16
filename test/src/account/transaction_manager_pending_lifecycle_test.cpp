@@ -57,7 +57,7 @@ namespace sgns
 
         static void RunInitializeUTXOs( TransactionManager &manager )
         {
-            manager.InitializeUTXOs();
+            ASSERT_TRUE( manager.InitializeUTXOs().has_value() );
         }
 
         static void RunInitTransactions( TransactionManager &manager )
@@ -98,6 +98,17 @@ namespace sgns
             std::shared_lock lock( manager.tx_mutex_m );
             auto             it = manager.tx_processed_m.find( TransactionManager::GetTransactionPath( tx_hash ) );
             return it != manager.tx_processed_m.end() ? std::optional{ it->second } : std::nullopt;
+        }
+
+        static size_t ForgetTrackedTx( TransactionManager &manager, const std::string &tx_hash )
+        {
+            std::unique_lock lock( manager.tx_mutex_m );
+            return manager.tx_processed_m.erase( TransactionManager::GetTransactionPath( tx_hash ) );
+        }
+
+        static std::string QueryOutgoingPreviousHashFromCRDT( const TransactionManager &manager, uint64_t nonce )
+        {
+            return manager.QueryOutgoingPreviousHashFromCRDT( nonce );
         }
 
         static void SetFailNextPutUTXOStore( sgns::UTXOManager &utxo_manager, bool fail )
@@ -506,6 +517,13 @@ TEST_F( TransactionManagerPreviousHashTest, UsesPersistedConfirmedHeadWhenPrevio
 
     RecreateManager();
     ASSERT_EQ( manager_->GetTransactionStatusByTxId( previous_transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    // Startup now reconstructs tracking. Forget only that transient entry so
+    // this test still exercises the durable head without deleting its evidence.
+    ASSERT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ForgetTrackedTx( *manager_,
+                                                                                    previous_transaction->GetHash() ),
+               1U );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( previous_transaction->GetHash() ),
                sgns::TransactionManager::TransactionStatus::INVALID );
 
     const auto transaction_id = manager_->MigrationFunds( 1, "persisted-head", kTokenId );
@@ -521,14 +539,25 @@ TEST_F( TransactionManagerPreviousHashTest, FallsBackToCrdtWhenConfirmedHeadHist
 {
     auto previous_transaction = MakeTransaction( 0 );
     StoreCertificate( previous_transaction );
-    account_->RollBackPeerConfirmedNonce( 0, account_->GetAddress() );
-    account_->SetPeerConfirmedNonce( 0, account_->GetAddress() );
     StoreTransaction( previous_transaction );
-    ASSERT_TRUE( account_->GetLocalConfirmedTxHash( 0 ).has_error() );
 
     RecreateManager();
     ASSERT_EQ( manager_->GetTransactionStatusByTxId( previous_transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    // Restore the missing-history scenario after startup has rebuilt both the
+    // transient tracking entry and the account's confirmed-head history.
+    ASSERT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ForgetTrackedTx( *manager_,
+                                                                                    previous_transaction->GetHash() ),
+               1U );
+    account_->RollBackPeerConfirmedNonce( 0, account_->GetAddress() );
+    account_->SetPeerConfirmedNonce( 0, account_->GetAddress() );
+    ASSERT_TRUE( account_->GetLocalConfirmedTxHash( 0 ).has_error() );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( previous_transaction->GetHash() ),
                sgns::TransactionManager::TransactionStatus::INVALID );
+    // The certificate-only predecessor path can also satisfy MigrationFunds;
+    // verify the CRDT scan itself while its fallback preconditions hold.
+    ASSERT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::QueryOutgoingPreviousHashFromCRDT( *manager_, 1 ),
+               previous_transaction->GetHash() );
 
     const auto transaction_id = manager_->MigrationFunds( 1, "crdt-fallback", kTokenId );
     ASSERT_TRUE( transaction_id.has_value() );
