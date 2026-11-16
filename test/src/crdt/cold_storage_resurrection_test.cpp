@@ -585,13 +585,17 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_MarkerPresent_DedupBlocksReintegr
  *        disposed markers TRIMMED (TrimDisposed(0, 0) erases the dedup
  *        line; the marker set is bounded in production by the D-10 dual
  *        bound)
- * @when  the pre-delete delta resolves through the cold chain and its
- *        content is re-merged through the REAL merge path
- *        (MergeDataFromDelta - exactly what the pubsub lane runs after
- *        a trimmed-marker miss)
- * @then  the CRDT-delete tombstone DOMINATES the re-delivered
- *        lower-height Add element: the value stays absent in the query,
- *        and the remote S3 copy of the delta stays intact.
+ * @when  the pre-delete delta is re-delivered through the REAL pubsub
+ *        receive lane after the trim (the dedup line is gone, so the
+ *        lane re-enters the walk)
+ * @then  the RETAINED seal (keep-seal 7961ec264: eviction never erases
+ *        the seal marker - the traversal terminator that prevents
+ *        re-fetch storms) ends the walk BEFORE any remote fetch: zero
+ *        S3 traffic, nothing re-merged, and the value stays absent.
+ *        (Pre-keep-seal this case observed the trimmed-marker re-learn
+ *        fetch + tombstone dominance; the seal retention makes the
+ *        non-resurrection guarantee strictly stronger - the re-delivered
+ *        Add never even lands.)
  */
 TEST_F( ColdStorageResurrectionTest, Resurrect_TrimmedMarker_TombstoneDominanceKeepsValueAbsent )
 {
@@ -612,36 +616,45 @@ TEST_F( ColdStorageResurrectionTest, Resurrect_TrimmedMarker_TombstoneDominanceK
         EXPECT_FALSE( disposed.value() ) << "the marker is trimmed - dedup cannot fire";
     }
 
-    // Re-deliver through the REAL pubsub receive lane: the dedup line
-    // is gone, so the lane walks the CID - the cold chain resolves the
-    // delta from the remote copy (the documented TrimDisposed
-    // re-learn: re-journal -> re-spill -> re-drain) and the merge runs.
+    // Re-deliver through the REAL pubsub receive lane. Pre-keep-seal the
+    // trimmed-marker miss walked and re-fetched the delta from the remote
+    // copy; since 7961ec264 the seal marker survives eviction and
+    // terminates the walk BEFORE the fetch (the GATE-03 re-fetch-storm
+    // terminator), so the whole re-delivery storm produces ZERO S3
+    // traffic.
     const uint64_t gets_before = counting_->get_calls();
-    ASSERT_TRUE(
-        feeder_->Broadcast( EncodeCidAnnouncement( created ), "topic" ).has_value() );
-    ASSERT_TRUE( PollUntil( [&] { return counting_->get_calls() > gets_before; },
-                            std::chrono::milliseconds( 10000 ) ) )
-        << "the trimmed-marker fallback must fetch the delta from the remote copy";
+    constexpr int  kRedeliveries = 25;
+    for ( int i = 0; i < kRedeliveries; ++i )
+    {
+        ASSERT_TRUE(
+            feeder_->Broadcast( EncodeCidAnnouncement( created ), "topic" ).has_value() );
+    }
 
-    // The merge ran (the S3 fetch IS the walk evidence); let the worker
-    // finish processing, bounded.
-    const auto settle_end = std::chrono::steady_clock::now() + std::chrono::milliseconds( 1500 );
-    ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= settle_end; },
+    // A bounded observation window for the would-be walk (the PollUntil
+    // deadline discipline - never a bare sleep).
+    const auto window_end = std::chrono::steady_clock::now() + std::chrono::milliseconds( 1500 );
+    ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= window_end; },
                             std::chrono::milliseconds( 2000 ) ) );
 
-    // TOMBSTONE DOMINANCE: the value stays absent despite the merge.
-    EXPECT_FALSE( ValueVisible( key ) )
-        << "the CRDT-delete tombstone dominates the re-delivered Add";
+    // ZERO S3 traffic across the whole re-delivery storm: the retained
+    // seal terminated every walk before any remote fetch.
+    EXPECT_EQ( counting_->get_calls(), gets_before )
+        << "the retained seal terminates the re-delivery walk with ZERO S3 Gets";
 
-    // The delta stays retrievable after the re-learn: the merge's fetch
-    // re-journaled + re-wrote the block locally (the documented
-    // TrimDisposed re-learn contract), so the next read resolves WITHOUT
-    // further S3 traffic - the remote copy made the re-learn safe.
-    const uint64_t gets_after_merge = counting_->get_calls();
-    auto again = dagsyncer_->GetNodeWithoutRequest( created );
-    ASSERT_TRUE( again.has_value() ) << "the delta stays retrievable post re-learn";
-    EXPECT_EQ( counting_->get_calls(), gets_after_merge )
-        << "the re-learned local copy serves the next read";
+    // No re-integration: no new journal record (the walk never fetched,
+    // so nothing merged or re-spilled).
+    EXPECT_FALSE( manager_->GetUploadState( cid ).has_value() )
+        << "no re-journal - the walk never fetched the delta";
+    {
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        auto pending = shared_local_->GetPendingUploads();
+        ASSERT_TRUE( pending.has_value() );
+        EXPECT_TRUE( pending.value().empty() ) << "no re-journal - nothing pending";
+    }
+
+    // The value stays absent (nothing merged - strictly stronger than
+    // tombstone dominance: the re-delivered Add never even landed).
+    EXPECT_FALSE( ValueVisible( key ) ) << "the value must NOT resurrect";
 }
 
 namespace
