@@ -156,3 +156,13 @@ target_link_libraries(processing_core_gating_test
     p2p::p2p_logger
     ipfs-pubsub
 )
+
+# Experimental parallel masked-XOR verifier: unit and multi-node functional tests.
+addtest(masked_xor_verification_test
+    masked_xor_verification_test.cpp
+    masked_xor_verification_functional_test.cpp
+)
+
+target_link_libraries(masked_xor_verification_test
+    processing_service
+)

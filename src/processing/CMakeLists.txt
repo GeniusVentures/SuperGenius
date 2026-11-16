@@ -14,9 +14,13 @@ add_library(processing_service
     impl/TaskQueueImpl.cpp
     processing_validation_core.cpp
     processing_validation_core.hpp
+    masked_xor_verification.cpp
+    masked_xor_verification.hpp
 )
 
 set_target_properties(processing_service PROPERTIES UNITY_BUILD ON)
+# Keep this new translation unit out of UNITY_BUILD to avoid anonymous-namespace collisions.
+set_source_files_properties(masked_xor_verification.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 add_proto_library(SGProcessingProto proto/SGProcessing.proto)
 
