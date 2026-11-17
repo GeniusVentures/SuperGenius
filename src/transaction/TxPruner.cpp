@@ -298,6 +298,20 @@ namespace sgns
                 auto erase = transaction_manager.EraseTransactionEntryPruned( TxHashFromPath( candidate->tx_path ) );
                 if ( erase.has_error() )
                 {
+                    if ( erase.error() == crdt::GlobalDB::Error::COLD_NOT_DURABLE )
+                    {
+                        // Guard-5 refusal (v1.2 Phase 14, PRUNE-02): the
+                        // journal state regressed between the admission
+                        // gate's read and this compose — a DEFERRAL, never
+                        // a failure (Pitfall 1): count the counter, not
+                        // errors, and let a later cycle re-evaluate the
+                        // group (the outcome passthrough through
+                        // TransactionManager is verbatim).
+                        ++stats.cold_deferred_groups;
+                        logger_->debug( "Prune erase deferred for tx {}: cold evidence not Durable at commit",
+                                       candidate->tx_path );
+                        continue;
+                    }
                     // Per-tx failure: record and CONTINUE — log-and-continue
                     // is sanctioned only for this per-tx scan contract; the
                     // tx stays enumerated and a later cycle retries it.

@@ -1504,6 +1504,40 @@ namespace sgns::crdt
             m_logger->error( "{}: cid {} is unresolved, refusing erase", __func__, cid.toString().value() );
             return outcome::failure( Error::INVALID_PARAMETERS );
         }
+        // (5) Cold-durability re-check (v1.2 Phase 14, PRUNE-02/D-06): on a
+        // cold tier-bearing GlobalDB the journal state is re-read HERE --
+        // inside the compose critical section, after guard (4), before any
+        // staging -- so evidence older than this commit can never authorize
+        // a destroying erase (the admission gate's TOCTOU closure). ONLY an
+        // exactly-Durable state permits; every other state (including an
+        // Unreadable read) refuses with the DISTINCT COLD_NOT_DURABLE
+        // value: unlike the guards above this is a DEFERRAL, not a policy
+        // violation -- nothing is erased, and the caller (TxPruner) counts
+        // the refusal into cold_deferred_groups, never into errors.
+        //
+        // LOCK DISCIPLINE (Pitfall 3 -- hard constraint): the guard calls
+        // ONLY HasColdStorage()/GetColdUploadState()-shaped reads --
+        // sequential lifecycle_mutex_-scoped reads over the pre-existing
+        // compose->lifecycle->cold_store chain (guard (1) already
+        // established the compose->lifecycle edge; no path acquires the
+        // compose lock under cold_store_mutex_). NOTHING here re-enters
+        // the datastore.
+        //
+        // Two-layer TOCTOU story (D-07): this guard closes PRE-ADMISSION
+        // staleness (the state changed between the admission gate's read
+        // and this compose). The post-read window -- this read to the
+        // commit -- is closed by journal monotonicity (research Q1: no
+        // in-process Durable->Accepted regression path exists; the only
+        // Durable-record removals are GC disposal paths yielding NoRecord,
+        // which a later cycle's gate defers) and is Phase 16's
+        // Interaction-C ruling surface, not this lock's.
+        if ( HasColdStorage() && GetColdUploadState( cid ) != ColdUploadState::Durable )
+        {
+            m_logger->warn( "{}: cid {} cold evidence not Durable at erase-commit - refusing (defer)",
+                            __func__,
+                            cid.toString().value() );
+            return outcome::failure( Error::COLD_NOT_DURABLE );
+        }
 
         // Compose: one batch, three owner stagings, one commit. Key-layout
         // knowledge stays in the owners -- this facade only composes.

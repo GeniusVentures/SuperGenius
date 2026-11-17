@@ -318,6 +318,12 @@ namespace sgns::crdt
             GLOBALDB_NOT_STARTED,           ///< Start wasn't called
             COLD_STORAGE_INIT_FAILED,       ///< Cold storage stack failed to open (v1.1 Phase 8)
             POST_COMMIT_ERASE_ANOMALY,      ///< Erase already committed; post-commit seal re-check failed
+            /// Refused: cold evidence not Durable at erase-commit (v1.2
+            /// Phase 14, EraseEntry guard 5) — NOTHING erased; a
+            /// DEFERRAL, not a policy violation: TxPruner maps this to
+            /// PruneCycleStats::cold_deferred_groups and the group retries
+            /// next cycle (never into stats.errors).
+            COLD_NOT_DURABLE,
         };
 
         /**
@@ -498,7 +504,15 @@ namespace sgns::crdt
          *         the batch landed, then the post-commit seal re-check
          *         failed. For that value the data IS erased -- callers must
          *         not treat it as "nothing was erased" (guard rejections,
-         *         Error::INVALID_PARAMETERS, erase nothing).
+         *         Error::INVALID_PARAMETERS, erase nothing). Guard 5
+         *         (v1.2 Phase 14, PRUNE-02): on a cold tier-bearing
+         *         GlobalDB (HasColdStorage()) the journal state is re-read
+         *         INSIDE this compose critical section -- after guard 4,
+         *         before any staging -- and any non-Durable state refuses
+         *         with Error::COLD_NOT_DURABLE: NOTHING erased, a
+         *         DEFERRAL (TxPruner counts cold_deferred_groups; the
+         *         group retries next cycle). Cold-off nodes take the guard
+         *         vacuously and behave byte-identically to pre-phase.
          */
         outcome::result<void> EraseEntry( const std::string                              &key,
                                           const CID                                      &cid,
