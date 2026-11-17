@@ -1021,19 +1021,10 @@ namespace sgns::crdt
         return GetColdStorageManagerStatus( cold_manager_ );
     }
 
-    ColdUploadState GlobalDB::GetColdUploadState( const CID &cid ) const
-    {
-        // The same active-accessor shape: NoRecord once shutdown has
-        // started; otherwise the null-safe ungated bridge over the
-        // manager's D-09 pass-through (never a library type here).
-        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
-        if ( shutdown_started_.load() )
-        {
-            return ColdUploadState::NoRecord;
-        }
-        // Explicit qualification: this member hides the free bridge name.
-        return sgns::crdt::GetColdUploadState( cold_manager_, cid );
-    }
+    // GetColdUploadState moved beside its TEST-ONLY override
+    // (SetColdUploadStateHookForTest / cold_upload_state_hook_for_test_,
+    // just below the QueryRaw block) so the read seam and its injector
+    // stay together.
 
     bool GlobalDB::HasColdStorage() const
     {
@@ -1408,6 +1399,41 @@ namespace sgns::crdt
     void GlobalDB::SetEraseInterruptHookForTest( std::function<bool( int step )> hook )
     {
         erase_interrupt_hook_for_test_ = std::move( hook );
+    }
+
+    std::function<std::optional<ColdUploadState>( const CID & )> GlobalDB::cold_upload_state_hook_for_test_ = nullptr;
+
+    void GlobalDB::SetColdUploadStateHookForTest( std::function<std::optional<ColdUploadState>( const CID & )> hook )
+    {
+        // TEST-ONLY (v1.2 Phase 14, D-07): the induced-regression injector
+        // at the shared read seam. PRODUCTION CODE MUST NEVER CALL THIS.
+        cold_upload_state_hook_for_test_ = std::move( hook );
+    }
+
+    ColdUploadState GlobalDB::GetColdUploadState( const CID &cid ) const
+    {
+        // TEST-ONLY override, consulted FIRST (before the lifecycle/shutdown
+        // path): an armed per-CID value IS "the state read changed" for
+        // every reader of this seam — the admission gate and the in-compose
+        // durability guard alike. Inert when unset (production).
+        if ( cold_upload_state_hook_for_test_ )
+        {
+            auto override_state = cold_upload_state_hook_for_test_( cid );
+            if ( override_state.has_value() )
+            {
+                return override_state.value();
+            }
+        }
+        // The same active-accessor shape: NoRecord once shutdown has
+        // started; otherwise the null-safe ungated bridge over the
+        // manager's D-09 pass-through (never a library type here).
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        if ( shutdown_started_.load() )
+        {
+            return ColdUploadState::NoRecord;
+        }
+        // Explicit qualification: this member hides the free bridge name.
+        return sgns::crdt::GetColdUploadState( cold_manager_, cid );
     }
 
     outcome::result<void> GlobalDB::EraseEntry( const std::string                              &key,

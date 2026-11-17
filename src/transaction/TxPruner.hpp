@@ -190,8 +190,15 @@ namespace sgns
          *              grouped by delta-block CID; a group whose block
          *              report is erasable is taken WHOLE when it fits the
          *              remaining K budget, else DEFERRED whole (held_blocks)
-         *              — never a partial group (Pitfall 1). (4) Per tx
-         *              inside a taken group: a FRESH spent-ness re-verify
+         *              — never a partial group (Pitfall 1). On a cold
+         *              tier-bearing GlobalDB (v1.2 Phase 14, PRUNE-01) each
+         *              NEW group additionally passes the cold-durability
+         *              admission conjunct at the filter: only an
+         *              evidence-exactly-Durable CID admits; NoRecord /
+         *              Pending / Accepted defer the whole group
+         *              (cold_deferred_groups), Unreadable defers loudly
+         *              (cold_unreadable_groups + one WARN) — never an
+         *              error, never a permit. (4) Per tx inside a taken group: a FRESH spent-ness re-verify
          *              (IsOutPointGenuinelyConsumed per outpoint) runs
          *              immediately before the erase; a reverted spend (or an
          *              unreadable value) skips the tx — never aborts the
@@ -263,15 +270,29 @@ namespace sgns
         /// Interrupt seam step: after the status update, before the INFO
         /// summary (the status IS updated at this point).
         static constexpr int kInterruptAfterStatus = 4;
+        /// Interrupt seam step: after the cold-durability conjunct admits
+        /// a group, BEFORE the per-tx erase loop — the TOCTOU probe
+        /// position between gate admission and erase-commit (v1.2 Phase
+        /// 14, D-07). The hook contract is unchanged: true = abort the
+        /// cycle at this point; the counter-test's observe-only usage
+        /// returns false.
+        static constexpr int kInterruptAfterColdGate = 5;
 
         /**
          * @brief       Test-only interruption seam for the cycle.
-         * @param[in]   hook invoked at the steps above; a @c true return
-         *              aborts the cycle AT that point. An aborted cycle is
-         *              NOT a completed cycle: the status (including the
-         *              watermark) is left untouched for steps 1-3 — the
-         *              crash-matrix positions 18-06 asserts against. Pass
-         *              nullptr to clear.
+         * @param[in]   hook invoked at the steps above — kInterruptAfterEvaluation
+         *              (after Evaluate, before grouping),
+         *              kInterruptBeforeErase (before each per-tx erase
+         *              call), kInterruptBeforeStatus / kInterruptAfterStatus
+         *              (around the status update + INFO summary), and
+         *              kInterruptAfterColdGate (after the cold-durability
+         *              conjunct admits a group, before the per-tx erase
+         *              loop — the v1.2 Phase 14 TOCTOU probe position); a
+         *              @c true return aborts the cycle AT that point. An
+         *              aborted cycle is NOT a completed cycle: the status
+         *              (including the watermark) is left untouched for
+         *              steps 1-3 — the crash-matrix positions 18-06
+         *              asserts against. Pass nullptr to clear.
          * @note        No production caller may invoke this method. Fixture
          *              discipline: a hook armed by a failing case must never
          *              leak further — clear it in the fixture destructor

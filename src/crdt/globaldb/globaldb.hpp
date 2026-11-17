@@ -514,6 +514,26 @@ namespace sgns::crdt
          */
         static void SetEraseInterruptHookForTest( std::function<bool( int step )> hook );
 
+        /**
+         * @brief      Test-only per-CID cold-upload-state override — the
+         *             induced-regression injector (v1.2 Phase 14, D-07).
+         * @param      hook invoked FIRST by GetColdUploadState: when it
+         *             returns a value for the CID, that value is returned
+         *             (the state "read" changed — the exact seam the
+         *             admission gate and the in-compose durability guard
+         *             share); nullopt means no override for that CID.
+         *             Required because the real journal is monotone
+         *             in-process (research Q1) and the coldstore RocksDB
+         *             is locked by the live GlobalDB — a regression can
+         *             only be INJECTED at the read seam, never driven.
+         * @note       PRODUCTION CODE MUST NEVER CALL this method (the
+         *             SetColdStorageStackClientsForTesting discipline);
+         *             inert when unset, and test fixtures must clear it in
+         *             teardown. Pass nullptr to clear.
+         */
+        static void SetColdUploadStateHookForTest(
+            std::function<std::optional<ColdUploadState>( const CID & )> hook );
+
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
         std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
@@ -771,6 +791,11 @@ namespace sgns::crdt
         /// Test-only EraseEntry interruption hook; see
         /// SetEraseInterruptHookForTest. Inert (nullptr) in production.
         static std::function<bool( int step )> erase_interrupt_hook_for_test_;
+
+        /// Test-only per-CID cold-state override; see
+        /// SetColdUploadStateHookForTest. Inert (nullptr) in production —
+        /// PRODUCTION CODE MUST NEVER ARM IT.
+        static std::function<std::optional<ColdUploadState>( const CID & )> cold_upload_state_hook_for_test_;
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
         mutable std::mutex             lifecycle_mutex_; ///< Guards service pointers during shutdown.

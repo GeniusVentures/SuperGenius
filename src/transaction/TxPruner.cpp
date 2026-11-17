@@ -274,6 +274,15 @@ namespace sgns
                 ++stats.held_blocks;
                 continue;
             }
+            if ( InterruptRequested( kInterruptAfterColdGate ) )
+            {
+                // Observation seam (v1.2 Phase 14, D-07): fires after the
+                // cold conjunct admitted this group, BEFORE the per-tx
+                // erase loop — the admission->erase-commit gap the TOCTOU
+                // counter-test probes. true = abort (the seam contract).
+                interrupted = true;
+                break;
+            }
             for ( const auto *candidate : group )
             {
                 if ( !OutputsRemainGenuinelyConsumed( globaldb, utxo_manager, *candidate ) )
