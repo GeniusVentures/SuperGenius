@@ -20,6 +20,7 @@
 
 #include "account/GeniusTransaction.hpp"
 #include "account/UTXOManager.hpp"
+#include "crdt/globaldb/ColdStorageStack.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "transaction/TransactionManager.hpp"
 
@@ -62,6 +63,69 @@ namespace sgns
                 return "advanced " + std::to_string( before.value() ) + " -> " + std::to_string( after.value() );
             }
             return "unchanged at " + std::to_string( after.value() );
+        }
+
+        /// COLD-DURABILITY ADMISSION CONJUNCT (v1.2 Phase 14, PRUNE-01 /
+        /// PRUNE-03 — the D-05 NAMED conjunct): admits a block group for
+        /// erasure only when the group's single delta-block CID (the D-01
+        /// removal set) reads EXACTLY ColdUploadState::Durable — mirroring
+        /// the GC kEvictionDurabilityGate precedent's three properties:
+        /// exact equality (never a level comparison), a dedicated counter
+        /// rather than an error, and continue-never-abort. Every other
+        /// leg — NoRecord, Pending, Accepted, an unparseable CID, and the
+        /// default arm (an unknown future enum value can never admit) —
+        /// defers the WHOLE group into stats.cold_deferred_groups; an
+        /// Unreadable journal read defers loudly into
+        /// stats.cold_unreadable_groups plus ONE WARN line (D-03).
+        ///
+        /// Activation policy (D-04): the gate is active iff the node role
+        /// is NodeType::Light (the fail-closed factory gate, :72) AND the
+        /// GlobalDB has a cold tier — automatic, no config knob. Evaluator
+        /// purity preserved (D-05): this conjunct lives in RunCycle's
+        /// group filter and composes beside erasable_cids membership as
+        /// an AND conjunct — it NEVER touches PruneEligibility (D-C6).
+        /// Performs ZERO writes: the erase stays ONE hot WriteBatch; the
+        /// journal is read, never written, by the gate.
+        bool ColdGateAdmitsGroup( const crdt::GlobalDB &globaldb,
+                                  const std::string    &cid_string,
+                                  PruneCycleStats      &stats,
+                                  const base::Logger   &logger )
+        {
+            if ( !globaldb.HasColdStorage() )
+            {
+                // D-04 vacuous branch: no cold tier on this node — the
+                // group is admitted exactly as before (pre-phase behavior;
+                // both cold counters stay zero).
+                return true;
+            }
+            auto cid = CID::fromString( cid_string );
+            if ( cid.has_error() )
+            {
+                // Fail closed: an unparseable CID can never be shown
+                // evidence-Durable — defer the whole group (never admit).
+                ++stats.cold_deferred_groups;
+                return false;
+            }
+            switch ( globaldb.GetColdUploadState( cid.value() ) )
+            {
+                case crdt::ColdUploadState::Durable:
+                    return true; // the ONLY permit (exact equality)
+                case crdt::ColdUploadState::Unreadable:
+                    // D-03: loud, dedicated counter + one WARN — never a
+                    // permanent-stop class error.
+                    ++stats.cold_unreadable_groups;
+                    logger->warn( "Prune cold gate: cid {} cold journal Unreadable — deferring group",
+                                  cid_string );
+                    return false;
+                case crdt::ColdUploadState::NoRecord:
+                case crdt::ColdUploadState::Pending:
+                case crdt::ColdUploadState::Accepted:
+                default:
+                    // Includes the default arm (T-14-01): an unknown
+                    // future enum value can never admit.
+                    ++stats.cold_deferred_groups;
+                    return false;
+            }
         }
     } // anonymous namespace
 
@@ -155,6 +219,9 @@ namespace sgns
 
         std::vector<std::string>                                         group_order;
         std::map<std::string, std::vector<const PruneCandidateResult *>> groups;
+        // Cold-deferred group CIDs this cycle (the whole-group skip below
+        // consults this, never the gate twice for one group).
+        std::set<std::string> cold_gate_deferred;
         for ( const auto &candidate : result.candidates )
         {
             if ( !candidate.eligible || !candidate.cid.has_value() )
@@ -166,9 +233,28 @@ namespace sgns
             {
                 continue;
             }
+            if ( cold_gate_deferred.find( cid ) != cold_gate_deferred.end() )
+            {
+                // Whole-group cold deferral already counted for this CID —
+                // no candidate of this CID enters the work list (Pitfall 4:
+                // per-tx gating inside the erase loop is the failure mode).
+                continue;
+            }
             const auto inserted = groups.try_emplace( cid );
             if ( inserted.second )
             {
+                // Cold-durability admission conjunct (PRUNE-01, D-05) at
+                // group admission, keyed on the group's single delta-block
+                // CID (D-01): active iff NodeType::Light AND the GlobalDB
+                // has a cold tier (D-04); the evaluator stays pure — this
+                // lives in the filter, never in
+                // PruneEligibility::Evaluate.
+                if ( !ColdGateAdmitsGroup( globaldb, cid, stats, logger_ ) )
+                {
+                    cold_gate_deferred.insert( cid );
+                    groups.erase( inserted.first );
+                    continue;
+                }
                 group_order.push_back( cid );
             }
             inserted.first->second.push_back( &candidate );
@@ -282,14 +368,18 @@ namespace sgns
         // (6) ONE per-cycle INFO summary (RECL-03). bytes reclaimed is NOT
         // measured until Phase 20 (deletes alone reclaim nothing — no
         // CompactRange has run) — stated explicitly, never fabricated.
+        // The cold counters (v1.2 Phase 14, D-03 shape) surface deferrals
+        // ONLY as counters — never as failure reasons.
         logger_->info( "Prune cycle [generation {}]: examined={}, eligible={}, erased={}, held_blocks={}, "
-                       "skipped={}, errors={}, duration_ms={}, watermark={} — bytes reclaimed: not measured "
-                       "until Phase 20",
+                       "cold_deferred={}, cold_unreadable={}, skipped={}, errors={}, duration_ms={}, "
+                       "watermark={} — bytes reclaimed: not measured until Phase 20",
                        stats.generation,
                        stats.examined,
                        stats.eligible,
                        stats.erased,
                        stats.held_blocks,
+                       stats.cold_deferred_groups,
+                       stats.cold_unreadable_groups,
                        stats.skipped,
                        stats.errors,
                        stats.duration_ms,

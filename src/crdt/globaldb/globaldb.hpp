@@ -576,6 +576,35 @@ namespace sgns::crdt
         ColdUploadState GetColdUploadState( const CID &cid ) const;
 
         /**
+         * @brief      Cold-tier presence signal (v1.2 Phase 14, PRUNE-01):
+         *             true iff this GlobalDB was constructed with a cold
+         *             storage tier (cold_manager_ != nullptr).
+         * @details    The vacuous-branch key for the TxPruner cold-durability
+         *             conjunct and the EraseEntry durability re-check: a
+         *             node with no cold tier admits erases exactly as
+         *             before (identical behavior, both cold counters zero),
+         *             while a cold-enabled node must show evidence-Durable
+         *             state before any destructive erase. Tier presence is
+         *             detected ONLY here — never inferred from a NoRecord
+         *             journal state (a cold-enabled node with a
+         *             not-yet-spilled CID also reads NoRecord) and never
+         *             from GetColdStorageStatus() defaults (Phase 14
+         *             research, Pitfall 7). Deliberately WITHOUT any
+         *             shutdown clause: during shutdown this accessor keeps
+         *             reporting the tier's PRESENCE so a gate read flows
+         *             into GetColdUploadState, which already returns
+         *             NoRecord once shutdown has started — and NoRecord
+         *             DEFERS (the safe under-prune direction). A shutdown
+         *             clause here would flip the cold conjunct into a
+         *             vacuous permit exactly when teardown is racing
+         *             (Pitfall 8). Returns false when cold storage is
+         *             disabled or the build is SGNS_COLD_STORAGE=OFF.
+         * @return     true when a cold tier is present; false when
+         *             disabled or compiled out.
+         */
+        bool HasColdStorage() const;
+
+        /**
          * @brief Starts the GlobalDB instance.
          */
         void Start();

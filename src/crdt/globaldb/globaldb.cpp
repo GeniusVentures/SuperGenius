@@ -1035,6 +1035,19 @@ namespace sgns::crdt
         return sgns::crdt::GetColdUploadState( cold_manager_, cid );
     }
 
+    bool GlobalDB::HasColdStorage() const
+    {
+        // The same active-accessor shape as GetColdUploadState, minus any
+        // shutdown clause BY DESIGN (v1.2 Phase 14, Pitfall 8): while
+        // shutdown is racing the tier's PRESENCE is still true, so a gate
+        // read flows into GetColdUploadState — which already maps shutdown
+        // to NoRecord, and NoRecord DEFERS (under-prune, the safe
+        // direction). A shutdown clause here would flip the TxPruner cold
+        // conjunct into a vacuous permit exactly when teardown is racing.
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        return cold_manager_ != nullptr;
+    }
+
     void GlobalDB::StartColdStorageManager()
     {
         sgns::crdt::StartColdStorageManager( cold_manager_ );

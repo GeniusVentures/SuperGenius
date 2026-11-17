@@ -82,6 +82,22 @@ namespace sgns
         /// stranding edge, Pitfall 1). Deferred groups retry next cycle.
         uint64_t held_blocks = 0;
 
+        /// Erasable block groups DEFERRED whole because the group's
+        /// delta-block CID is not evidence-Durable in the cold journal
+        /// (NoRecord / Pending / Accepted, an unparseable CID, or an
+        /// in-compose refusal — v1.2 Phase 14, PRUNE-01). NOT an error:
+        /// deferred groups are re-evaluated next cycle (under-prune is
+        /// the safe direction; the cold conjunct defers loudly as a
+        /// counter, never as a failure reason).
+        uint64_t cold_deferred_groups = 0;
+
+        /// Erasable block groups DEFERRED because the cold-journal read
+        /// itself failed (ColdUploadState::Unreadable) — additionally
+        /// WARN-logged once per group (D-03). Never a permanent-stop
+        /// class error: a single unreadable record must not brick
+        /// pruning; the group retries next cycle.
+        uint64_t cold_unreadable_groups = 0;
+
         /// Candidates inside taken groups whose FRESH spent-ness re-verify
         /// refused the erase (a spend reverted between evaluation and erase,
         /// or the value could not be re-fetched) — skipped, never erased.

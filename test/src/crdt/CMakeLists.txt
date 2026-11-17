@@ -281,6 +281,47 @@ endif()
 
 set_tests_properties(cold_storage_resurrection_test PROPERTIES LABELS "Tier1")
 endif()
+
+# Cold-durability prune admission gate (PRUNE-01/PRUNE-03, v1.2 Phase 14
+# plan 14-01): TxPruner::RunCycle's group filter admits an erase only on
+# evidence-Durable cold state; everything else defers the whole group as a
+# counter. Registered ONLY under SGNS_COLD_STORAGE. Links the cold-storage
+# set PLUS the transaction/account surface the TxPruner + TransactionManager
+# fixture needs (the tx_pruner_test recipe: genius_node_test whole-archive
+# + p2p_logger, over the resurrection-test cold link set).
+if(SGNS_COLD_STORAGE)
+addtest(cold_prune_gate_test
+    cold_prune_gate_test.cpp
+)
+
+target_include_directories(cold_prune_gate_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_prune_gate_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+)
+
+if(MSVC)
+    target_link_options(cold_prune_gate_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_prune_gate_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_prune_gate_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_prune_gate_test PROPERTIES LABELS "Tier1")
+endif()
 # s3d-unavailable soak: outage-then-recovery iteration soak + D-09
 # teardown legs + peer cold-fetch budget (TEST-02 SC3, v1.1 Phase 12
 # plan 12-02). Registered ONLY under SGNS_COLD_STORAGE: hermetic fakes
