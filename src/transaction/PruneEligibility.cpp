@@ -283,6 +283,87 @@ namespace sgns
         return db.PutRaw( key_buffer, value_buffer );
     }
 
+    std::string PruneEligibility::BuildPruneBlockMarkerKey( const std::string &cid_string )
+    {
+        // CID-keyed sibling of BuildPruneMarkerKey (D-C1: this is the ONE
+        // home): the CID keys the entry, the erasing /prune/tx hash and the
+        // erased-at generation travel inside the record value (D-02).
+        return std::string( PRUNE_BLOCK_MARKER_PREFIX ) + cid_string;
+    }
+
+    outcome::result<std::pair<PrunedBlockLookup, std::optional<SGTransaction::PrunedBlockRecord>>> PruneEligibility::
+        LookupPrunedBlockEntry( crdt::GlobalDB &db, const std::string &cid_string )
+    {
+        crdt::GlobalDB::Buffer marker_key;
+        marker_key.put( BuildPruneBlockMarkerKey( cid_string ) );
+        auto marker = db.GetRaw( marker_key );
+        if ( marker.has_error() )
+        {
+            if ( marker.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                // No marker: this node never erased the block. D-03 fresh
+                // start: absence IS the NoEvidence answer, full stop — no
+                // backfill, no /prune/tx-scan fallback. Deliberately NO
+                // VALUE_PRESENT_INVARIANT_VIOLATION leg: a block marker
+                // legitimately coexists with cold bytes (the normal
+                // post-erase state on a cold node — evidence, not bytes,
+                // decides serve-vs-refuse, SC1).
+                return std::make_pair( PrunedBlockLookup::NOT_FOUND, std::nullopt );
+            }
+            return outcome::failure( marker.error() );
+        }
+
+        SGTransaction::PrunedBlockRecord record;
+        if ( !record.ParseFromArray( marker.value().data(), static_cast<int>( marker.value().size() ) ) )
+        {
+            // T-17-0502 discipline (Pitfall 7): a malformed — including a
+            // zero-length — marker is an ERROR, never a silent verdict in
+            // either direction.
+            MarkerLogger()->error( "Pruned block marker for cid {} is malformed", cid_string );
+            return outcome::failure( std::errc::bad_message );
+        }
+
+        // Presence IS the refusal evidence; the record buys operator
+        // CID->tx traceability and feeds Phase 17's ancestry-density
+        // measurement (D-02).
+        return std::make_pair( PrunedBlockLookup::PRUNED, std::move( record ) );
+    }
+
+    std::pair<base::Buffer, base::Buffer> PruneEligibility::BuildPruneBlockMarkerEntry( const std::string &cid_string,
+                                                                                        const std::string &tx_hash,
+                                                                                        uint64_t          generation )
+    {
+        // The production twin of WritePrunedBlockEntryForTest's body (the
+        // BuildPruneMarkerEntry discipline): the SAME key home
+        // (BuildPruneBlockMarkerKey) and record shape, returned as buffers
+        // for the caller to stage into the SAME erase WriteBatch as the
+        // /prune/tx pair (D-01: one commit carries the erase plus BOTH
+        // markers). The record back-references the ERASING tx's /prune/tx
+        // hash and carries the erased-at account generation threaded from
+        // TxPruner::RunCycle (D-02/D-C4).
+        SGTransaction::PrunedBlockRecord record;
+        record.set_pruning_tx_hash( tx_hash );
+        record.set_has_erased_at_generation( true );
+        record.set_erased_at_generation( generation );
+
+        base::Buffer key_buffer;
+        key_buffer.put( BuildPruneBlockMarkerKey( cid_string ) );
+        base::Buffer value_buffer;
+        value_buffer.put( record.SerializeAsString() );
+        return { std::move( key_buffer ), std::move( value_buffer ) };
+    }
+
+    outcome::result<void> PruneEligibility::WritePrunedBlockEntryForTest( crdt::GlobalDB   &db,
+                                                                          const std::string &cid_string,
+                                                                          const std::string &tx_hash,
+                                                                          uint64_t          generation )
+    {
+        // TEST-ONLY (see header): the production write joins the erase
+        // WriteBatch so value XOR markers hold atomically (D-01).
+        auto entry = BuildPruneBlockMarkerEntry( cid_string, tx_hash, generation );
+        return db.PutRaw( entry.first, entry.second );
+    }
+
     outcome::result<PruneEvaluationResult> PruneEligibility::Evaluate() const
     {
         if ( !config_m.finality_window.has_value() )

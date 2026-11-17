@@ -488,16 +488,20 @@ namespace sgns::crdt
          *            domain owner; never concatenated here.
          * @param[in] cid CID whose raw block bytes are erased alongside the
          *            entries for @p key.
-         * @param[in] extra_entry OPTIONAL caller-built key+value buffer pair
-         *            staged into the SAME batch after the raw-map removal and
-         *            before the single commit (default: none -- existing
-         *            two-arg callers are unchanged). The buffers are OPAQUE:
-         *            GlobalDB stays generic and never inspects or builds key
-         *            shapes. The value-XOR-marker atomicity contract: when
-         *            the caller stages the prune marker here, one commit
-         *            establishes "value absent AND marker present" together
-         *            -- an interrupted batch leaves BOTH sides in their
-         *            pre-erase state, never either alone.
+         * @param[in] extra_entries OPTIONAL caller-built key+value buffer
+         *            pairs (a vector; default: none -- existing two-arg
+         *            callers are unchanged), staged into the SAME batch
+         *            after the raw-map removal and before the single
+         *            commit. The buffers are OPAQUE: GlobalDB stays
+         *            generic and never inspects or builds key shapes.
+         *            The value-XOR-markers atomicity contract (v1.2
+         *            Phase 15 D-01 widened the single pair to a vector so
+         *            one erase stages BOTH the /prune/tx/<hash> and
+         *            /prune/blk/<cid> markers): when the caller stages
+         *            prune markers here, one commit establishes "value
+         *            absent AND markers present" together -- an
+         *            interrupted batch leaves ALL sides in their
+         *            pre-erase state, never any alone.
          * @return outcome::success on success, or outcome::failure on a guard
          *         rejection, a staging error, or a commit error.
          *         Error::POST_COMMIT_ERASE_ANOMALY reports a COMMITTED erase:
@@ -514,9 +518,10 @@ namespace sgns::crdt
          *         group retries next cycle). Cold-off nodes take the guard
          *         vacuously and behave byte-identically to pre-phase.
          */
-        outcome::result<void> EraseEntry( const std::string                              &key,
-                                          const CID                                      &cid,
-                                          const std::optional<std::pair<Buffer, Buffer>> &extra_entry = std::nullopt );
+        outcome::result<void> EraseEntry(
+            const std::string                                              &key,
+            const CID                                                      &cid,
+            const std::optional<std::vector<std::pair<Buffer, Buffer>>>    &extra_entries = std::nullopt );
 
         /**
          * @brief Test-only interruption seam for EraseEntry's compose window.

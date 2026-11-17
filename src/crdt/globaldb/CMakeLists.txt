@@ -46,6 +46,11 @@ target_link_libraries(crdt_globaldb
     rapidjson
     crdt_graphsync_dagsyncer
     crdt_globaldb_proto
+    # SERVE-03 (v1.2 Phase 15): the GlobalDB-installed evidence lambda
+    # parses SGTransaction::PrunedBlockRecord natively (the layering
+    # ruling - PruneEligibility/genius_transaction_objs must NOT be
+    # linked here or the crdt->transaction dependency inverts).
+    SGTransactionProto
     ipfs-lite-cpp::ipfs_datastore_rocksdb
     Boost::filesystem
     p2p::p2p_protocol_echo

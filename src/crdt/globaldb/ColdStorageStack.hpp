@@ -19,6 +19,7 @@
 #ifndef SUPERGENIUS_CRDT_COLDSTORAGESTACK_HPP
 #define SUPERGENIUS_CRDT_COLDSTORAGESTACK_HPP
 
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -26,6 +27,7 @@
 #include <ipfs_lite/ipfs/datastore.hpp>
 #include <outcome/outcome.hpp>
 
+#include "crdt/cold_read_fallback.hpp"
 #include "globaldb.hpp"
 
 namespace sgns::blockstore
@@ -270,6 +272,26 @@ namespace sgns::crdt
      * @param[in]  service the bundle's cold-read service (may be null)
      */
     void StopColdReadService( const std::shared_ptr<ColdReadService> &service );
+
+    /**
+     * @brief      Install the prune-evidence classifier on the cold-read
+     *             service (SERVE-03/D-04, v1.2 Phase 15; null-safe no-op
+     *             when null).
+     *
+     * Real implementation (SGNS_COLD_STORAGE=ON): forwards to
+     * ColdReadService::SetPruneEvidenceLookup; the OFF-build stub is the
+     * no-op ODR twin (no service can exist there, so the consult never
+     * runs and reads stay byte-identical). The callable is the
+     * type-erased GlobalDB-owned lambda (native GetRaw +
+     * PrunedBlockRecord parse) - the ungated caller never sees the
+     * gated service definition, and no sgns-blockstore type crosses
+     * this always-compiled header.
+     * @param[in]  service the bundle's cold-read service (may be null)
+     * @param[in]  lookup the GlobalDB-installed classifier
+     */
+    void SetPruneEvidenceLookupOnColdReadService(
+        const std::shared_ptr<ColdReadService>           &service,
+        std::function<PruneEvidenceClass( const CID & )>  lookup );
 
     /**
      * @brief      TEST-ONLY client override for the cold-storage stack

@@ -3,6 +3,8 @@
 #include "pubsub_broadcaster_ext.hpp"
 #include "keypair_file_storage.hpp"
 
+#include "account/proto/SGTransaction.pb.h"
+#include "crdt/cold_read_fallback.hpp"
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/atomic_transaction.hpp"
@@ -25,6 +27,7 @@
 #include <rapidjson/document.h>
 
 #include <cstdlib>
+#include <string_view>
 #include <vector>
 
 #if defined( _WIN32 )
@@ -73,6 +76,16 @@ namespace sgns::crdt
     using IpfsRocksDb        = ipfs_lite::rocksdb;
     using GossipPubSub       = ipfs_pubsub::GossipPubSub;
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
+
+    // SERVE-03/D-04 (v1.2 Phase 15): file-local mirror of the /prune/blk/
+    // key prefix. The CANONICAL home is
+    // PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX, but globaldb.cpp cannot
+    // include PruneEligibility (genius_transaction_objs links the crdt
+    // targets - including it here would invert the dependency), so the
+    // evidence lambda below carries this private copy. The
+    // cold_evidence_matrix_test round-trip pins the two homes together: a
+    // drifted prefix fails that suite loudly.
+    static constexpr std::string_view kPruneBlockMarkerPrefix{ "/prune/blk/" };
 
     GlobalDB::ColdStorageEnvLookup GlobalDB::DefaultColdStorageEnvLookup()
     {
@@ -839,6 +852,59 @@ namespace sgns::crdt
             // here and injected into the DAG syncer as its ungated hook.
             cold_read_hook      = stack.value().cold_read_hook;
             cold_read_service_  = std::move( stack.value().cold_read_service );
+            // SERVE-03/D-04 (v1.2 Phase 15): install THE role-aware prune
+            // evidence predicate on the cold-read service - the ONE
+            // classification source every evidence-aware surface
+            // (getNode's cold leg, GetNodeWithoutRequest, the re-warm
+            // worker) derives from. Layering ruling: the body is a native
+            // GetRaw + PrunedBlockRecord parse (see kPruneBlockMarkerPrefix
+            // above for why PruneEligibility cannot be included here), and
+            // the install itself flows through the ColdStorageStack bridge
+            // so this ungated TU never needs the complete gated
+            // ColdReadService type (the StartColdReadService discipline).
+            // Role-aware by construction (A4): only pruning nodes (Light)
+            // ever write /prune/blk rows, so non-pruning nodes read
+            // NoEvidence vacuously. Thread discipline: the callable runs on
+            // the CRDT DAG worker and the re-warm worker; GetRaw is the
+            // thread-safe committed-state point read.
+            SetPruneEvidenceLookupOnColdReadService(
+                cold_read_service_,
+                [this]( const CID &cid ) -> PruneEvidenceClass
+                {
+                    const auto        cid_string_result = cid.toString();
+                    const std::string cid_string
+                        = cid_string_result.has_value() ? cid_string_result.value() : std::string();
+                    const std::string key_string = std::string( kPruneBlockMarkerPrefix ) + cid_string;
+                    Buffer             marker_key;
+                    marker_key.put( key_string );
+                    auto marker = GetRaw( marker_key );
+                    if ( marker.has_error() )
+                    {
+                        if ( marker.error() == storage::DatabaseError::NOT_FOUND )
+                        {
+                            // D-03: no row IS the NoEvidence answer - cold
+                            // bytes are restorable history (SC2).
+                            return PruneEvidenceClass::NoEvidence;
+                        }
+                        // Fail-closed (Pitfall 7): unreadable evidence is
+                        // NEVER treated as absent evidence.
+                        m_logger->warn( "prune evidence read failed for CID {} (code {}) - failing closed",
+                                        cid_string,
+                                        marker.error().message() );
+                        return PruneEvidenceClass::Malformed;
+                    }
+                    SGTransaction::PrunedBlockRecord record;
+                    if ( !record.ParseFromArray( marker.value().data(), static_cast<int>( marker.value().size() ) ) )
+                    {
+                        // Fail-closed (Pitfall 7, T-17-0502 discipline): a
+                        // malformed - including zero-length - row is
+                        // Malformed, never a silent NoEvidence and never a
+                        // serve.
+                        m_logger->warn( "prune evidence for CID {} is malformed - failing closed", cid_string );
+                        return PruneEvidenceClass::Malformed;
+                    }
+                    return PruneEvidenceClass::Pruned;
+                } );
             // READ-02 (plan 09-02): the re-warm worker starts at
             // construction time beside the service so every serve miss
             // finds the executor live (own thread - Phase-8 D-10).
@@ -1436,9 +1502,10 @@ namespace sgns::crdt
         return sgns::crdt::GetColdUploadState( cold_manager_, cid );
     }
 
-    outcome::result<void> GlobalDB::EraseEntry( const std::string                              &key,
-                                                const CID                                      &cid,
-                                                const std::optional<std::pair<Buffer, Buffer>> &extra_entry )
+    outcome::result<void> GlobalDB::EraseEntry(
+        const std::string                                              &key,
+        const CID                                                      &cid,
+        const std::optional<std::vector<std::pair<Buffer, Buffer>>>    &extra_entries )
     {
         auto crdt_datastore = ActiveCRDTDataStore();
         auto datastore      = ActiveDataStore();
@@ -1557,13 +1624,18 @@ namespace sgns::crdt
         {
             return outcome::failure( Error::INVALID_PARAMETERS );
         }
-        // The caller-built extra entry (D-C1: the /prune/tx/<hash> marker)
-        // joins the SAME batch after the raw-map removal, before the single
-        // commit -- value XOR marker is established atomically. The buffers
-        // are opaque; key shapes stay with the caller (Phase-16 D-01).
-        if ( extra_entry.has_value() )
+        // The caller-built extra entries (D-C1 homes: the /prune/tx/<hash>
+        // and /prune/blk/<cid> markers - v1.2 Phase 15 D-01 widened the slot
+        // to a vector) join the SAME batch after the raw-map removal, before
+        // the single commit - value XOR markers is established atomically.
+        // The buffers are opaque; key shapes stay with the caller
+        // (Phase-16 D-01).
+        if ( extra_entries.has_value() )
         {
-            BOOST_OUTCOME_TRY( batch->put( extra_entry->first, extra_entry->second ) );
+            for ( const auto &staged_entry : *extra_entries )
+            {
+                BOOST_OUTCOME_TRY( batch->put( staged_entry.first, staged_entry.second ) );
+            }
         }
         BOOST_OUTCOME_TRY( batch->commit() );
 

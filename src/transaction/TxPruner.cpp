@@ -295,7 +295,10 @@ namespace sgns
                     interrupted = true;
                     break;
                 }
-                auto erase = transaction_manager.EraseTransactionEntryPruned( TxHashFromPath( candidate->tx_path ) );
+                // v1.2 Phase 15 (D-C4 -> D-02): the generation tag rides
+                // the erase into the /prune/blk marker's erased_at_generation.
+                auto erase = transaction_manager.EraseTransactionEntryPruned( TxHashFromPath( candidate->tx_path ),
+                                                                              generation );
                 if ( erase.has_error() )
                 {
                     if ( erase.error() == crdt::GlobalDB::Error::COLD_NOT_DURABLE )

@@ -91,6 +91,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
             return "Cold storage returned bytes that failed CID verification";
         case sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_UNAUTHORIZED:
             return "Cold storage rejected the request (authentication/permission failure)";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY:
+            return "History was pruned on this node (node-local prune evidence)";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::PRUNE_EVIDENCE_CORRUPT:
+            return "Prune evidence marker failed to decode (failing closed)";
     }
     return "Unknown error";
 }
@@ -381,6 +385,17 @@ namespace sgns::crdt
                             cid.toString().value(),
                             reinterpret_cast<size_t>( this ) );
             return node;
+        }
+
+        // SERVE-04 (v1.2 Phase 15): node-local terminality - the two
+        // evidence-based refusals NEVER fall through to the peer leg
+        // (evidence outranks peers, not just bytes: a peer fetch would
+        // resurrect the very history this node deliberately erased - the
+        // resurrection bug this phase kills). GetNodeWithoutRequest needs
+        // no such check: it returns the cold-leg result directly.
+        if ( node.error() == Error::HISTORY_PRUNED_LOCALLY || node.error() == Error::PRUNE_EVIDENCE_CORRUPT )
+        {
+            return node.as_failure();
         }
 
         auto route_keys_result = GetRouteKeys( cid );
@@ -788,6 +803,27 @@ namespace sgns::crdt
             // Disabled bar (Phase-7): no hook -> the hot path's own error
             // surfaces unchanged; no cold I/O ever runs.
             return hot_miss_result;
+        }
+
+        // SERVE-01/02 (v1.2 Phase 15): THE evidence consult - ONE lookup at
+        // the top of the hooked path, BEFORE the cold Get, so it covers both
+        // the bytes-present and the bytes-miss+evidence cases (Pitfall 1)
+        // and skips cold I/O entirely for pruned CIDs. Pruned is TERMINAL:
+        // no cold Get, no Rehydrate - erased bytes are never resurrected.
+        // Malformed fails closed (Pitfall 7). NoEvidence falls into the
+        // existing serve body VERBATIM (SC2 - evict = DETACH).
+        switch ( cold_read_hook_->LookupPruneEvidence( cid ) )
+        {
+            case PruneEvidenceClass::Pruned:
+                logger_->debug( "cold read: CID {} refused - node-local prune evidence outranks bytes",
+                                cid.toString().value() );
+                return outcome::failure( Error::HISTORY_PRUNED_LOCALLY );
+            case PruneEvidenceClass::Malformed:
+                logger_->error( "cold read: CID {} prune evidence is corrupt - failing closed",
+                                cid.toString().value() );
+                return outcome::failure( Error::PRUNE_EVIDENCE_CORRUPT );
+            case PruneEvidenceClass::NoEvidence:
+                break; // SC2: the existing v1.1 serve path, unchanged
         }
 
         common::Buffer   bytes;

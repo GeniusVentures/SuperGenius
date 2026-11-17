@@ -389,4 +389,17 @@ namespace sgns::crdt
         }
     }
 
+    // SERVE-03/D-04 (v1.2 Phase 15): the install bridge - GlobalDB hands
+    // its type-erased evidence lambda to the gated service without ever
+    // needing the complete ColdReadService type at its own call site.
+    void SetPruneEvidenceLookupOnColdReadService(
+        const std::shared_ptr<ColdReadService>           &service,
+        std::function<PruneEvidenceClass( const CID & )>  lookup )
+    {
+        if ( service )
+        {
+            service->SetPruneEvidenceLookup( std::move( lookup ) );
+        }
+    }
+
 } // namespace sgns::crdt

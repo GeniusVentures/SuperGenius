@@ -50,6 +50,27 @@ namespace sgns::crdt
     };
 
     /**
+     * @brief      Seam-side classification of the node-local prune
+     *             evidence for one CID (SERVE-03/D-04, v1.2 Phase 15).
+     *
+     * The ONE role-aware predicate every classifying cold-serve surface
+     * (getNode's cold leg, GetNodeWithoutRequest, the re-warm worker)
+     * derives from via LookupPruneEvidence; HasBlock projects the same
+     * source onto bool without consulting it (D-04 source-consistency
+     * ruling). Mirrors the ColdReadStatus discipline: NO transaction-layer
+     * type (PrunedLookup, PrunedBlockLookup) ever crosses the gated/ungated
+     * boundary. Role-aware by construction (A4): only pruning nodes (Light)
+     * ever write /prune/blk rows, so the predicate is vacuously NoEvidence
+     * on non-pruning roles - no explicit role flag is needed.
+     */
+    enum class PruneEvidenceClass : uint8_t
+    {
+        NoEvidence, ///< no /prune/blk row: cold bytes are restorable history (SC2)
+        Pruned,     ///< row present: node-local terminal refusal - bytes are never served, never re-warmed (SC1)
+        Malformed,  ///< row failed decode: fail-closed hard error, never a silent verdict (Pitfall 7)
+    };
+
+    /**
      * @brief      Cold-read fallback hook (READ-01): the D-01/D-02 chain
      *             (LocalBlockStore then S3BlockStore, both CID-verifying)
      *             plus the D-04 rehydrate path, behind an interface the
@@ -141,6 +162,26 @@ namespace sgns::crdt
          *              (09-RESEARCH §2.4 ruling: bytes only).
          */
         virtual void Rehydrate( const CID &cid, const sgns::common::Buffer &bytes ) = 0;
+
+        /**
+         * @brief       Classify the node-local prune evidence for @p cid
+         *              (SERVE-03/D-04, v1.2 Phase 15).
+         * @param[in]   cid the content identifier
+         * @return      NoEvidence when no /prune/blk row exists (cold bytes
+         *              are restorable history - SC2); Pruned when a decoded
+         *              row exists (node-local TERMINAL refusal - SC1);
+         *              Malformed when the row failed decode (fail-closed
+         *              hard error - Pitfall 7)
+         * @note        The ONE role-aware predicate every classifying
+         *              surface derives from (D-04 source-consistency);
+         *              implemented over a GlobalDB-installed callable at
+         *              the OpenColdStorageStack seam. A null hook is never
+         *              consulted - disabled builds stay byte-identical
+         *              (the Phase-7 bar). O(1) point lookup (WR-04: never
+         *              a scan), stateless, safe on the CRDT DAG worker and
+         *              the re-warm worker alike.
+         */
+        virtual PruneEvidenceClass LookupPruneEvidence( const CID &cid ) = 0;
     };
 
     /**

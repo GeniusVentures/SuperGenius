@@ -127,6 +127,25 @@ namespace sgns
     };
 
     /**
+     * @brief       CID-keyed verdict of the block-marker lookup (v1.2
+     *              Phase 15, D-02).
+     * @details     The CID-keyed sibling of PrunedLookup WITHOUT the
+     *              VALUE_PRESENT_INVARIANT_VIOLATION leg: a block marker
+     *              legitimately coexists with cold bytes — that is the
+     *              NORMAL post-erase state on a cold node (the erase
+     *              removes the hot value; the cold tier may still hold
+     *              the CID-verified bytes, and evidence — not bytes —
+     *              decides serve-vs-refuse, SC1).
+     */
+    enum class PrunedBlockLookup : uint8_t
+    {
+        PRUNED,    ///< /prune/blk marker present: the block was physically
+                   ///< erased on this node — node-local terminal refusal.
+        NOT_FOUND, ///< No marker: this node never erased the block; cold
+                   ///< bytes (if any) are restorable history (SC2).
+    };
+
+    /**
      * @brief       Structured verdict for one candidate transaction key.
      * @details     Named-evidence discipline (PublicChainInputValidator shape):
      *              fields are recorded only after the check that produces them
@@ -395,6 +414,12 @@ namespace sgns
         /// same shared RocksDB, direct datastore writes, never broadcast).
         static constexpr std::string_view PRUNE_MARKER_PREFIX = "/prune/tx/";
 
+        /// Node-local BLOCK marker key namespace (v1.2 Phase 15, D-02): the
+        /// CID-keyed sibling of PRUNE_MARKER_PREFIX — presence of a row under
+        /// this prefix is the node-local terminal refusal evidence consulted
+        /// by every cold serve surface (SC1/SC3).
+        static constexpr std::string_view PRUNE_BLOCK_MARKER_PREFIX = "/prune/blk/";
+
         /**
          * @brief       Builds the node-local marker key for @p tx_hash.
          * @details     PRUNE_MARKER_PREFIX + hash; the tx PATH travels inside
@@ -469,6 +494,86 @@ namespace sgns
         static outcome::result<void> WritePrunedEntryForTest( crdt::GlobalDB                               &db,
                                                               const std::string                            &tx_hash,
                                                               const SGTransaction::PrunedTransactionRecord &record );
+
+        /**
+         * @brief       Builds the node-local BLOCK marker key for @p cid_string
+         *              (v1.2 Phase 15, D-02; D-C1 home).
+         * @details     PRUNE_BLOCK_MARKER_PREFIX + CID; the erasing
+         *              /prune/tx hash and the erased-at generation travel
+         *              inside the record value because lookups are by CID.
+         * @param[in]   cid_string Block CID (readable string form).
+         * @return      "/prune/blk/&lt;cid_string&gt;".
+         */
+        static std::string BuildPruneBlockMarkerKey( const std::string &cid_string );
+
+        /**
+         * @brief       Answers "was this block erased here?" (D-02, SC1).
+         * @details     Reads the marker at BuildPruneBlockMarkerKey(cid_string)
+         *              through the node-local raw surface. Verdicts: no row
+         *              ⇒ NOT_FOUND (no record — the D-03 fresh-start answer,
+         *              full stop: no backfill, no /prune/tx-scan fallback);
+         *              row present ⇒ PRUNED with the decoded record. A
+         *              malformed marker payload — including a zero-length
+         *              value — is an error result
+         *              (std::errc::bad_message), never a silent verdict
+         *              (T-17-0502 discipline, Pitfall 7). Deliberately NO
+         *              VALUE_PRESENT_INVARIANT_VIOLATION leg: a block marker
+         *              legitimately coexists with cold bytes (see
+         *              PrunedBlockLookup). Writes nothing; O(1) point lookup
+         *              (WR-04: never a scan).
+         * @param[in]   db Committed-state reader.
+         * @param[in]   cid_string Block CID (readable string form).
+         * @return      (verdict, decoded record when a marker decoded), or
+         *              outcome::failure for a raw-read/decode error.
+         */
+        static outcome::result<std::pair<PrunedBlockLookup, std::optional<SGTransaction::PrunedBlockRecord>>>
+        LookupPrunedBlockEntry( crdt::GlobalDB &db, const std::string &cid_string );
+
+        /**
+         * @brief       Builds the production BLOCK marker entry (D-02, D-C1).
+         * @details     The production twin of WritePrunedBlockEntryForTest:
+         *              returns the key/value buffer pair —
+         *              BuildPruneBlockMarkerKey(cid_string) plus a
+         *              PrunedBlockRecord carrying the erasing /prune/tx hash
+         *              back-reference and the erased-at account generation —
+         *              instead of writing it. The caller stages the pair
+         *              into the SAME WriteBatch as the erase and the
+         *              /prune/tx marker (D-01: one commit carries the erase
+         *              plus BOTH markers, so erase-without-marker and
+         *              marker-without-erase are impossible by construction).
+         *              The key home and record shape live HERE — callers
+         *              never rebuild them.
+         * @param[in]   cid_string Block CID (readable string form), resolved
+         *              by the caller for this erase (WR-02: the SAME cid the
+         *              erase targets).
+         * @param[in]   tx_hash The erasing transaction's hash (readable
+         *              string form) — the /prune/tx back-reference.
+         * @param[in]   generation The erased-at account generation threaded
+         *              from TxPruner::RunCycle (D-C4).
+         * @return      (marker key buffer, serialized record buffer).
+         */
+        static std::pair<base::Buffer, base::Buffer> BuildPruneBlockMarkerEntry( const std::string &cid_string,
+                                                                                const std::string &tx_hash,
+                                                                                uint64_t          generation );
+
+        /**
+         * @brief       TEST-ONLY block-marker writer (the TEST-01 seam).
+         * @details     Serializes a PrunedBlockRecord built from
+         *              (@p tx_hash, @p generation) and writes it at the
+         *              block-marker key on the node-local raw surface.
+         *              Production NEVER calls this: the real block-marker
+         *              write joins the erase WriteBatch (D-01).
+         * @note        No production caller may invoke this method.
+         * @param[in]   db Store receiving the marker.
+         * @param[in]   cid_string Block CID (readable string form).
+         * @param[in]   tx_hash The erasing transaction's hash back-reference.
+         * @param[in]   generation The erased-at account generation tag.
+         * @return      outcome::success, or outcome::failure on I/O error.
+         */
+        static outcome::result<void> WritePrunedBlockEntryForTest( crdt::GlobalDB  &db,
+                                                                   const std::string &cid_string,
+                                                                   const std::string &tx_hash,
+                                                                   uint64_t          generation );
 
     private:
         PruneEligibility( crdt::GlobalDB      &globaldb,

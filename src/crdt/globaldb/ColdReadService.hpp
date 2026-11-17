@@ -30,6 +30,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -90,6 +91,25 @@ namespace sgns::crdt
 
         /** @copydoc ColdReadFallback::Rehydrate() */
         void Rehydrate( const CID &cid, const sgns::common::Buffer &bytes ) override;
+
+        /** @copydoc ColdReadFallback::LookupPruneEvidence() */
+        PruneEvidenceClass LookupPruneEvidence( const CID &cid ) override;
+
+        /**
+         * @brief      Installs the GlobalDB-owned evidence classifier
+         *             (SERVE-03/D-04, v1.2 Phase 15).
+         * @note      Dependency direction GlobalDB->service: the callable
+         *            does the native GetRaw + PrunedBlockRecord parse and
+         *            this class never grows a GlobalDB type into its
+         *            signature. Production installs it between the
+         *            cold_read_service_ assignment and StartColdReadService
+         *            (globaldb.cpp wiring seam); the empty-callable
+         *            default answers NoEvidence (the pre-install /
+         *            test-stub posture). Thread discipline: the callable may
+         *            run on the CRDT DAG worker and the re-warm worker -
+         *            GlobalDB::GetRaw is the thread-safe point read.
+         */
+        void SetPruneEvidenceLookup( std::function<PruneEvidenceClass( const CID & )> lookup );
 
         /**
          * @brief      Spawn the re-warm worker thread (idempotent;
@@ -170,6 +190,13 @@ namespace sgns::crdt
         std::shared_ptr<std::mutex>                        cold_store_mutex_;
         std::shared_ptr<std::mutex>                        remote_store_mutex_;
         std::shared_ptr<ipfs_lite::ipfs::IpfsDatastore>    rehydrate_target_;
+
+        // SERVE-03/D-04 (v1.2 Phase 15): the GlobalDB-installed prune
+        // evidence classifier (empty = NoEvidence, the pre-install /
+        // test-stub posture). Read on the CRDT DAG worker and the re-warm
+        // worker; the callable itself is immutable after install and its
+        // body is a thread-safe point read.
+        std::function<PruneEvidenceClass( const CID & )>   prune_evidence_lookup_;
 
         // Rate-limited failure logging state (D-03/§3.4: cold failures
         // logged + counted, BlockStatus code only - never endpoint or

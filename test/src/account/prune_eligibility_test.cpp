@@ -1280,8 +1280,11 @@ TEST_F( PruneEligibilityTest, PruneMarker_EraseWithStagedMarkerCommitsAtomically
     auto cid = CID::fromString( block_cid );
     ASSERT_TRUE( cid.has_value() );
     const auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash(), tx_path );
+    // v1.2 Phase 15 D-01: the staged slot widened to a vector of pairs;
+    // this /prune/tx-only staging shape is the 1-element vector.
+    const std::vector<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> marker_entries{ marker_pair };
 
-    auto erased = db_->EraseEntry( tx_path, cid.value(), marker_pair );
+    auto erased = db_->EraseEntry( tx_path, cid.value(), marker_entries );
     ASSERT_TRUE( erased.has_value() );
 
     // One commit, both sides: value gone, block gone, marker present.
@@ -1323,6 +1326,9 @@ TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUn
     auto cid = CID::fromString( block_cid );
     ASSERT_TRUE( cid.has_value() );
     auto marker_pair = PruneEligibility::BuildPruneMarkerEntry( tx->GetHash(), tx_path );
+    // v1.2 Phase 15 D-01: the staged slot widened to a vector of pairs;
+    // the /prune/tx-only staging shape is the 1-element vector.
+    const std::vector<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> marker_entries{ marker_pair };
 
     for ( const int step : { 1, 2, 3 } )
     {
@@ -1333,7 +1339,7 @@ TEST_F( PruneEligibilityTest, PruneMarker_InterruptedEraseLeavesValueAndMarkerUn
         ASSERT_EQ( pre_lookup.value().first, PrunedLookup::NOT_FOUND );
 
         crdt::GlobalDB::SetEraseInterruptHookForTest( [step]( int fired ) { return fired == step; } );
-        auto erased = db_->EraseEntry( tx_path, cid.value(), marker_pair );
+        auto erased = db_->EraseEntry( tx_path, cid.value(), marker_entries );
         crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
 
         ASSERT_TRUE( erased.has_error() );

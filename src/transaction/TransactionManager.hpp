@@ -1090,10 +1090,15 @@ namespace sgns
          *          block key is an idempotent no-op, so no special-casing
          *          for BLOCK_ALREADY_ERASED verdicts.
          * @param[in] tx_hash hash of the transaction to erase and mark.
+         * @param[in] generation The erased-at account generation threaded
+         *            from TxPruner::RunCycle (D-C4 -> D-02, v1.2 Phase 15):
+         *            recorded in the /prune/blk marker. Default 0 keeps
+         *            non-TxPruner callers compiling unchanged.
          * @return outcome::success on success, or outcome::failure under
          *         the same conditions as EraseTransactionEntry.
          */
-        outcome::result<void> EraseTransactionEntryPruned( const std::string &tx_hash );
+        outcome::result<void> EraseTransactionEntryPruned( const std::string &tx_hash,
+                                                            uint64_t           generation = 0 );
 
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus new_status );
@@ -1180,9 +1185,10 @@ namespace sgns
          * @brief The ONE resolve→erase→cleanup sequence behind both erase
          *        drivers (EraseTransactionEntry / EraseTransactionEntryPruned).
          * @details Resolves the tx path and CID together, erases through
-         *          GlobalDB::EraseEntry (staging @p extra_entry into the
-         *          same WriteBatch when present — the pruned driver passes
-         *          the marker pair, the plain driver passes none), then
+         *          GlobalDB::EraseEntry (staging the marker-vector entries
+         *          into the same WriteBatch when @p stage_pruned_marker is
+         *          set — the pruned driver passes BOTH the /prune/tx and
+         *          /prune/blk pairs, the plain driver passes none), then
          *          performs the revert-free tracked-map cleanup.
          * @param[in] tx_hash hash of the transaction to erase.
          * @param[in] stage_pruned_marker when true, the prune marker pair is
@@ -1192,11 +1198,17 @@ namespace sgns
          *            WriteBatch — the persisted record then names the path
          *            that was actually erased, whatever monitored network it
          *            lives under (WR-02).
+         * @param[in] generation The erased-at account generation threaded
+         *            from TxPruner::RunCycle (D-C4 -> D-02, v1.2 Phase 15):
+         *            recorded in the /prune/blk marker. Default 0 keeps
+         *            non-TxPruner callers compiling unchanged.
          * @return outcome::success on success, or outcome::failure when the
          *         CID cannot be resolved, a guard rejects the erase, or the
          *         atomic commit fails.
          */
-        outcome::result<void> EraseTransactionEntryWithMarker( const std::string &tx_hash, bool stage_pruned_marker );
+        outcome::result<void> EraseTransactionEntryWithMarker( const std::string &tx_hash,
+                                                               bool               stage_pruned_marker,
+                                                               uint64_t           generation = 0 );
 
         /**
          * @brief Derives the escrow chain id for a private-network job scope.

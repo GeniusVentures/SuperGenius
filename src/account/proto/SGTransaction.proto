@@ -75,6 +75,20 @@ message PrunedTransactionRecord
     uint64 erased_at_height = 4;
 }
 
+// Node-local marker that a BLOCK was physically erased (v1.2 Phase 15,
+// D-02). Key layout: "/prune/blk/" + CID on the node-local raw surface;
+// the value carries the erasing /prune/tx hash back-reference plus the
+// erased-at account generation threaded from TxPruner::RunCycle (D-C4).
+// Written ONLY in the same WriteBatch as the erase (value XOR markers,
+// atomic - D-01). NEVER a wire format: this is a node-local raw-store
+// value, the same class as PrunedTransactionRecord (D-07/A1).
+message PrunedBlockRecord
+{
+    string pruning_tx_hash = 1;
+    bool has_erased_at_generation = 2;
+    uint64 erased_at_generation = 3;
+}
+
 message UTXOCheckpointRecord
 {
     string owner_address = 1;

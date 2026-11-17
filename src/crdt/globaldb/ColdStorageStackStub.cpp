@@ -103,4 +103,15 @@ namespace sgns::crdt
         (void)service; // no service exists on OFF builds; null-safe no-op
     }
 
+    // SERVE-03/D-04 (v1.2 Phase 15): the ODR twin of the install bridge -
+    // no service exists on OFF builds, so there is nothing to arm (the
+    // consult never runs; reads stay byte-identical to pre-phase).
+    void SetPruneEvidenceLookupOnColdReadService(
+        const std::shared_ptr<ColdReadService>           &service,
+        std::function<PruneEvidenceClass( const CID & )>  lookup )
+    {
+        (void)service;
+        (void)lookup; // no service exists on OFF builds; null-safe no-op
+    }
+
 } // namespace sgns::crdt

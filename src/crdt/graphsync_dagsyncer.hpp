@@ -64,6 +64,15 @@ namespace sgns::crdt
             COLD_STORAGE_TEMPORARILY_UNAVAILABLE, ///< Cold tier transport/outage/timeout (D-03)
             COLD_STORAGE_CORRUPT,                 ///< Cold-tier bytes failed CID verification (SC3)
             COLD_STORAGE_UNAUTHORIZED,            ///< Cold-tier authentication/permission failure (SC3)
+            // SERVE-04/D-07 (v1.2 Phase 15): node-local prune-evidence
+            // refusals - appended AFTER COLD_STORAGE_UNAUTHORIZED
+            // (uint8_t-sequential; never reordered). BIP-159-NOPRUNE-style
+            // distinction from CID_NOT_FOUND: pruned-local is NEVER folded
+            // into the not-found class, so requesters fail over through the
+            // existing per-CID failure accounting instead of treating the
+            // miss as authoritative absence.
+            HISTORY_PRUNED_LOCALLY, ///< Node-local prune evidence refuses the serve (SERVE-04/D-07)
+            PRUNE_EVIDENCE_CORRUPT, ///< /prune/blk marker failed decode: fail-closed hard error (Pitfall 7)
         };
 
         struct BlacklistEntry

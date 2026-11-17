@@ -429,16 +429,38 @@ namespace sgns::crdt
             }
             else
             {
-                // The 09-01 chain does the CID-verifying fetch + re-cache
-                // (T-9-07: verification cannot be bypassed; corrupted
-                // bytes classify Corrupt and are never re-cached).
-                sgns::common::Buffer   bytes;
-                const ColdReadStatus status = Get( cid, bytes );
-                if ( !bytes.empty() )
+                // SERVE-01 (v1.2 Phase 15): responder-side resurrection gate
+                // - the evidence consult PRECEDES the cold Get so no re-warm
+                // surface can ever write erased bytes hot. Pruned skips with
+                // a debug line (node-local terminal evidence); Malformed
+                // skips with an error line (fail-closed, Pitfall 7);
+                // NoEvidence proceeds into the existing fetch body VERBATIM
+                // (SC2 - evict = DETACH).
+                const PruneEvidenceClass evidence = LookupPruneEvidence( cid );
+                if ( evidence == PruneEvidenceClass::Pruned )
                 {
-                    Rehydrate( cid, bytes );
+                    logger_->debug( "cold read: re-warm skipped for CID {} - node-local prune evidence (SERVE-01)",
+                                    cid.toString().value() );
                 }
-                (void)status; // classifications are logged inside the chain
+                else if ( evidence == PruneEvidenceClass::Malformed )
+                {
+                    logger_->error(
+                        "cold read: re-warm skipped for CID {} - prune evidence malformed, failing closed (Pitfall 7)",
+                        cid.toString().value() );
+                }
+                else
+                {
+                    // The 09-01 chain does the CID-verifying fetch + re-cache
+                    // (T-9-07: verification cannot be bypassed; corrupted
+                    // bytes classify Corrupt and are never re-cached).
+                    sgns::common::Buffer bytes;
+                    const ColdReadStatus status = Get( cid, bytes );
+                    if ( !bytes.empty() )
+                    {
+                        Rehydrate( cid, bytes );
+                    }
+                    (void)status; // classifications are logged inside the chain
+                }
             }
             {
                 std::lock_guard<std::mutex> lock( rewarm_mutex_ );
@@ -446,6 +468,30 @@ namespace sgns::crdt
             }
             MarkRewarmIdle();
         }
+    }
+
+    void ColdReadService::SetPruneEvidenceLookup( std::function<PruneEvidenceClass( const CID & )> lookup )
+    {
+        // Installed exactly once by GlobalDB between the cold_read_service_
+        // assignment and StartColdReadService (the pinned seam) - immutable
+        // afterwards, so the unsynchronized read below is safe: it either
+        // observes nullptr (pre-install posture) or the fully published
+        // callable, never a torn state.
+        prune_evidence_lookup_ = std::move( lookup );
+    }
+
+    PruneEvidenceClass ColdReadService::LookupPruneEvidence( const CID &cid )
+    {
+        // Empty callable = NoEvidence (the pre-install/test-stub posture,
+        // v1.2 Phase 15): production installs the GlobalDB lambda before
+        // StartColdReadService, so this arm is unreachable in a running
+        // cold node; a stub that never armed evidence is not corrupt, so
+        // it answers honestly rather than failing closed.
+        if ( prune_evidence_lookup_ == nullptr )
+        {
+            return PruneEvidenceClass::NoEvidence;
+        }
+        return prune_evidence_lookup_( cid );
     }
 
     void ColdReadService::Rehydrate( const CID &cid, const sgns::common::Buffer &bytes )

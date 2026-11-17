@@ -4716,7 +4716,8 @@ namespace sgns
     }
 
     outcome::result<void> TransactionManager::EraseTransactionEntryWithMarker( const std::string &tx_hash,
-                                                                               bool               stage_pruned_marker )
+                                                                               bool               stage_pruned_marker,
+                                                                               uint64_t           generation )
     {
         if ( !globaldb_m )
         {
@@ -4736,23 +4737,32 @@ namespace sgns
         const auto &path = path_and_cid.first;
         BOOST_OUTCOME_TRY( auto cid, CID::fromString( path_and_cid.second ) );
 
-        // The marker pair is built HERE — AFTER resolution — from the SAME
-        // path the erase below targets. Building it from the hash alone would
+        // The marker pairs are built HERE — AFTER resolution — from the SAME
+        // path+cid the erase below targets. Building them from the hash alone would
         // format the LOCAL network's path even when the entry resolves under
         // another monitored network, persisting a record whose tx_path names
         // a key that never existed (WR-02: the lookup's value-presence probe
         // would then read a vacuously absent path and the invariant detector
         // could never fire for such markers).
-        std::optional<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> extra_entry;
+        // v1.2 Phase 15 D-01: the staged slot is a VECTOR carrying BOTH
+        // markers - /prune/tx/<hash> AND /prune/blk/<cid> - so one commit
+        // establishes value-absent AND both markers atomically; D-02: the
+        // block record back-references the erasing tx hash and carries the
+        // erased-at generation threaded from TxPruner::RunCycle (D-C4).
+        std::optional<std::vector<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>>> extra_entries;
         if ( stage_pruned_marker )
         {
-            extra_entry = PruneEligibility::BuildPruneMarkerEntry( tx_hash, path );
+            std::vector<std::pair<crdt::GlobalDB::Buffer, crdt::GlobalDB::Buffer>> markers;
+            markers.push_back( PruneEligibility::BuildPruneMarkerEntry( tx_hash, path ) );
+            markers.push_back(
+                PruneEligibility::BuildPruneBlockMarkerEntry( path_and_cid.second, tx_hash, generation ) );
+            extra_entries = std::move( markers );
         }
 
         // Atomic two-level erase + map-entry delete in one WriteBatch; the
-        // staged extra entry (the pruned driver's marker pair) joins the SAME
-        // batch, so value XOR marker holds atomically.
-        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid, extra_entry ) );
+        // staged extra entries (the pruned driver's BOTH marker pairs) join
+        // the SAME batch, so value XOR markers holds atomically.
+        BOOST_OUTCOME_TRY( globaldb_m->EraseEntry( path, cid, extra_entries ) );
 
         // Revert-free tracked-map cleanup after the committed erase, keyed on
         // the SAME path that was erased; the entry is memory-only
@@ -4772,12 +4782,13 @@ namespace sgns
         return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/false );
     }
 
-    outcome::result<void> TransactionManager::EraseTransactionEntryPruned( const std::string &tx_hash )
+    outcome::result<void> TransactionManager::EraseTransactionEntryPruned( const std::string &tx_hash,
+                                                                           uint64_t          generation )
     {
-        // The production driver: the marker pair (built by its one home,
-        // PruneEligibility, from the RESOLVED path inside the shared helper)
-        // joins the erase WriteBatch.
-        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/true );
+        // The production driver: BOTH marker pairs (built by their one home,
+        // PruneEligibility, from the RESOLVED path+cid inside the shared
+        // helper) join the erase WriteBatch (v1.2 Phase 15 D-01/D-02).
+        return EraseTransactionEntryWithMarker( tx_hash, /*stage_pruned_marker=*/true, generation );
     }
 
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(
