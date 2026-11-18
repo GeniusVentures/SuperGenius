@@ -48,6 +48,22 @@
 
 #include "base/sgns_version.hpp"
 
+// Cold-enabled erase-gate legs (v1.2 Phase 15 plan 15-03, SERVE-04/D-07):
+// the hermetic cold posture (InMemory S3 fakes against a never-contacted
+// endpoint) + the /prune/blk evidence seeding helper. Compiled ONLY under
+// SGNS_COLD_STORAGE - the OFF build keeps the suite's cold-disabled shape.
+#ifdef SGNS_COLD_STORAGE
+#include <sgns-blockstore/InMemoryS3AdminClient.hpp>
+#include <sgns-blockstore/InMemoryS3Client.hpp>
+#include <sgns-blockstore/S3AdminClient.hpp>
+#include <sgns-blockstore/S3Client.hpp>
+
+#include "account/proto/SGTransaction.pb.h"
+#include "crdt/cold_read_fallback.hpp"
+#include "crdt/globaldb/ColdStorageStack.hpp"
+#include "transaction/PruneEligibility.hpp"
+#endif
+
 namespace
 {
     std::string GetLoggingSystem( const std::string & )
@@ -117,6 +133,109 @@ public:
                 nodes_.push_back( std::move( node ) );
             }
         }
+
+#ifdef SGNS_COLD_STORAGE
+        /// Adds one COLD-ENABLED node (the 15-03 failover topology): the
+        /// hermetic cold posture from the cold_evidence_matrix kit - cold
+        /// on against the never-contacted "hermetic.invalid" endpoint
+        /// with InMemory S3 fakes installed process-globally just before
+        /// the node's construction and hygiene-cleared immediately after
+        /// (the node's coldstore lands at basePath/CommonKey/coldstore;
+        /// the drainer's fast cadence drives real Pending->Accepted->
+        /// Durable transitions on the fakes).
+        void addColdNode( const std::string &dbName )
+        {
+            const std::string testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+            const std::string binaryPath = boost::dll::program_location().parent_path().string();
+            const std::string basePath   = binaryPath + "/" + dbName + "_" + testName;
+            sgns::test::removeAllWithRetry( basePath );
+            boost::filesystem::create_directories( basePath );
+
+            EraseNode node = makeColdNode( basePath, /*start=*/true );
+            if ( node.db )
+            {
+                nodes_.push_back( std::move( node ) );
+            }
+        }
+
+        /// The cold-enabled twin of makeNode: identical pubsub/scheduler/
+        /// graphsync wiring, plus the hermetic ColdStorageOptions and the
+        /// fake-client injection window around GlobalDB::New (the real
+        /// minio client must never be constructed against an unresolvable
+        /// host - the kit's standing constraint).
+        EraseNode makeColdNode( const std::string &basePath, bool start )
+        {
+            EraseNode node;
+            node.basePath = basePath;
+
+            sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );
+            auto                           keyPair = keyStore.GetKeyPair().value();
+            node.pubsub                            = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
+            const std::string listenIp             = "0.0.0.0";
+            const auto        startError           = node.pubsub->Start( 0, {}, listenIp, { "127.0.0.1" } ).get();
+            EXPECT_FALSE( startError ) << "Could not start cold GlobalDB test node: " << startError.message();
+            if ( startError )
+            {
+                return node;
+            }
+
+            auto io        = node.pubsub->GetAsioContext();
+            auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( node.pubsub->GetAsioContext() ),
+                libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+            auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( node.pubsub->GetHost(),
+                                                                                                 scheduler );
+            auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+
+            sgns::crdt::GlobalDB::ColdStorageOptions cold;
+            cold.enabled   = true;
+            cold.endpoint  = "hermetic.invalid"; // overridden below - never contacted
+            cold.bucket    = "erase-failover";
+            cold.accessKey = "test";
+            cold.secretKey = "test";
+            cold.backpressure.drain_interval_ms = 50;
+            cold.backpressure.warn_pending      = 100000;
+            cold.backpressure.critical_pending  = 200000;
+            cold.backpressure.backoff_cap_ms    = 1000;
+            // FastDurability (50/300 ms): the pruned peer's Durable wait
+            // for the erase's guard 5 is deterministic.
+            cold.durability.flush_min_interval_ms = 50;
+            cold.durability.flush_max_interval_ms = 300;
+
+            auto fake_s3    = std::make_shared<sgns::blockstore::InMemoryS3Client>();
+            auto fake_admin = std::make_shared<sgns::blockstore::InMemoryS3AdminClient>();
+            sgns::crdt::SetColdStorageStackClientsForTesting(
+                std::static_pointer_cast<sgns::blockstore::S3Client>( fake_s3 ),
+                std::static_pointer_cast<sgns::blockstore::S3AdminClient>( fake_admin ) );
+
+            auto globaldb_ret = sgns::crdt::GlobalDB::New( io,
+                                                           basePath + "/CommonKey",
+                                                           node.pubsub,
+                                                           sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                           graphsyncnetwork,
+                                                           scheduler,
+                                                           generator,
+                                                           nullptr,
+                                                           sgns::crdt::GlobalDB::BackupOptions{ false, 15, 12, true },
+                                                           cold );
+
+            // Hygiene: the process-global override has served its purpose
+            // (this node's stack consumed it during construction).
+            sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
+
+            if ( globaldb_ret.has_error() )
+            {
+                return node;
+            }
+            node.db = std::move( globaldb_ret.value() );
+
+            if ( start )
+            {
+                node.db->Start();
+            }
+            return node;
+        }
+#endif
 
         /// Tears node @p index down (drain CRDT workers, stop and join pubsub,
         /// then release the db while retaining the host's reactor) and recreates it
@@ -1287,6 +1406,250 @@ TEST_F( GlobalDBEraseRefusalFailoverTest, PrunedPeerRefusalFailsOverToServingPee
     EXPECT_GE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
     EXPECT_LE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 4 );
 }
+
+#ifdef SGNS_COLD_STORAGE
+/// SERVE-04/D-07 (v1.2 Phase 15 plan 15-03): the cold-enabled evidence
+/// refusal fails over through the EXISTING per-CID machinery. Topology:
+/// a cold-enabled requester, a cold-enabled light peer that HOLDS the
+/// erased block's Durable cold bytes AND a seeded /prune/blk row (hot
+/// absent), and a cold-disabled serving archive peer (hot present).
+///
+/// The sharp bit vs the hot-absence RefusalFailover leg: the pruned
+/// peer's responder CANNOT serve the CID even though its cold chain
+/// HOLDS the bytes - the evidence consult refuses before the cold Get
+/// (the 15-01 resurrection-gap kill, exercised cross-node for the first
+/// time) - and its own direct getNode refuses with the DISTINCT terminal
+/// value while its re-warm worker skips the CID (no self-resurrection).
+///
+/// A5 discipline: refusal is asserted ONLY through public consequences -
+/// failover completed, no connection blacklist, bounded attempts naming
+/// kForcedWalkPeerFailoverPerCid, storage-deterministic refusal. No
+/// EXPECT asserts a graphsync wire-status constant (the responder's
+/// negative completion is the documented RS_NOT_FOUND honest don't-have,
+/// graphsync_dagsyncer.cpp's in-source comment; the observed transport
+/// behavior is recorded in the plan SUMMARY, never welded into a test).
+TEST_F( GlobalDBEraseRefusalFailoverTest, ColdEnabledPrunedPeerRefusalFailsOverToServingPeer )
+{
+    auto testNodes = std::make_unique<EraseNodeCollection>();
+    testNodes->addColdNode( "globaldb_coldfail_requester" );
+    testNodes->addColdNode( "globaldb_coldfail_light" );
+    testNodes->addNode( "globaldb_coldfail_full" );
+    ASSERT_EQ( testNodes->getNodes().size(), 3 );
+    testNodes->connectNodes( 1, 2 ); // seeding pair: light dials full
+
+    auto      &r_db        = *testNodes->getNodes()[0].db;
+    auto      &l_db        = *testNodes->getNodes()[1].db;
+    auto      &f_db        = *testNodes->getNodes()[2].db;
+    const auto light_peer  = testNodes->getNodes()[1].pubsub->GetHost()->getId();
+    auto      &r_datastore = *r_db.GetCRDTDataStore();
+
+    ASSERT_TRUE( r_db.HasColdStorage() );
+    ASSERT_TRUE( l_db.HasColdStorage() );
+    ASSERT_FALSE( f_db.HasColdStorage() );
+
+    // The deaf-light topology (the hot leg's shape): the light never
+    // hears the full node's deltas; the full server listens.
+    ASSERT_FALSE( l_db.AddBroadcastTopic( kTopic ).has_error() );
+    ASSERT_FALSE( f_db.AddBroadcastTopic( kTopic ).has_error() );
+    f_db.AddListenTopic( kTopic );
+
+    const auto entry_a = SeedEntryOn( l_db, "/coldfail/entryA", "A", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return entryApplied( f_db, entry_a ) && rawSealKeyPresent( f_db, entry_a.cid ) &&
+                   headListContains( f_db, entry_a.cid );
+        },
+        WAIT_TIMEOUT,
+        "full server received and sealed the shared history root",
+        nullptr );
+    const auto entry_l2 = SeedEntryOn( l_db, "/coldfail/entryL2", "L2", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return !headListContains( l_db, entry_a.cid ) && headListContains( l_db, entry_l2.cid ); },
+                               WAIT_TIMEOUT,
+                               "light node's retire put moved its head past the prune target",
+                               nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return headListContains( f_db, entry_l2.cid ); },
+                               WAIT_TIMEOUT,
+                               "full server received the retiring delta",
+                               nullptr );
+
+    // The light's block is REALLY Durable in cold (the hermetic fakes'
+    // fast cadence) - the evidence the erase's guard 5 requires, and the
+    // cold bytes whose serve the /prune/blk row must refuse.
+    ASSERT_WAIT_FOR_CONDITION(
+        [&] { return l_db.GetColdUploadState( entry_a.cid ) == sgns::crdt::ColdUploadState::Durable; },
+        WAIT_TIMEOUT,
+        "light node's pruned-target block reached Durable cold evidence",
+        nullptr );
+
+    // The pruned state on the light node: erase (seal retained), then
+    // the /prune/blk evidence row - a PrunedBlockRecord seeded at the
+    // D-C1 key home (the prefix-parity pin: this write goes through
+    // PruneEligibility's constant while the production consult reads
+    // through globaldb.cpp's file-local mirror). Direct PutRaw, NOT
+    // WritePrunedBlockEntryForTest: the helper's body lives in
+    // genius_transaction_objs, which this crdt-level target must NOT
+    // link (the layering ruling in src/crdt/globaldb/CMakeLists.txt -
+    // linking it here inverts the crdt->transaction dependency); the
+    // row written is byte-identical to the helper's (same key home,
+    // same record shape).
+    ASSERT_TRUE( l_db.PutRaw( sgns::base::Buffer{}.put( entry_a.tx_path ),
+                              sgns::base::Buffer{}.put( entry_a.cid.toString().value() ) )
+                     .has_value() );
+    EXPECT_OUTCOME_TRUE_1( l_db.EraseEntry( entry_a.tx_path, entry_a.cid ) );
+    EXPECT_TRUE( l_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+    EXPECT_TRUE( l_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+    EXPECT_TRUE( rawSealKeyPresent( l_db, entry_a.cid ) );
+    {
+        SGTransaction::PrunedBlockRecord record;
+        record.set_pruning_tx_hash( "coldfail-pruner" );
+        record.set_has_erased_at_generation( true );
+        record.set_erased_at_generation( 3 );
+        ASSERT_TRUE( l_db.PutRaw(
+                         sgns::base::Buffer{}.put( std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX )
+                                                   + entry_a.cid.toString().value() ),
+                         sgns::base::Buffer{}.put( record.SerializeAsString() ) )
+                         .has_value() );
+    }
+
+    // The cross-node resurrection-gap kill: the pruned peer's OWN read
+    // path refuses with the DISTINCT terminal value EVEN THOUGH its cold
+    // chain holds Durable bytes, and the refusal never re-warms (the hot
+    // store stays absent - the re-warm worker's consult skips Pruned).
+    auto &l_syncer = *syncerOf( l_db );
+    auto  refused  = l_syncer.getNode( entry_a.cid );
+    ASSERT_TRUE( refused.has_error() );
+    EXPECT_EQ( refused.error(), sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY );
+    EXPECT_TRUE( l_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() )
+        << "the refusal must never re-warm the erased bytes";
+    // The evidence classification is consultable (SC3's single
+    // predicate): the responder-side consult the wire refusal derives
+    // from.
+    EXPECT_EQ( *l_syncer.LookupPruneEvidence( entry_a.cid ), sgns::crdt::PruneEvidenceClass::Pruned );
+    // The serving state on the full node: value, block bytes, seal.
+    EXPECT_TRUE( entryApplied( f_db, entry_a ) );
+    EXPECT_TRUE( f_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_value() );
+    EXPECT_TRUE( rawSealKeyPresent( f_db, entry_a.cid ) );
+
+    // Part 1 -- the peer half, hermetic. The requester joins NO topic;
+    // the test registers the two routes itself, in order, with the
+    // PRUNED (cold-enabled, evidence-bearing) light first and the
+    // serving full node second. One direct getNode walks the production
+    // route: consult the light, take its clean refusal (the responder's
+    // storage lookup deterministically refuses on evidence), record the
+    // per-CID failure, fail over to the full node, which serves.
+    const auto full_peer = testNodes->getNodes()[2].pubsub->GetHost()->getId();
+    const auto light_addr =
+        libp2p::multi::Multiaddress::create( testNodes->getNodes()[1].pubsub->GetInterfaceAddress() ).value();
+    const auto full_addr = libp2p::multi::Multiaddress::create( testNodes->getNodes()[2].pubsub->GetInterfaceAddress() )
+                               .value();
+
+    auto &r_syncer = *syncerOf( r_db );
+    r_syncer.AddRoute( entry_a.cid, light_peer, { light_addr } ); // consulted FIRST
+    r_syncer.AddRoute( entry_a.cid, full_peer, { full_addr } );   // failover target
+
+    const size_t ladder_baseline = r_datastore.GetFailedRootRetryCountForTest();
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    EXPECT_OUTCOME_TRUE( fetched_node, r_syncer.getNode( entry_a.cid ) );
+    EXPECT_EQ( fetched_node->getCID(), entry_a.cid );
+    // CID-scoped, never a connection blacklist.
+    EXPECT_FALSE( r_syncer.IsOnBlackList( light_peer ) );
+    // The direct walk enqueues no root job.
+    EXPECT_EQ( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 0 );
+    EXPECT_EQ( r_datastore.GetFailedRootRetryCountForTest(), ladder_baseline );
+    // The pruned peer's terminal state is untouched by serving its
+    // refusal: hot absent, evidence row present, Durable cold bytes.
+    EXPECT_TRUE( l_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+    EXPECT_EQ( l_db.GetColdUploadState( entry_a.cid ), sgns::crdt::ColdUploadState::Durable );
+
+    // Storage-deterministic refusal, single route: a SECOND cold-enabled
+    // requester joining NO topic, with ONLY the pruned peer registered
+    // for the CID - its direct getNode must FAIL (the refusal-shaped
+    // outcome, behavior-asserted - no wire constant), nothing lands hot
+    // on the requester, the pruned peer's hot store stays absent (no
+    // re-warm resurrection), and still no blacklist (CID-scoped
+    // accounting only - the RecordCIDFailure path).
+    testNodes->addColdNode( "globaldb_coldfail_requester2" );
+    ASSERT_EQ( testNodes->getNodes().size(), 4u );
+    auto &r2_db     = *testNodes->getNodes()[3].db;
+    auto &r2_syncer = *syncerOf( r2_db );
+    r2_syncer.AddRoute( entry_a.cid, light_peer, { light_addr } ); // the ONLY route
+    auto refused_alone = r2_syncer.getNode( entry_a.cid );
+    ASSERT_TRUE( refused_alone.has_error() )
+        << "the pruned peer alone must not serve the evidence-refused CID";
+    EXPECT_FALSE( r2_syncer.IsOnBlackList( light_peer ) );
+    EXPECT_TRUE( r2_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() )
+        << "the refused fetch must leave the requester's hot store absent";
+    EXPECT_TRUE( l_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() )
+        << "no re-warm resurrection on the pruned peer";
+    EXPECT_EQ( *syncerOf( l_db )->LookupPruneEvidence( entry_a.cid ), sgns::crdt::PruneEvidenceClass::Pruned );
+
+    // Discard the directly-fetched LRU copy so the mesh half below
+    // processes the pruned CID through the real broadcast intake
+    // (the suite's own Pitfall 3 comment).
+    EXPECT_OUTCOME_TRUE_1( r_syncer.DeleteCIDBlock( entry_a.cid ) );
+
+    // Part 2 -- the mesh half, end to end: the requester grafts the
+    // topic, the light-attributed cached publishes and head
+    // re-broadcast deliver the pruned-CID learning (all refusal-bound),
+    // and the full node's fresh fork delta registers the serving route
+    // whose walk pulls the missing history.
+    r_db.AddListenTopic( kTopic );
+    testNodes->connectNodes( 0, 1 );
+    testNodes->connectNodes( 0, 2 );
+    auto light_pubsub = testNodes->getNodes()[1].pubsub;
+    auto full_pubsub  = testNodes->getNodes()[2].pubsub;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return light_pubsub->getPeerCount( fullTopicName( kTopic ) ) >= 2 &&
+                   full_pubsub->getPeerCount( fullTopicName( kTopic ) ) >= 1;
+        },
+        std::chrono::seconds( 10 ),
+        "both servers learned the requester's topic subscription",
+        nullptr );
+
+    EXPECT_OUTCOME_TRUE_1( l_db.GetCRDTDataStore()->BroadcastHeadsForTopics( { kTopic } ) );
+    const auto entry_fmid = SeedEntryOn( f_db, "/coldfail/entryFmid", "F_MID", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        { return entryApplied( r_db, entry_a ) && entryApplied( r_db, entry_l2 ) && entryApplied( r_db, entry_fmid ); },
+        WAIT_TIMEOUT,
+        "pruned-CID fetch completed through the serving peer after the cold-enabled refusal",
+        nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return headListContains( r_db, entry_fmid.cid ); },
+                               WAIT_TIMEOUT,
+                               "rescue root finalized as the requester's head",
+                               nullptr );
+
+    EXPECT_FALSE( r_syncer.IsOnBlackList( light_peer ) );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return r_datastore.GetFailedRootRetryCountForTest() == ladder_baseline; },
+                               WAIT_TIMEOUT,
+                               "rescued roots drained the retry ladder -- no doomed rides left",
+                               nullptr );
+    // Bounded attempts across the whole mesh window, naming the D-06
+    // constant (the 8-attempt doomed ladder would run far past it).
+    EXPECT_LE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(),
+               sgns::crdt::GraphsyncDAGSyncer::kForcedWalkPeerFailoverPerCid );
+    // The pruned peer's terminal state is untouched by the failover.
+    EXPECT_TRUE( l_db.Get( sgns::crdt::HierarchicalKey( entry_a.tx_path ) ).has_error() );
+    EXPECT_TRUE( l_db.GetRaw( blockKeyOf( entry_a.cid ) ).has_error() );
+    EXPECT_TRUE( rawSealKeyPresent( l_db, entry_a.cid ) );
+
+    // Part 3 -- functional not-blacklisted proof: a fetch the light CAN
+    // still serve (its fresh put) routes to it and completes - the
+    // connection-vs-CID distinction on the cold-enabled peer.
+    sgns::crdt::CrdtDatastore::ResetRootFetchAttemptsForTest();
+    const auto entry_l3 = SeedEntryOn( l_db, "/coldfail/entryL3", "L3", { kTopic } );
+    ASSERT_WAIT_FOR_CONDITION( [&] { return entryApplied( r_db, entry_l3 ); },
+                               WAIT_TIMEOUT,
+                               "cold-enabled light peer still serves data it holds -- not connection-blacklisted",
+                               nullptr );
+    EXPECT_FALSE( r_syncer.IsOnBlackList( light_peer ) );
+    EXPECT_GE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 1 );
+    EXPECT_LE( sgns::crdt::CrdtDatastore::GetRootFetchAttemptsForTest(), 4 );
+}
+#endif // SGNS_COLD_STORAGE
 
 /// SURV-03 / D-04 (19-07): a fresh light node bootstraps through a pruned
 /// mesh. Three seeders share the mesh topic -- two light peers that prune

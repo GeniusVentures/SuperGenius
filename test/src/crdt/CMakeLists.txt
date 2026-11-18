@@ -57,6 +57,28 @@ target_link_libraries(globaldb_integration_test
     crdt_globaldb
 )
 
+# Cold-enabled erase-gate legs (v1.2 Phase 15 plan 15-03, SERVE-04/D-07):
+# the cold-enabled refusal-failover leg links the InMemory S3 fakes +
+# the cold-stack client-override seam, which live in sgns-blockstore
+# (the node_startup_test gate discipline). Registered ONLY under
+# SGNS_COLD_STORAGE; the OFF build keeps the suite at its pre-15-03
+# cold-disabled shape.
+if(SGNS_COLD_STORAGE)
+    target_compile_definitions(globaldb_integration_test PRIVATE SGNS_COLD_STORAGE)
+    # sgns-blockstore: the InMemory S3 fakes + the cold-stack override
+    # seam. rapidjson + SGTransactionProto: the failover leg includes
+    # PruneEligibility.hpp (rapidjson/document.h) and hand-rolls the
+    # PrunedBlockRecord evidence row (the helper lives in
+    # genius_transaction_objs, which this crdt-level target must not
+    # link - the layering ruling in src/crdt/globaldb/CMakeLists.txt) -
+    # both arrive PRIVATE through crdt_globaldb, so linked directly.
+    target_link_libraries(globaldb_integration_test
+        sgns-blockstore::sgns-blockstore
+        rapidjson
+        SGTransactionProto
+    )
+endif()
+
 if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()

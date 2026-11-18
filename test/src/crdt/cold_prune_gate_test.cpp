@@ -930,6 +930,45 @@ groups:
             EXPECT_EQ( lookup.value().first, sgns::PrunedLookup::PRUNED );
         }
 
+        // D-01/D-02 (v1.2 Phase 15 plan 15-03): BOTH marker rows staged in
+        // the SAME commit - the /prune/blk sibling lands beside every
+        // /prune/tx row, its record carrying the erasing tx-hash
+        // back-reference and the RunCycle generation (kTestGeneration).
+        // (cid_a/cid_b were captured BEFORE the cycle: the erase removes
+        // the raw tx->CID map entry, so the post-cycle map read is gone.)
+        const std::vector<std::pair<const sgns::GeniusTransaction *, std::string>> erased_with_cids = {
+            { eligible_a.get(), cid_a },
+            { eligible_b.get(), cid_b },
+        };
+        for ( const auto &[tx, erased_cid] : erased_with_cids )
+        {
+            // The raw row physically exists (the prefix-parity pin: the
+            // key through PruneEligibility's builder, the same row the
+            // production consult reads through globaldb.cpp's mirror).
+            auto raw_row = db_->GetRaw( crdt::GlobalDB::Buffer{}.put(
+                std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX ) + erased_cid ) );
+            ASSERT_TRUE( raw_row.has_value() ) << "/prune/blk row missing for " << erased_cid;
+
+            auto blk_lookup = sgns::PruneEligibility::LookupPrunedBlockEntry( *db_, erased_cid );
+            ASSERT_TRUE( blk_lookup.has_value() );
+            EXPECT_EQ( blk_lookup.value().first, sgns::PrunedBlockLookup::PRUNED );
+            ASSERT_TRUE( blk_lookup.value().second.has_value() );
+            EXPECT_EQ( blk_lookup.value().second->pruning_tx_hash(), tx->GetHash() );
+            EXPECT_TRUE( blk_lookup.value().second->has_erased_at_generation() );
+            EXPECT_EQ( blk_lookup.value().second->erased_at_generation(), kTestGeneration );
+        }
+
+        // Negative control: the unspent sibling survives untouched - NO
+        // block marker for a CID that was never erased.
+        {
+            const std::string unspent_cid = SnapshotMapEntry(
+                sgns::TransactionManager::GetTransactionPath( *unspent ) );
+            ASSERT_NE( unspent_cid, "absent" );
+            auto blk_lookup = sgns::PruneEligibility::LookupPrunedBlockEntry( *db_, unspent_cid );
+            ASSERT_TRUE( blk_lookup.has_value() );
+            EXPECT_EQ( blk_lookup.value().first, sgns::PrunedBlockLookup::NOT_FOUND );
+        }
+
         // Negative control: the unspent sibling survives untouched.
         EXPECT_TRUE(
             db_->Get( { sgns::TransactionManager::GetTransactionPath( *unspent ) } ).has_value() );
@@ -1014,6 +1053,16 @@ groups:
             EXPECT_EQ( lookup.value().first, sgns::PrunedLookup::NOT_FOUND );
         }
 
+        // D-01 (v1.2 Phase 15 plan 15-03): a deferred (non-Durable) group
+        // stages NO /prune/blk row either - no marker without the erase,
+        // across BOTH marker namespaces; the hot value remains.
+        {
+            auto blk_lookup = sgns::PruneEligibility::LookupPrunedBlockEntry( *db_, shared_cid );
+            ASSERT_TRUE( blk_lookup.has_value() );
+            EXPECT_EQ( blk_lookup.value().first, sgns::PrunedBlockLookup::NOT_FOUND )
+                << "a deferred cycle must stage no block marker";
+        }
+
         // Deferred-not-forgotten: a second cycle re-evaluates the same
         // group — still enumerated, still eligible, still deferred (the
         // counter increments again; liveness per T-14-03).
@@ -1066,6 +1115,15 @@ groups:
         ASSERT_TRUE( ConsumeOutput( *eligible_b, 0, *spender ) );
         PutSeedValue( "/seed/gate/vacuous-driver-2", "d2" );
 
+        // Captured BEFORE the cycle (the erase removes the raw tx->CID
+        // map entry - the 15-03 /prune/blk assertions below need them).
+        const std::string vac_cid_a = SnapshotMapEntry(
+            sgns::TransactionManager::GetTransactionPath( *eligible_a ) );
+        const std::string vac_cid_b = SnapshotMapEntry(
+            sgns::TransactionManager::GetTransactionPath( *eligible_b ) );
+        ASSERT_NE( vac_cid_a, "absent" );
+        ASSERT_NE( vac_cid_b, "absent" );
+
         auto pruner = MakePruner( 10, kSmallSettleSeconds );
         ASSERT_NE( pruner, nullptr );
 
@@ -1093,7 +1151,123 @@ groups:
         }
         EXPECT_TRUE(
             db_->Get( { sgns::TransactionManager::GetTransactionPath( *unspent ) } ).has_value() );
+
+        // D-01 (v1.2 Phase 15 plan 15-03): markers are NODE-LOCAL and
+        // cold-INDEPENDENT - the cold-disabled node still stages the
+        // /prune/blk row with every erase (the vacuous-branch erase keeps
+        // the widened staging path; only the cold guards are vacuous).
+        for ( const auto &[tx, erased_cid] : std::vector<std::pair<const sgns::GeniusTransaction *, std::string>>{
+                  { eligible_a.get(), vac_cid_a }, { eligible_b.get(), vac_cid_b } } )
+        {
+            auto blk_lookup = sgns::PruneEligibility::LookupPrunedBlockEntry( *db_, erased_cid );
+            ASSERT_TRUE( blk_lookup.has_value() );
+            EXPECT_EQ( blk_lookup.value().first, sgns::PrunedBlockLookup::PRUNED )
+                << "cold-off erase must still stage the block marker";
+            ASSERT_TRUE( blk_lookup.value().second.has_value() );
+            EXPECT_EQ( blk_lookup.value().second->pruning_tx_hash(), tx->GetHash() );
+            EXPECT_EQ( blk_lookup.value().second->erased_at_generation(), kTestGeneration );
+        }
     }
+
+    //
+    // ERASE-GATE INTERRUPT LEGS (v1.2 Phase 15 plan 15-03, D-01): every
+    // EraseEntry interrupt step proves all-or-nothing across BOTH marker
+    // namespaces - an aborted compose leaves the erase, the /prune/tx row,
+    // AND the /prune/blk row all in their pre-erase state (one WriteBatch
+    // carries the erase plus both markers; no partial landing exists).
+    //
+
+    /// Parameterized over SetEraseInterruptHookForTest's steps (1 = after
+    /// CRDT staging, 2 = after block staging, 3 = after raw-map staging).
+    class ColdPruneEraseInterruptTest : public ColdPruneGateTest,
+                                        public ::testing::WithParamInterface<int>
+    {
+    };
+
+    TEST_P( ColdPruneEraseInterruptTest, InterruptedEraseStagesNeitherMarkerInEitherNamespace )
+    {
+        const int step_target = GetParam();
+
+        BuildStack( /*cold_enabled=*/true, /*drain_interval_ms=*/50 );
+        ASSERT_NE( db_, nullptr );
+
+        // The RealPrune seeding shape: one eligible spent transaction
+        // below an unspent sibling.
+        auto spender  = MakeTransfer( 1, 0 );
+        auto eligible = MakeTransfer( 2, 1 );
+        auto unspent  = MakeTransfer( 3, 1 );
+
+        SeedTransaction( spender );
+        PutSeedValue( "/seed/gate/intr-driver-1", "d1" );
+        SeedTransaction( eligible );
+        SeedTransaction( unspent );
+
+        TrackOutputs( *eligible );
+        TrackOutputs( *unspent );
+        ASSERT_TRUE( ConsumeOutput( *eligible, 0, *spender ) );
+        PutSeedValue( "/seed/gate/intr-driver-2", "d2" );
+
+        const std::string tx_path = sgns::TransactionManager::GetTransactionPath( *eligible );
+        const std::string cid_str = SnapshotMapEntry( tx_path );
+        ASSERT_NE( cid_str, "absent" );
+
+        // REAL transitions to Durable (LEG 1's deterministic drive) - the
+        // admission gate must PERMIT the group so the interrupt is the
+        // only thing standing between the cycle and the erase.
+        ASSERT_TRUE( PollUntil( [&] { return JournalStateOf( cid_str ) == crdt::ColdUploadState::Durable; },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "eligible's block never reached Durable (cid " << cid_str << ")";
+
+        auto pruner = MakePruner( 10, kSmallSettleSeconds );
+        ASSERT_NE( pruner, nullptr );
+
+        // Abort the compose at the requested step: the erase fails inside
+        // the single WriteBatch window and the cycle records it as a
+        // per-tx error, continuing (TxPruner's log-and-continue contract).
+        sgns::crdt::GlobalDB::SetEraseInterruptHookForTest(
+            [step_target]( int step ) { return step == step_target; } );
+        sgns::PruneCycleStats stats;
+        RunSettledCycle( *pruner, stats );
+        sgns::crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
+
+        EXPECT_EQ( stats.erased, 0u ) << "step " << step_target << " must abort the erase";
+        EXPECT_EQ( stats.errors, 1u ) << "step " << step_target << " is a per-tx error, never a deferral";
+
+        // All-or-nothing across EVERY namespace (D-01): the value is
+        // present, and NEITHER the /prune/tx row NOR the /prune/blk row
+        // landed - the dying batch staged nothing.
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_value() ) << "step " << step_target << " destroyed the value";
+        {
+            auto tx_lookup = sgns::PruneEligibility::LookupPrunedEntry( *db_, eligible->GetHash() );
+            ASSERT_TRUE( tx_lookup.has_value() );
+            EXPECT_EQ( tx_lookup.value().first, sgns::PrunedLookup::NOT_FOUND )
+                << "step " << step_target << " staged the tx marker without the erase";
+        }
+        {
+            auto raw_row = db_->GetRaw( crdt::GlobalDB::Buffer{}.put(
+                std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX ) + cid_str ) );
+            EXPECT_TRUE( raw_row.has_error() )
+                << "step " << step_target << " staged the raw block-marker row without the erase";
+            auto blk_lookup = sgns::PruneEligibility::LookupPrunedBlockEntry( *db_, cid_str );
+            ASSERT_TRUE( blk_lookup.has_value() );
+            EXPECT_EQ( blk_lookup.value().first, sgns::PrunedBlockLookup::NOT_FOUND )
+                << "step " << step_target << " staged the block marker without the erase";
+        }
+
+        // The cycle's error was per-tx, so a RETRY with no interrupt
+        // completes the erase with BOTH markers - the interrupt left no
+        // poisoned state behind.
+        sgns::PruneCycleStats retried;
+        RunSettledCycle( *pruner, retried );
+        EXPECT_EQ( retried.erased, 1u );
+        EXPECT_EQ( retried.errors, 0u );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_error() );
+        auto blk_lookup = sgns::PruneEligibility::LookupPrunedBlockEntry( *db_, cid_str );
+        ASSERT_TRUE( blk_lookup.has_value() );
+        EXPECT_EQ( blk_lookup.value().first, sgns::PrunedBlockLookup::PRUNED );
+    }
+
+    INSTANTIATE_TEST_SUITE_P( EraseInterruptSteps, ColdPruneEraseInterruptTest, ::testing::Values( 1, 2, 3 ) );
 
     //
     // MATRIX (14-03 Task 1) — the journal-CF seeded legs: NoRecord /
