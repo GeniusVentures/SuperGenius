@@ -32,14 +32,18 @@
 #include <boost/dll.hpp>
 #include <boost/json.hpp>
 
+#include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+
 #include "account/AccountMessenger.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
-#include "transaction/TransactionManager.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
+#include "crdt/proto/bcast.pb.h"
+#include "crdt/proto/delta.pb.h"
 #include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -47,8 +51,18 @@
 #include "testutil/local_trust_setup.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
+#include "transaction/PruneEligibility.hpp"
+#include "transaction/TransactionManager.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
+
+#ifdef SGNS_COLD_STORAGE
+#include <sgns-blockstore/InMemoryS3AdminClient.hpp>
+#include <sgns-blockstore/InMemoryS3Client.hpp>
+#include <sgns-blockstore/S3AdminClient.hpp>
+#include <sgns-blockstore/S3Client.hpp>
+#include "crdt/globaldb/ColdStorageStack.hpp"
+#endif // SGNS_COLD_STORAGE
 
 using namespace sgns;
 
@@ -152,7 +166,15 @@ protected:
                             bool                                isFullNode           = false,
                             std::optional<std::chrono::seconds> trust_sync_interval  = std::nullopt,
                             bool                                force_bootstrap_walk = false,
-                            boost::json::object                 settings_overrides   = {} )
+                            boost::json::object                 settings_overrides   = {},
+                            // v1.2 Phase 15 (15-02 walk legs): optional
+                            // crdt_config.json content written BEFORE
+                            // GeniusNode::New so the node's GlobalDB builds
+                            // its cold-storage stack from it. Empty (the
+                            // default for every pre-existing caller) writes
+                            // nothing - cold stays disabled exactly as
+                            // before.
+                            const std::string                  &crdt_config_content  = "" )
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
@@ -220,6 +242,11 @@ protected:
             input.close();
             std::ofstream output( config_path );
             output << boost::json::serialize( config );
+        }
+        if ( !crdt_config_content.empty() )
+        {
+            std::ofstream crdt_config( outPath + "crdt_config.json", std::ios::trunc );
+            crdt_config << crdt_config_content;
         }
         return { GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } ),
                  std::move( authority ),
@@ -296,6 +323,135 @@ protected:
             std::error_code ec;
             sgns::test::removeAllWithRetry( dir, ec );
         }
+    }
+
+    //
+    // v1.2 Phase 15 (15-02) forced-walk recovery helpers: the walk legs
+    // (RECOVER-02/03/04) drive the node's own opt-in walk surface over a
+    // hermetic history source and observe GetForcedWalkStatus() exactly
+    // like the ForcedBootstrapWalk tests above.
+    //
+
+    /// The concrete DAG syncer behind the node's broadcaster (the
+    /// cold_evidence_matrix_test syncerOf accessor idiom) - the surface the
+    /// walk's LRU eviction and seal seeding need.
+    static std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> syncerOf( const std::shared_ptr<sgns::crdt::GlobalDB> &db )
+    {
+        return std::static_pointer_cast<sgns::crdt::GraphsyncDAGSyncer>( db->GetBroadcaster()->GetDagSyncer() );
+    }
+
+    /// Waits for the node's async InitDatabase (INITIALIZING_DATABASE state
+    /// machine step - the GlobalDB appears shortly after New returns, not
+    /// during it) and returns the transaction database.
+    static std::shared_ptr<sgns::crdt::GlobalDB> AwaitNodeDatabase( NodeFixture &fixture )
+    {
+        std::shared_ptr<sgns::crdt::GlobalDB> node_db;
+        test::assertWaitForCondition(
+            [&]
+            {
+                node_db = GeniusNodeTestAccess::TransactionDatabaseOf( fixture.node );
+                return node_db != nullptr;
+            },
+            std::chrono::milliseconds( kReadyPollTimeoutMs ),
+            "node did not construct its transaction GlobalDB" );
+        return node_db;
+    }
+
+    /// Full-node replication posture for the walk legs: the node's
+    /// broadcaster listens on the full-nodes topic only from
+    /// INITIALIZING_TRANSACTIONS (AddListenTopic at GeniusNode.cpp:1002);
+    /// a full node parks at the trust-genesis gate PAST that state, so
+    /// gossip ingest is live before the source publishes (the
+    /// CanonicalCertificatesAcceptedBeforeTransactionManager shape - a
+    /// light node parks in INITIALIZING_BLOCKCHAIN before the listen
+    /// exists and never replicates anything). Authorizes the node, waits
+    /// for the park, then returns the transaction database.
+    static std::shared_ptr<sgns::crdt::GlobalDB> AwaitNodeParkedAndListening( NodeFixture &fixture )
+    {
+        Blockchain::SetAuthorizedFullNodeAddress( fixture.node->GetAddress() );
+        test::assertWaitForCondition(
+            [&] { return fixture.node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+            std::chrono::milliseconds( kReadyPollTimeoutMs ),
+            "full node did not park at the trust genesis gate" );
+        return AwaitNodeDatabase( fixture );
+    }
+
+    /// Builds and starts a composition-backed history source announcing on
+    /// the node's pubsub interface (the SubmitReviewedTrustAndAwaitReady
+    /// composition shape, minus the trust machinery).
+    std::shared_ptr<sgns::crdt::GlobalDB> AttachHistorySource( NodeFixture &fixture, const std::string &name )
+    {
+        const auto network_config = fixture.path / ( name + "-network.json" );
+        const auto database_path  = fixture.path / ( name + "-globaldb" );
+        std::filesystem::create_directories( database_path );
+        sgns::test::WriteGlobalDbNetworkConfig( network_config.string(),
+                                                fixture.node->GetPubSub()->GetInterfaceAddress() );
+        const std::string topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+        sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
+        composition_config.network_config_path = network_config.string();
+        composition_config.database_path       = database_path.string();
+        composition_config.listen_topic        = topic;
+        composition_config.broadcast_topic     = topic;
+        auto composition_result = sgns::crdt::GlobalDbNetworkComposition::Create( std::move( composition_config ) );
+        if ( !composition_result.has_value() )
+        {
+            return nullptr;
+        }
+        if ( !composition_result.value()->Start().has_value() )
+        {
+            return nullptr;
+        }
+        fixture.composition = composition_result.value();
+        return composition_result.value()->db();
+    }
+
+    /// Waits until the node holds a published block: retained (raw hot
+    /// bytes), sealed, and with no pending root-sync job - the three
+    /// preconditions EraseEntry's guards demand. Drives replication the
+    /// way CanonicalCertificatesAcceptedBeforeTransactionManager does: the
+    /// composition as an explicit peer + repeated head broadcasts (a
+    /// single publish-time announcement is lost if the gossip graft has
+    /// not formed yet).
+    static void AwaitNodeHoldsSealedBlock( NodeFixture                               &fixture,
+                                           const std::shared_ptr<sgns::crdt::GlobalDB> &source,
+                                           const std::shared_ptr<sgns::crdt::GlobalDB> &node_db,
+                                           const sgns::CID                             &cid,
+                                           const std::string                           &cid_string,
+                                           const char                                  *what )
+    {
+        fixture.node->AddPeer( fixture.composition->interface_address() );
+        constexpr auto kHeadRepeatInterval = std::chrono::milliseconds( 100 );
+        auto           last_broadcast      = std::chrono::steady_clock::now() - kHeadRepeatInterval;
+        const std::string full_topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+        ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+            [&]
+            {
+                const auto now = std::chrono::steady_clock::now();
+                if ( now - last_broadcast >= kHeadRepeatInterval )
+                {
+                    (void) source->RequestHeadBroadcast( { full_topic } );
+                    last_broadcast = now;
+                }
+                const auto retained = node_db->HasLocalBlock( cid_string );
+                const auto seal     = node_db->GetRaw( base::Buffer{}.put( cid_string + "sealed" ) );
+                return retained.has_value() && retained.value() && seal.has_value()
+                       && !node_db->GetCRDTDataStore()->IsRootCIDPendingOrActive( cid );
+            },
+            std::chrono::milliseconds( kReadyPollTimeoutMs ),
+            what ) );
+    }
+
+    /// Drives the node's existing opt-in walk surface over the full-nodes
+    /// topic with an all-allowing recovery guard (the
+    /// ForcedBootstrapWalkRetriesLateValidatorAfterReady call shape).
+    static void RequestWalkOverFullTopic( const std::shared_ptr<sgns::crdt::GlobalDB> &node_db )
+    {
+        ASSERT_TRUE( node_db
+                         ->RequestForcedWalk(
+                             { std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) },
+                             []( const crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+                             1000U )
+                         .has_value() );
     }
 };
 
@@ -644,6 +800,489 @@ TEST_F( NodeStartupTest, ForcedBootstrapWalkRetriesLateValidatorAfterReady )
         "bootstrap recovery did not retry the late validator after READY" ) );
     EXPECT_FALSE( left_ready );
     EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::READY );
+}
+
+#ifdef SGNS_COLD_STORAGE
+
+namespace
+{
+    // Hermetic cold posture for the walk legs (the cold_evidence_matrix /
+    // cold_prune_gate kit discipline): cold enabled against a
+    // never-contacted endpoint with InMemory clients installed
+    // process-globally before node construction, hygiene-cleared right
+    // after the node's GlobalDB consumes them.
+    constexpr const char *kWalkLegsColdConfig =
+        R"json({"blockstore":{"endpoint":"http://hermetic.invalid:9000","bucket":"walk-legs","access_key":"walk-access","secret_key":"walk-secret"}})json";
+} // namespace
+
+// W1 - RECOVER-02 (SC4 first half, D-05 matrix leg b): a GC-evicted-shaped
+// ancestor - sealed, not hot-retained, cold-resident (the journal-first
+// set() of the Phase-8 decorator mirrored every replicated block into the
+// local cold tier), NO /prune/blk evidence - is RESTORED by the forced walk
+// through getNode's cold-before-peers chain; the block is hot again with
+// its seal intact when the walk finishes Completed, and skipped_pruned
+// does not move for it.
+TEST_F( NodeStartupTest, ForcedWalkRestoresColdResidentAncestor )
+{
+    auto fake_s3    = std::make_shared<sgns::blockstore::InMemoryS3Client>();
+    auto fake_admin = std::make_shared<sgns::blockstore::InMemoryS3AdminClient>();
+    sgns::crdt::SetColdStorageStackClientsForTesting(
+        std::static_pointer_cast<sgns::blockstore::S3Client>( fake_s3 ),
+        std::static_pointer_cast<sgns::blockstore::S3AdminClient>( fake_admin ) );
+    auto fixture = CreateNode( "forced_walk_cold_restore",
+                               "0xcafe",
+                               "1.0",
+                               TokenID::FromBytes( { 0x00 } ),
+                               /*isFullNode=*/true,
+                               std::nullopt,
+                               /*force_bootstrap_walk=*/false,
+                               {},
+                               kWalkLegsColdConfig );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    auto              node_db = AwaitNodeParkedAndListening( fixture );
+    ASSERT_TRUE( node_db );
+    // Hygiene: the async InitDatabase has consumed the override now.
+    sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
+
+    auto source = AttachHistorySource( fixture, "walk-w1" );
+    ASSERT_TRUE( source );
+    const std::string full_topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+
+    // A two-block ancestry: the PARENT is the recovery target. The child
+    // keeps the topic-head slot so EraseEntry's head guard (guard 1) admits
+    // the parent - exactly the TxPruner/GC shape of "sealed ancestor".
+    base::Buffer parent_value;
+    parent_value.put( "forced walk cold-resident ancestor payload" );
+    auto parent_put = source->Put( { "/walk/w1/ancestor" }, parent_value, { full_topic } );
+    ASSERT_TRUE( parent_put.has_value() ) << parent_put.error().message();
+    const sgns::CID parent_cid        = parent_put.value();
+    const auto      parent_cid_string = parent_cid.toString().value();
+
+    // Phase 1 - replicate the ancestor ALONE first: the node processes it as
+    // its own root and parks it in the topic head set. Publishing the
+    // descendant only afterwards makes its delta list the ancestor as its
+    // parent, so processing the descendant REPLACES ancestor->descendant in
+    // the head set. Publishing both up front lets the node process the
+    // descendant first, and the link-fetched ancestor then re-adds itself
+    // as an extra head - which EraseEntry's head guard (guard 1) refuses.
+    ASSERT_NO_FATAL_FAILURE( AwaitNodeHoldsSealedBlock(
+        fixture, source, node_db, parent_cid, parent_cid_string, "node did not retain + seal the cold-resident ancestor" ) );
+    ASSERT_TRUE( node_db->Get( { "/walk/w1/ancestor" } ).has_value() );
+
+    // Phase 2 - the descendant takes the head slot (exactly the
+    // TxPruner/GC shape of "sealed ancestor below a live head").
+    base::Buffer    child_value;
+    child_value.put( "forced walk cold-resident descendant payload" );
+    auto child_put = source->Put( { "/walk/w1/descendant" }, child_value, { full_topic } );
+    ASSERT_TRUE( child_put.has_value() ) << child_put.error().message();
+    ASSERT_NO_FATAL_FAILURE( AwaitNodeHoldsSealedBlock(
+        fixture,
+        source,
+        node_db,
+        child_put.value(),
+        child_put.value().toString().value(),
+        "node did not retain the walk head" ) );
+
+    // Evict any directly-fetched LRU copy (EraseEntry guard 3; the walk's
+    // later cold fetch must not be served from the LRU).
+    (void) syncerOf( node_db )->DeleteCIDBlock( parent_cid );
+
+    // EraseEntry guard 5: induce the exactly-Durable journal evidence the
+    // erase compose re-reads (the Phase-14 test seam, cleared immediately).
+    sgns::crdt::GlobalDB::SetColdUploadStateHookForTest(
+        [&parent_cid]( const sgns::CID &cid ) -> std::optional<sgns::crdt::ColdUploadState> {
+            return cid == parent_cid ? std::optional( sgns::crdt::ColdUploadState::Durable ) : std::nullopt;
+        } );
+    auto erased = node_db->EraseEntry( "/walk/w1/ancestor", parent_cid, std::nullopt );
+    sgns::crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+    ASSERT_TRUE( erased.has_value() ) << erased.error().message();
+
+    // The evicted posture: hot bytes gone, seal retained (the erase's own
+    // post-commit invariant), NO /prune/blk marker anywhere.
+    auto hot_after_erase = node_db->HasLocalBlock( parent_cid_string );
+    ASSERT_TRUE( hot_after_erase.has_value() );
+    EXPECT_FALSE( hot_after_erase.value() );
+    EXPECT_TRUE( node_db->GetRaw( base::Buffer{}.put( parent_cid_string + "sealed" ) ).has_value() );
+
+    // THE WALK (RECOVER-02): the NoEvidence leg falls through to the bounded
+    // fetch, getNode's cold chain serves + rehydrates, the walk owns sealing.
+    // The production surface (GlobalDB::RequestForcedWalk forwards with
+    // require_registered_filters=true) defers elements without a registered
+    // validator ("missing dependency") - register the leg's accepting
+    // validator first, the same final-phase shape
+    // ForcedBootstrapWalkRetriesLateValidatorAfterReady uses for its
+    // recovery walk.
+    ASSERT_TRUE( node_db->RegisterElementFilter(
+        "^/?walk/w1/ancestor$",
+        []( const crdt::CrdtDatastore::Element & )
+        { return crdt::CRDTDataFilter::ElementFilterResult::Accept(); } ) );
+    ASSERT_NO_FATAL_FAILURE( RequestWalkOverFullTopic( node_db ) );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return node_db->GetForcedWalkStatus().state == crdt::CrdtDatastore::ForcedWalkState::Completed; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "cold-resident no-evidence ancestor did not complete the forced walk" ) );
+    const auto status = node_db->GetForcedWalkStatus();
+    EXPECT_EQ( status.skipped_pruned, 0U );
+    EXPECT_EQ( status.deferred, 0U );
+    EXPECT_EQ( status.walk_gaps, 0U );
+    EXPECT_EQ( status.errors, 0U );
+    EXPECT_GE( status.fetched + status.restored, 1U );
+
+    // The block is hot again with its seal intact (the :598-605 probes) and
+    // the erased element was re-merged by the walk's replay.
+    auto hot_restored = node_db->HasLocalBlock( parent_cid_string );
+    ASSERT_TRUE( hot_restored.has_value() );
+    EXPECT_TRUE( hot_restored.value() );
+    EXPECT_TRUE( node_db->GetRaw( base::Buffer{}.put( parent_cid_string + "sealed" ) ).has_value() );
+    auto element_restored = node_db->Get( { "/walk/w1/ancestor" } );
+    ASSERT_TRUE( element_restored.has_value() );
+    EXPECT_EQ( element_restored.value().toString(), parent_value.toString() );
+}
+
+// W2 - RECOVER-03 (D-05 matrix leg a): a TxPruner-erased-shaped ancestor
+// (a well-formed /prune/blk row present) is SKIPPED with the existing
+// ++skipped_pruned shape - the block-level skip bounds the walk while the
+// element-level CanRestoreElement guard stays terminal authority, so the
+// erased element is never resurrected.
+TEST_F( NodeStartupTest, ForcedWalkSkipsEvidenceBearingAncestor )
+{
+    auto fake_s3    = std::make_shared<sgns::blockstore::InMemoryS3Client>();
+    auto fake_admin = std::make_shared<sgns::blockstore::InMemoryS3AdminClient>();
+    sgns::crdt::SetColdStorageStackClientsForTesting(
+        std::static_pointer_cast<sgns::blockstore::S3Client>( fake_s3 ),
+        std::static_pointer_cast<sgns::blockstore::S3AdminClient>( fake_admin ) );
+    auto fixture = CreateNode( "forced_walk_pruned_skip",
+                               "0xcafe",
+                               "1.0",
+                               TokenID::FromBytes( { 0x00 } ),
+                               /*isFullNode=*/true,
+                               std::nullopt,
+                               /*force_bootstrap_walk=*/false,
+                               {},
+                               kWalkLegsColdConfig );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    auto              node_db = AwaitNodeParkedAndListening( fixture );
+    ASSERT_TRUE( node_db );
+    sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
+
+    auto source = AttachHistorySource( fixture, "walk-w2" );
+    ASSERT_TRUE( source );
+    const std::string full_topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+
+    // The ancestor's element sits at an ALLOWLISTED tx key so the
+    // element-level guard assertion below is load-bearing (a non-allowlisted
+    // key would answer CanRestoreElement vacuously).
+    const std::string tx_hash( 64, 'a' );
+    const std::string parent_key_string = TransactionManager::GetBlockChainBase() + "tx/" + tx_hash;
+    base::Buffer      parent_value;
+    parent_value.put( "forced walk evidence-bearing ancestor payload" );
+    auto parent_put = source->Put( { parent_key_string }, parent_value, { full_topic } );
+    ASSERT_TRUE( parent_put.has_value() ) << parent_put.error().message();
+    const sgns::CID parent_cid        = parent_put.value();
+    const auto      parent_cid_string = parent_cid.toString().value();
+
+    // Phase 1 - replicate the ancestor ALONE first so the node's head set
+    // is {ancestor}; the descendant published afterwards replaces it (the
+    // both-up-front order leaves the link-fetched ancestor re-adding
+    // itself as an extra head, which EraseEntry's guard 1 refuses - see
+    // the W1 comment).
+    ASSERT_NO_FATAL_FAILURE( AwaitNodeHoldsSealedBlock(
+        fixture,
+        source,
+        node_db,
+        parent_cid,
+        parent_cid_string,
+        "node did not retain + seal the evidence-bearing ancestor" ) );
+
+    base::Buffer    child_value;
+    child_value.put( "forced walk evidence-bearing descendant payload" );
+    auto child_put = source->Put( { "/walk/w2/descendant" }, child_value, { full_topic } );
+    ASSERT_TRUE( child_put.has_value() ) << child_put.error().message();
+    ASSERT_NO_FATAL_FAILURE( AwaitNodeHoldsSealedBlock(
+        fixture,
+        source,
+        node_db,
+        child_put.value(),
+        child_put.value().toString().value(),
+        "node did not retain the walk head" ) );
+
+    (void) syncerOf( node_db )->DeleteCIDBlock( parent_cid );
+    sgns::crdt::GlobalDB::SetColdUploadStateHookForTest(
+        [&parent_cid]( const sgns::CID &cid ) -> std::optional<sgns::crdt::ColdUploadState> {
+            return cid == parent_cid ? std::optional( sgns::crdt::ColdUploadState::Durable ) : std::nullopt;
+        } );
+    auto erased = node_db->EraseEntry( parent_key_string, parent_cid, std::nullopt );
+    sgns::crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+    ASSERT_TRUE( erased.has_value() ) << erased.error().message();
+
+    // Seed BOTH evidence layers exactly as a TxPruner erase would have (the
+    // 15-01 TEST-01 seeding recipes, against the node's own GlobalDB).
+    ASSERT_TRUE(
+        sgns::PruneEligibility::WritePrunedBlockEntryForTest( *node_db, parent_cid_string, tx_hash, 1 ).has_value() );
+    SGTransaction::PrunedTransactionRecord tx_record;
+    tx_record.set_tx_path( parent_key_string );
+    tx_record.set_cid( parent_cid_string );
+    ASSERT_TRUE( sgns::PruneEligibility::WritePrunedEntryForTest( *node_db, tx_hash, tx_record ).has_value() );
+
+    // The element-level terminal authority, proven directly (the same guard
+    // the production walk wires at GeniusNode's recovery entry).
+    auto restorable = sgns::PruneEligibility::CanRestoreElement( *node_db, parent_key_string );
+    ASSERT_TRUE( restorable.has_value() );
+    EXPECT_FALSE( restorable.value() );
+
+    // THE WALK (RECOVER-03): the Pruned consult skips the ancestor - the
+    // walk bounds itself at the block level and completes.
+    ASSERT_NO_FATAL_FAILURE( RequestWalkOverFullTopic( node_db ) );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return node_db->GetForcedWalkStatus().state == crdt::CrdtDatastore::ForcedWalkState::Completed; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "evidence-bearing ancestor did not complete the forced walk" ) );
+    const auto status = node_db->GetForcedWalkStatus();
+    EXPECT_GE( status.skipped_pruned, 1U );
+    EXPECT_EQ( status.walk_gaps, 0U );
+    EXPECT_EQ( status.deferred, 0U );
+    EXPECT_EQ( status.errors, 0U );
+
+    // Hot absence preserved: the walk never fetched the erased ancestor, and
+    // the element remains unrestorable through the recovery surface.
+    auto hot = node_db->HasLocalBlock( parent_cid_string );
+    ASSERT_TRUE( hot.has_value() );
+    EXPECT_FALSE( hot.value() );
+    auto element = node_db->Get( { parent_key_string } );
+    EXPECT_TRUE( element.has_error() );
+    EXPECT_EQ( element.error(), storage::DatabaseError::NOT_FOUND );
+}
+
+// W3 - RECOVER-04 (D-05 fourth quadrant, abort-never-skip): a sealed,
+// not-retained, no-evidence, no-cold CID whose bounded peer recovery fails
+// produces ++walk_gaps, a distinct FORCED_WALK_GAP failure, and the walk
+// finishing Incomplete with the frontier CLEARED - never a skipped_pruned
+// increment, never a deferred increment (Pitfall 5), never a generic error,
+// never continued processing of the remaining frontier CIDs.
+//
+// The gap shape is the corruption posture research describes (seal-only
+// remnants): the ghost CIDs below are real content-addressed CIDs whose
+// bytes exist nowhere - not hot, in no cold tier, at no peer - linked from
+// a valid head delta and sealed directly through the syncer's public
+// markResolved.
+//
+// Budget observability: the >8-route deterministic topology is impractical
+// on this node fixture (routes arrive via gossip intake, and the walk
+// exposes no per-CID attempt counter) - the count bound's runtime proof
+// rides 15-03's failover mesh window and Phase 17 SC2's probe (the plan's
+// recorded deferral, not a silent drop).
+TEST_F( NodeStartupTest, ForcedWalkAbortsNeverSkipsOnTrueGap )
+{
+    auto fake_s3    = std::make_shared<sgns::blockstore::InMemoryS3Client>();
+    auto fake_admin = std::make_shared<sgns::blockstore::InMemoryS3AdminClient>();
+    sgns::crdt::SetColdStorageStackClientsForTesting(
+        std::static_pointer_cast<sgns::blockstore::S3Client>( fake_s3 ),
+        std::static_pointer_cast<sgns::blockstore::S3AdminClient>( fake_admin ) );
+    auto fixture = CreateNode( "forced_walk_gap_abort",
+                               "0xcafe",
+                               "1.0",
+                               TokenID::FromBytes( { 0x00 } ),
+                               /*isFullNode=*/true,
+                               std::nullopt,
+                               /*force_bootstrap_walk=*/false,
+                               {},
+                               kWalkLegsColdConfig );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    auto              node_db = AwaitNodeParkedAndListening( fixture );
+    ASSERT_TRUE( node_db );
+    sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
+
+    auto source = AttachHistorySource( fixture, "walk-w3" );
+    ASSERT_TRUE( source );
+    const std::string full_topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+
+    // Deterministic ghosts: bytes exist NOWHERE (the fourth quadrant's
+    // no-cold condition - unreachable through any store, by construction).
+    auto ghost_a = sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromString( "walk gap ghost a - bytes exist nowhere" );
+    auto ghost_b = sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromString( "walk gap ghost b - bytes exist nowhere" );
+    ASSERT_TRUE( ghost_a );
+    ASSERT_TRUE( ghost_b );
+
+    // The seal-only remnant, seeded FIRST on the NODE: link traversal
+    // (TraverseCIDsLinks) skips resolved children, so pre-sealing the ghosts
+    // lets the head replicate cleanly without anyone trying to fetch bytes
+    // that exist nowhere - while the walk's QueueForcedWalkLinks has NO
+    // seal check and still queues the ghosts for the visit (no bytes ever
+    // existed to process; the syncer's public markResolved is the seeding
+    // surface).
+    ASSERT_TRUE( syncerOf( node_db )->markResolved( ghost_a->getCID() ).has_value() );
+    ASSERT_TRUE( syncerOf( node_db )->markResolved( ghost_b->getCID() ).has_value() );
+
+    // A head whose delta links both ghosts as topic-named parents - the
+    // exact CreateIPLDNode link + destination shape, so replication
+    // registers it as the topic head and the walk's FIFO frontier queues
+    // the ghosts behind it. Published through two PUBLIC surfaces (the
+    // syncer's addNode persists the bytes at the source; the broadcaster's
+    // Broadcast announces the CID - the same EncodeBroadcast message shape
+    // the datastore itself emits).
+    auto head_delta = std::make_shared<crdt::pb::Delta>();
+    head_delta->set_priority( 1 );
+    auto head_node = sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromString( head_delta->SerializeAsString() );
+    ASSERT_TRUE( head_node );
+    for ( const auto &ghost : { ghost_a, ghost_b } )
+    {
+        auto ghost_bytes = ghost->getCID().toBytes();
+        ASSERT_TRUE( ghost_bytes.has_value() );
+        head_node->addLink( sgns::ipfs_lite::ipld::IPLDLink( ghost->getCID(), full_topic, ghost_bytes.value().size() ) );
+    }
+    head_node->addDestination( full_topic );
+    const sgns::CID head_cid = head_node->getCID();
+    ASSERT_TRUE( syncerOf( source )->addNode( head_node ).has_value() );
+    crdt::pb::CRDTBroadcast head_announce;
+    head_announce.add_heads()->set_cid( head_cid.toString().value() );
+    base::Buffer announce_buffer;
+    announce_buffer.put( head_announce.SerializeAsString() );
+    // The broadcaster's envelope needs the publisher's addresses - a
+    // none peerInfo drops the publish silently ("No addresses found for
+    // broadcasting", success without publishing). BroadcastHeadsForTopics
+    // passes the syncer's own PeerInfo; mirror that here.
+    auto source_peer_info = syncerOf( source )->GetPeerInfo();
+    ASSERT_TRUE( source_peer_info.has_value() ) << source_peer_info.error().message();
+
+    // Drive the custom head's replication: the composition's head list does
+    // not carry it (addNode persists bytes without head registration), so
+    // the manual announce - the same EncodeBroadcast message shape the
+    // datastore emits - repeats until the node holds the head.
+    fixture.node->AddPeer( fixture.composition->interface_address() );
+    constexpr auto kAnnounceInterval = std::chrono::milliseconds( 100 );
+    auto           last_announce     = std::chrono::steady_clock::now() - kAnnounceInterval;
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            const auto now = std::chrono::steady_clock::now();
+            if ( now - last_announce >= kAnnounceInterval )
+            {
+                (void) source->GetBroadcaster()->Broadcast( announce_buffer, full_topic, source_peer_info.value() );
+                last_announce = now;
+            }
+            const auto retained = node_db->HasLocalBlock( head_cid.toString().value() );
+            const auto seal     = node_db->GetRaw( base::Buffer{}.put( head_cid.toString().value() + "sealed" ) );
+            return retained.has_value() && retained.value() && seal.has_value()
+                   && !node_db->GetCRDTDataStore()->IsRootCIDPendingOrActive( head_cid );
+        },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "node did not retain + seal the ghost-linking head" ) );
+
+    // THE WALK (RECOVER-04): the first gap aborts - Incomplete, loud, never
+    // a skip and never a retry-shape deferral.
+    ASSERT_NO_FATAL_FAILURE( RequestWalkOverFullTopic( node_db ) );
+    size_t visited_at_abort = 0;
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            const auto status = node_db->GetForcedWalkStatus();
+            if ( status.state == crdt::CrdtDatastore::ForcedWalkState::Incomplete && status.walk_gaps > 0 )
+            {
+                visited_at_abort = status.visited;
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "true gap did not abort the walk Incomplete with walk_gaps" ) );
+    const auto status = node_db->GetForcedWalkStatus();
+    EXPECT_GE( status.walk_gaps, 1U );
+    EXPECT_EQ( status.skipped_pruned, 0U );
+    EXPECT_EQ( status.deferred, 0U );
+    EXPECT_EQ( status.errors, 0U );
+    EXPECT_EQ( status.limit_reached, false );
+
+    // The frontier abort stopped processing: head + first ghost only - the
+    // second ghost is never fetched (visited stays fixed after the abort).
+    EXPECT_EQ( visited_at_abort, 2U );
+    {
+        const auto settled = node_db->GetForcedWalkStatus();
+        ASSERT_EQ( settled.state, crdt::CrdtDatastore::ForcedWalkState::Incomplete );
+        EXPECT_EQ( settled.visited, visited_at_abort );
+        EXPECT_EQ( settled.walk_gaps, status.walk_gaps );
+    }
+}
+
+#endif // SGNS_COLD_STORAGE
+
+// W4 - cold-disabled walk posture (Phase-7 bar, D-05 nullopt leg): the SAME
+// sealed+missing+marker shape on a node WITHOUT a cold tier preserves
+// today's skip exactly - sealed+missing without a cold tier is necessarily
+// TxPruner-erased (GC eviction requires a cold tier), so the null-hook
+// consult keeps the legacy skip byte-identical even with a marker present.
+TEST_F( NodeStartupTest, ColdDisabledWalkPreservesLegacyPruneBoundarySkip )
+{
+    auto fixture = CreateNode( "forced_walk_cold_off", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), /*isFullNode=*/true );
+    ASSERT_TRUE( fixture.node );
+    NodeTeardownGuard teardown{ fixture.node };
+    auto              node_db = AwaitNodeParkedAndListening( fixture );
+    ASSERT_TRUE( node_db );
+
+    auto source = AttachHistorySource( fixture, "walk-w4" );
+    ASSERT_TRUE( source );
+    const std::string full_topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+
+    const std::string parent_key_string = TransactionManager::GetBlockChainBase() + "tx/" + std::string( 64, 'c' );
+    base::Buffer      parent_value;
+    parent_value.put( "cold-off legacy-skip ancestor payload" );
+    auto parent_put = source->Put( { parent_key_string }, parent_value, { full_topic } );
+    ASSERT_TRUE( parent_put.has_value() ) << parent_put.error().message();
+    const sgns::CID parent_cid        = parent_put.value();
+    const auto      parent_cid_string = parent_cid.toString().value();
+
+    // Phase 1 - replicate the ancestor ALONE first so the node's head set
+    // is {ancestor}; the descendant published afterwards replaces it (the
+    // both-up-front order leaves the link-fetched ancestor re-adding
+    // itself as an extra head, which EraseEntry's guard 1 refuses - see
+    // the W1 comment).
+    ASSERT_NO_FATAL_FAILURE( AwaitNodeHoldsSealedBlock(
+        fixture,
+        source,
+        node_db,
+        parent_cid,
+        parent_cid_string,
+        "node did not retain + seal the cold-off ancestor" ) );
+
+    base::Buffer    child_value;
+    child_value.put( "cold-off legacy-skip descendant payload" );
+    auto child_put = source->Put( { "/walk/w4/descendant" }, child_value, { full_topic } );
+    ASSERT_TRUE( child_put.has_value() ) << child_put.error().message();
+    ASSERT_NO_FATAL_FAILURE( AwaitNodeHoldsSealedBlock(
+        fixture,
+        source,
+        node_db,
+        child_put.value(),
+        child_put.value().toString().value(),
+        "node did not retain the walk head" ) );
+
+    (void) syncerOf( node_db )->DeleteCIDBlock( parent_cid );
+    // Guard 5 is vacuous on a cold-disabled node - no journal-state seam.
+    auto erased = node_db->EraseEntry( parent_key_string, parent_cid, std::nullopt );
+    ASSERT_TRUE( erased.has_value() ) << erased.error().message();
+    ASSERT_TRUE(
+        sgns::PruneEligibility::WritePrunedBlockEntryForTest( *node_db, parent_cid_string, "walk-w4-pruner", 1 )
+            .has_value() );
+
+    // THE WALK (cold-off leg): today's outcome exactly.
+    ASSERT_NO_FATAL_FAILURE( RequestWalkOverFullTopic( node_db ) );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return node_db->GetForcedWalkStatus().state == crdt::CrdtDatastore::ForcedWalkState::Completed; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "cold-disabled node did not complete the forced walk through the legacy skip" ) );
+    const auto status = node_db->GetForcedWalkStatus();
+    EXPECT_GE( status.skipped_pruned, 1U );
+    EXPECT_EQ( status.walk_gaps, 0U );
+    EXPECT_EQ( status.deferred, 0U );
+    EXPECT_EQ( status.errors, 0U );
+
+    auto hot = node_db->HasLocalBlock( parent_cid_string );
+    ASSERT_TRUE( hot.has_value() );
+    EXPECT_FALSE( hot.value() );
+    auto element = node_db->Get( { parent_key_string } );
+    EXPECT_TRUE( element.has_error() );
 }
 
 // Processing gossip is live before blockchain genesis and the trust controller.

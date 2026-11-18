@@ -229,6 +229,15 @@ target_link_libraries(node_startup_test
     genius_node_test
     rapidjson
     )
+# v1.2 Phase 15 (15-02): the cold walk-recovery legs (W1-W3) run only on
+# SGNS_COLD_STORAGE builds - the InMemory S3 fakes + the cold-stack
+# client-override seam live in sgns-blockstore, which crdt_globaldb links
+# PRIVATEly. OFF builds compile the file exactly as before (the legs are
+# #ifdef-guarded).
+if(SGNS_COLD_STORAGE)
+    target_compile_definitions(node_startup_test PRIVATE SGNS_COLD_STORAGE)
+    target_link_libraries(node_startup_test sgns-blockstore::sgns-blockstore)
+endif()
 if(WIN32)
     target_link_options(node_startup_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 
