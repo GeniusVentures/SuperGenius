@@ -1474,6 +1474,15 @@ namespace sgns::crdt
         erase_interrupt_hook_for_test_ = std::move( hook );
     }
 
+    std::function<void()> GlobalDB::erase_window_observer_for_test_ = nullptr;
+
+    void GlobalDB::SetEraseWindowObserverForTest( std::function<void()> observer )
+    {
+        // TEST-ONLY (v1.2 Phase 16, COMP-01/D-06): the observe-and-continue
+        // seam for the compose window. PRODUCTION CODE MUST NEVER CALL THIS.
+        erase_window_observer_for_test_ = std::move( observer );
+    }
+
     std::function<std::optional<ColdUploadState>( const CID & )> GlobalDB::cold_upload_state_hook_for_test_ = nullptr;
 
     void GlobalDB::SetColdUploadStateHookForTest( std::function<std::optional<ColdUploadState>( const CID & )> hook )
@@ -1644,7 +1653,33 @@ namespace sgns::crdt
                 BOOST_OUTCOME_TRY( batch->put( staged_entry.first, staged_entry.second ) );
             }
         }
+        // [COMP-01, D-06] TEST-ONLY observe-and-continue seam: fires
+        // exactly once per erase, immediately before the single batch
+        // commit -- after every guard (including guard 3's LRU-residency
+        // check) and after all staging. NOT an abort seam: the erase
+        // proceeds UNCONDITIONALLY; the abort contract stays exclusive
+        // to erase_interrupt_hook_for_test_ steps 1-3.
+        if ( erase_window_observer_for_test_ )
+        {
+            erase_window_observer_for_test_();
+        }
         BOOST_OUTCOME_TRY( batch->commit() );
+
+        // [COMP-01, D-04] Post-commit LRU invalidation - GC-parity with
+        // RunHotCleanup's A6 ordering (ColdStorageManager.cpp): a
+        // concurrent AddCIDBlock-path insert (FetchNodeFromColdStorage
+        // rehydrate / BlockReceivedCallback) between guard 3's
+        // compose-start check and this commit cannot survive - a stale
+        // entry would serve erased bytes through HasBlock's LRU term.
+        // Unconditional for EVERY caller of EraseEntry (the single home,
+        // D-04); covers BOTH post-commit exits - the success return and
+        // POST_COMMIT_ERASE_ANOMALY - because it precedes the seal
+        // re-assert (planner ruling, research Open Question 3);
+        // idempotent when the cache never held the CID; takes no lock
+        // (DeleteCIDBlock is lock-free - no compose-lock edge, A2).
+        // [D-05: guard 3 stays - admission semantics unchanged, this
+        // only closes the window.]
+        (void)m_dagSyncer->DeleteCIDBlock( cid );
 
         // The seal marker is never staged for removal above; if it is gone
         // now, something erased it out-of-band -- fail loudly with a

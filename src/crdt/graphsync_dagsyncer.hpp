@@ -296,6 +296,15 @@ namespace sgns::crdt
         bool                  IsCIDInCache( const CID &cid ) const override;
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
 
+        // [v1.2 Phase 16, COMP-01] LRU insert/read pair, made public beside
+        // their IsCIDInCache/DeleteCIDBlock siblings: the SC1 window
+        // counter-test inserts through the BlockReceivedCallback inserter
+        // primitive (AddCIDBlock) and asserts the stale-serve signature
+        // through the LRU read (GrabCIDBlock) - the same surface the
+        // production received-block path uses.
+        bool AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock( const CID &cid ) const;
+
         void Stop() override;
 
     private:
@@ -331,9 +340,6 @@ namespace sgns::crdt
         // Helper methods for the peer registry
         PeerKey                    RegisterPeer( const PeerId &peer, std::vector<Multiaddress> address );
         outcome::result<PeerEntry> GetPeerById( PeerKey id ) const;
-
-        bool AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
-        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock( const CID &cid ) const;
 
         /**
          * @brief      Cold-chain fetch leg (READ-01/D-01/D-02, v1.1

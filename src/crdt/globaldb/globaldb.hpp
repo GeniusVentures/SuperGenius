@@ -534,6 +534,25 @@ namespace sgns::crdt
         static void SetEraseInterruptHookForTest( std::function<bool( int step )> hook );
 
         /**
+         * @brief      Test-only OBSERVE-AND-CONTINUE seam for EraseEntry's
+         *             compose window (v1.2 Phase 16, COMP-01/D-06).
+         * @param      observer invoked exactly once per erase,
+         *             immediately before the single batch commit — after
+         *             every guard (including guard 3's LRU-residency
+         *             check) and after all staging; the erase proceeds
+         *             UNCONDITIONALLY after the call.
+         * @note       This is NOT an abort seam — the abort contract (a
+         *             @c true return aborts without committing) stays
+         *             exclusive to SetEraseInterruptHookForTest steps
+         *             1-3. Intended to force the COMP-01 window
+         *             deterministically (a mid-window LRU insert or a
+         *             barrier park inside the window). PRODUCTION CODE
+         *             MUST NEVER CALL this method. Pass nullptr to clear;
+         *             test fixtures must clear it in teardown.
+         */
+        static void SetEraseWindowObserverForTest( std::function<void()> observer );
+
+        /**
          * @brief      Test-only per-CID cold-upload-state override — the
          *             induced-regression injector (v1.2 Phase 14, D-07).
          * @param      hook invoked FIRST by GetColdUploadState: when it
@@ -810,6 +829,11 @@ namespace sgns::crdt
         /// Test-only EraseEntry interruption hook; see
         /// SetEraseInterruptHookForTest. Inert (nullptr) in production.
         static std::function<bool( int step )> erase_interrupt_hook_for_test_;
+
+        /// Test-only EraseEntry window observer; see
+        /// SetEraseWindowObserverForTest. Inert (nullptr) in production —
+        /// PRODUCTION CODE MUST NEVER ARM IT.
+        static std::function<void()> erase_window_observer_for_test_;
 
         /// Test-only per-CID cold-state override; see
         /// SetColdUploadStateHookForTest. Inert (nullptr) in production —

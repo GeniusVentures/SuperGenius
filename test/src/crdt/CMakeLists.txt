@@ -430,6 +430,48 @@ endif()
 set_tests_properties(cold_evidence_matrix_test PROPERTIES LABELS "Tier1")
 endif()
 
+# TxPruner x GC composition hardening (COMP-01/02/03, v1.2 Phase 16): the
+# SC1 stale-LRU window close proven at both D-06 layers (deterministic
+# observe-and-continue seam + barrier-driven real-thread), the abort-path
+# and absent-key edges, the SC2 interleave matrix, and the SC3
+# disposal-starvation deterministic leg. Registered ONLY under
+# SGNS_COLD_STORAGE; same link set as cold_prune_gate_test (the
+# genius_node_test whole-archive keeps PruneEligibility test helpers
+# linkable for the later 16-02/16-03 legs).
+if(SGNS_COLD_STORAGE)
+addtest(cold_compose_matrix_test
+    cold_compose_matrix_test.cpp
+)
+
+target_include_directories(cold_compose_matrix_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_compose_matrix_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+)
+
+if(MSVC)
+    target_link_options(cold_compose_matrix_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_compose_matrix_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_compose_matrix_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_compose_matrix_test PROPERTIES LABELS "Tier1")
+endif()
+
 # Dev-gated live-stack smoke (D-08c, v1.2 Phase 14 plan 14-03): the REAL
 # MinIO wire (production S3 client + real drainer transitions) passes the
 # cold-durability gate. Env-gated opt-in via SGNS_BLOCKSTORE_TEST_MINIO_BIN
