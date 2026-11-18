@@ -365,6 +365,26 @@ namespace sgns::crdt
         return ColdUploadState::NoRecord; // unreachable - defensive
     }
 
+    std::optional<bool> IsColdDisposed( const std::shared_ptr<ColdStorageManager> &manager,
+                                        const CID                                &cid )
+    {
+        if ( !manager )
+        {
+            return false;
+        }
+        // D-10 (v1.2 Phase 16, COMP-03): the disposed-marker bridge for
+        // TxPruner's NoRecord arm. Gated TU discipline: the library result
+        // maps HERE; a read error surfaces as nullopt so the calling member
+        // can WARN and classify freeze-safe false (the ColdReadService
+        // HasDisposed posture - both arms defer, under-prune preserved).
+        auto disposed = manager->IsDisposed( cid );
+        if ( disposed.has_value() )
+        {
+            return disposed.value();
+        }
+        return std::nullopt;
+    }
+
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager )
     {
         if ( manager )

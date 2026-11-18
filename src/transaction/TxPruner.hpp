@@ -98,6 +98,16 @@ namespace sgns
         /// pruning; the group retries next cycle.
         uint64_t cold_unreadable_groups = 0;
 
+        /// Erasable block groups DEFERRED because the constituent CID's
+        /// journal record is gone AND the GC disposed-marker is present
+        /// (EvictLocalAndMarkDisposed deleted the journal while remote
+        /// S3 still serves — v1.2 Phase 16, COMP-03/D-10). NOT an error:
+        /// under-prune is the fail-safe direction; stranded groups are
+        /// re-admitted every cycle until Phase 18's collectibility policy
+        /// rules otherwise. The split exists so operators can see
+        /// stranded prune mass (never-healthy-by-omission, MI-02).
+        uint64_t cold_disposed_stranded_groups = 0;
+
         /// Candidates inside taken groups whose FRESH spent-ness re-verify
         /// refused the erase (a spend reverted between evaluation and erase,
         /// or the value could not be re-fetched) — skipped, never erased.

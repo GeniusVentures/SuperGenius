@@ -730,6 +730,16 @@ namespace sgns::crdt
         return local_block_store_->GetUploadState( cid );
     }
 
+    sgns::blockstore::result<bool, sgns::blockstore::BlockStatus>
+    ColdStorageManager::IsDisposed( const sgns::blockstore::Cid &cid )
+    {
+        // D-10 (v1.2 Phase 16, COMP-03): the D-09 three-line pass-through
+        // shape — disposed-marker point lookup for TxPruner's NoRecord arm;
+        // the keyspace is owned by the library (no key construction here).
+        std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+        return local_block_store_->IsDisposed( cid );
+    }
+
     void ColdStorageManager::RefreshStagingStats()
     {
         // D-13 on-demand entry: one bounded observation, predicate
@@ -1072,6 +1082,16 @@ namespace sgns::crdt
                 // EXACTLY kEvictionDurabilityGate - anything else
                 // (NoRecord/Pending/Accepted) or an unreadable read is not
                 // eligible.
+                // [D-02, v1.2 Phase 16 — Interaction-C ruling] This
+                // mark-time durability read is one of the TWO destructive
+                // durability readers; the other (TxPruner's in-compose
+                // guard-5 chain, Phase 14 D-06: compose lock ->
+                // lifecycle_mutex_ -> cold_store_mutex_ via GetColdUploadState
+                // -> GetUploadState) serializes with it HERE, on
+                // cold_store_mutex_ (this lock scope opened above is the
+                // serialization point). No new lock is added or needed in
+                // v1.2: remote S3 is never deleted, so contradictory
+                // durability beliefs can never destroy the last copy.
                 auto state = local_block_store_->GetUploadState( entry.cid );
                 if ( !state.has_value() || state.value() != kEvictionDurabilityGate )
                 {
@@ -1270,6 +1290,16 @@ namespace sgns::crdt
             }
             // D-16 HALF 1: the library batch (cold bytes + journal +
             // timestamp + disposed marker) under the shared mutex.
+            //
+            // [D-12, v1.2 Phase 16, COMP-03 — the starvation interplay
+            // home] This disposal deletes the cold journal record and
+            // writes the disposed marker as ONE library-atomic batch; a
+            // subsequent TxPruner cycle's gate therefore reads NoRecord on
+            // this CID and strands the group behind
+            // cold_disposed_stranded_groups (D-10) — the observable
+            // outcome is under-prune, NEVER destruction of the last copy
+            // (remote S3 still serves). The v2 DisposedDurable terminal
+            // state (REQUIREMENTS Future) is the recorded follow-up.
             sgns::blockstore::DisposedRecord record;
             record.disposed_at_unix_ms = now_ms;
             record.reclaimed_bytes     = mark.size_bytes;

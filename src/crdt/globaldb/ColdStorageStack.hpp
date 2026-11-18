@@ -232,6 +232,20 @@ namespace sgns::crdt
                                         const CID                                &cid );
 
     /**
+     * @brief      Null-safe per-CID disposed-marker bridge (D-10, v1.2
+     *             Phase 16, COMP-03): routes the gated manager's
+     *             library-typed IsDisposed onto the ungated bool the
+     *             TxPruner NoRecord arm consumes.
+     * @param[in]  manager the bundle's manager (may be null)
+     * @param[in]  cid the block whose disposed marker to read
+     * @return     true/false when the consult answers; nullopt ONLY on a
+     *             consult read error (the caller classifies freeze-safe
+     *             false — never healthy-by-omission at the warn site)
+     */
+    std::optional<bool> IsColdDisposed( const std::shared_ptr<ColdStorageManager> &manager,
+                                        const CID                                &cid );
+
+    /**
      * @brief      Enqueue an ops-triggered drain (flag + notify only - the
      *             drain body NEVER runs on the caller's thread; SC2).
      * @param[in]  manager the bundle's manager (may be null)

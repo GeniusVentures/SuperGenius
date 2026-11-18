@@ -634,6 +634,22 @@ namespace sgns::crdt
         ColdUploadState GetColdUploadState( const CID &cid ) const;
 
         /**
+         * @brief      D-10 (v1.2 Phase 16, COMP-03) disposed-marker bridge
+         *             for TxPruner's NoRecord arm: routes
+         *             GlobalDB -> ColdStorageManager::IsDisposed ->
+         *             LocalBlockStore::IsDisposed (the library-owned
+         *             keyspace — one builder per namespace, no third
+         *             builder, Pitfall 5).
+         * @param[in]  cid the block whose disposed marker to read
+         * @return     true only when the library answers disposed with
+         *             evidence; false when the marker is absent, when the
+         *             tier is absent/shut down, and — freeze-safe — when
+         *             the consult itself errors (both arms defer, so the
+         *             under-prune direction holds even on consult failure).
+         */
+        bool IsColdDisposed( const CID &cid ) const;
+
+        /**
          * @brief      Cold-tier presence signal (v1.2 Phase 14, PRUNE-01):
          *             true iff this GlobalDB was constructed with a cold
          *             storage tier (cold_manager_ != nullptr).

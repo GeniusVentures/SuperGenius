@@ -266,6 +266,19 @@ namespace sgns::crdt
         GetUploadState( const sgns::blockstore::Cid &cid );
 
         /**
+         * @brief      D-10 (v1.2 Phase 16, COMP-03) disposed-marker point
+         *             lookup for TxPruner's NoRecord arm — the ONLY
+         *             consumer outside ColdReadService::HasDisposed.
+         * @param[in]  cid the block whose disposed marker to read
+         * @return     the library result (true = disposed)
+         * @note       the keyspace is owned by the sgns-blockstore
+         *             library (one builder per namespace — no key
+         *             construction here or in any caller, Pitfall 5).
+         */
+        sgns::blockstore::result<bool, sgns::blockstore::BlockStatus>
+        IsDisposed( const sgns::blockstore::Cid &cid );
+
+        /**
          * @brief      D-13 on-demand staging-stats refresh: ONE bounded
          *             GetUploadStats plus predicate re-evaluation,
          *             serialized against the drainer tick's admin calls

@@ -118,11 +118,32 @@ namespace sgns
                                   cid_string );
                     return false;
                 case crdt::ColdUploadState::NoRecord:
+                    // [COMP-03, D-10] Cross-marker skip: NoRecord on a
+                    // cold-bearing node means never-spilled OR GC-disposed
+                    // (EvictLocalAndMarkDisposed deleted the journal
+                    // record while remote S3 still serves). Consult the GC
+                    // module's disposed-marker keyspace THROUGH the
+                    // library API (GlobalDB::IsColdDisposed — no third
+                    // builder, Pitfall 5): disposed strands the group
+                    // behind a SPLIT counter (visible, never an erase —
+                    // under-prune is the fail-safe direction, D-12);
+                    // absent keeps today's cold_deferred path. ONLY this
+                    // arm consults — the journal record exists in every
+                    // other arm, so those blocks were never disposed.
+                    if ( globaldb.IsColdDisposed( cid.value() ) )
+                    {
+                        ++stats.cold_disposed_stranded_groups;
+                        return false;
+                    }
+                    ++stats.cold_deferred_groups;
+                    return false;
                 case crdt::ColdUploadState::Pending:
                 case crdt::ColdUploadState::Accepted:
                 default:
                     // Includes the default arm (T-14-01): an unknown
-                    // future enum value can never admit.
+                    // future enum value can never admit. Never consults
+                    // the disposed keyspace: the journal record exists —
+                    // the block was never disposed.
                     ++stats.cold_deferred_groups;
                     return false;
             }
@@ -394,10 +415,11 @@ namespace sgns
         // (6) ONE per-cycle INFO summary (RECL-03). bytes reclaimed is NOT
         // measured until Phase 20 (deletes alone reclaim nothing — no
         // CompactRange has run) — stated explicitly, never fabricated.
-        // The cold counters (v1.2 Phase 14, D-03 shape) surface deferrals
-        // ONLY as counters — never as failure reasons.
+        // The cold counters (v1.2 Phase 14, D-03 shape; the stranded
+        // split joined in Phase 16, D-10) surface deferrals ONLY as
+        // counters — never as failure reasons.
         logger_->info( "Prune cycle [generation {}]: examined={}, eligible={}, erased={}, held_blocks={}, "
-                       "cold_deferred={}, cold_unreadable={}, skipped={}, errors={}, duration_ms={}, "
+                       "cold_deferred={}, cold_unreadable={}, cold_disposed_stranded={}, skipped={}, errors={}, duration_ms={}, "
                        "watermark={} — bytes reclaimed: not measured until Phase 20",
                        stats.generation,
                        stats.examined,
@@ -406,6 +428,7 @@ namespace sgns
                        stats.held_blocks,
                        stats.cold_deferred_groups,
                        stats.cold_unreadable_groups,
+                       stats.cold_disposed_stranded_groups,
                        stats.skipped,
                        stats.errors,
                        stats.duration_ms,

@@ -1518,6 +1518,34 @@ namespace sgns::crdt
         return sgns::crdt::GetColdUploadState( cold_manager_, cid );
     }
 
+    bool GlobalDB::IsColdDisposed( const CID &cid ) const
+    {
+        // D-10 (v1.2 Phase 16, COMP-03): the disposed-marker bridge for
+        // TxPruner's NoRecord arm, mirroring GetColdUploadState's
+        // const-member lifecycle_mutex_ pattern and its exact lock order
+        // (caller holds NO lock here, but the chain this rides —
+        // compose lock -> lifecycle_mutex_ -> cold_store_mutex_ — is the
+        // ordering Phase 14 already established; never re-shaped).
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        if ( shutdown_started_.load() || cold_manager_ == nullptr )
+        {
+            return false;
+        }
+        auto disposed = sgns::crdt::IsColdDisposed( cold_manager_, cid );
+        if ( disposed.has_value() )
+        {
+            return disposed.value();
+        }
+        // Freeze-safe false (the ColdReadService::HasDisposed posture): a
+        // consult error classifies not-disposed -> the cold_deferred path;
+        // both arms defer, so the fail-safe direction holds even when the
+        // consult itself fails (the COMP-03 edge).
+        m_logger->warn( "{}: disposed-marker consult failed for cid {} - classifying not-disposed",
+                        __func__,
+                        cid.toString().value() );
+        return false;
+    }
+
     outcome::result<void> GlobalDB::EraseEntry(
         const std::string                                              &key,
         const CID                                                      &cid,
@@ -1614,6 +1642,17 @@ namespace sgns::crdt
         // Durable-record removals are GC disposal paths yielding NoRecord,
         // which a later cycle's gate defers) and is Phase 16's
         // Interaction-C ruling surface, not this lock's.
+        //
+        // [D-02, v1.2 Phase 16 — Interaction-C ruling, CLOSED] Both
+        // destructive durability readers serialize on cold_store_mutex_:
+        // GC's mark-time kEvictionDurabilityGate read executes inside the
+        // lock scope opened in ColdStorageManager's GcPassOnce eligibility
+        // scan, and THIS guard's chain is compose lock -> lifecycle_mutex_
+        // -> cold_store_mutex_ (via GetColdUploadState -> GetUploadState).
+        // Verified at af644481f (16-RESEARCH Anchor Record). No new lock
+        // is added or needed in v1.2 — remote S3 is never deleted, so
+        // contradictory durability beliefs can never destroy the last
+        // copy.
         if ( HasColdStorage() && GetColdUploadState( cid ) != ColdUploadState::Durable )
         {
             m_logger->warn( "{}: cid {} cold evidence not Durable at erase-commit - refusing (defer)",
