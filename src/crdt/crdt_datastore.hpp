@@ -83,6 +83,14 @@ namespace sgns::crdt
             size_t          fetched          = 0;
             size_t          restored         = 0;
             size_t          skipped_pruned   = 0;
+            /// RECOVER-04/D-05 (v1.2 Phase 15): sealed+not-retained CIDs
+            /// whose bounded cold+peer recovery failed. An ABORT condition,
+            /// never retry-shaped (a gap does not resolve; contrast
+            /// deferred) and never a skip (a silently-validated partial
+            /// history is the exact failure this counter makes loud):
+            /// nonzero walk_gaps clears the frontier and finishes the walk
+            /// Incomplete.
+            size_t          walk_gaps        = 0;
             size_t          skipped_existing = 0;
             size_t          deferred         = 0;
             size_t          errors           = 0;
@@ -105,6 +113,11 @@ namespace sgns::crdt
             NODE_CREATION,
             GET_NODE,
             INVALID_JOB,
+            /// RECOVER-04/D-05 (v1.2 Phase 15): bounded cold+peer recovery
+            /// exhausted on a sealed+not-retained walk CID with no prune
+            /// evidence - the walk-gap ABORT, never a skip counter and
+            /// never deferred (a gap does not resolve).
+            FORCED_WALK_GAP,
         };
 
         /**

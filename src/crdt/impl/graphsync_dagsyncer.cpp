@@ -346,6 +346,37 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::getNode( const CID &cid ) const
     {
+        // D-06 (v1.2 Phase 15): the general 1-arg virtual is a thin delegate -
+        // the unbounded sentinel makes the per-CID budget check inside the core
+        // a no-op, so every non-walk caller keeps today's fetch behavior
+        // byte-for-byte.
+        return GetNodeWithRouteBudget( cid, kUnboundedPeerFailoverBudget );
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::getNode(
+        const CID &cid, uint32_t peer_failover_budget ) const
+    {
+        // D-06 (v1.2 Phase 15): the walk-passed bounded overload (see the
+        // header's kForcedWalkPeerFailoverPerCid derivation). No resolution
+        // semantics of its own - the core owns the whole hot->cold->peers
+        // chain; only the peer leg's distinct-peer fan-out is capped.
+        return GetNodeWithRouteBudget( cid, peer_failover_budget );
+    }
+
+    std::optional<PruneEvidenceClass> GraphsyncDAGSyncer::LookupPruneEvidence( const CID &cid ) const
+    {
+        if ( cold_read_hook_ == nullptr )
+        {
+            // The walk's surface-availability signal (D-05): nullopt = cold
+            // disabled = preserve the legacy sealed+missing skip.
+            return std::nullopt;
+        }
+        return cold_read_hook_->LookupPruneEvidence( cid );
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeWithRouteBudget(
+        const CID &cid, uint32_t peer_failover_budget ) const
+    {
         auto node = GrabCIDBlock( cid );
 
         if ( !node.has_error() )
@@ -410,6 +441,13 @@ namespace sgns::crdt
 
         const auto fetch_deadline = std::chrono::steady_clock::now() + kTotalFetchTimeout;
 
+        // D-06 (v1.2 Phase 15): per-CID peer-failover budget - a peer counts
+        // as ATTEMPTED once its request passes the blacklist and suppression
+        // gates and RequestNode initiates. The unbounded sentinel (the 1-arg
+        // virtual's delegate) can never reach the budget, so general callers
+        // are unaffected.
+        uint32_t attempted_peers = 0;
+
         for ( const auto peer_key : route_keys )
         {
             if ( std::chrono::steady_clock::now() >= fetch_deadline )
@@ -438,6 +476,21 @@ namespace sgns::crdt
                                 cid.toString().value() );
                 continue;
             }
+
+            // D-06 (v1.2 Phase 15): at the budget, stop walking routes -
+            // log + fall into the existing terminal path below (the "No
+            // usable route candidates left" ApplyColdPrecedence return; no
+            // new error shape at this layer - the forced walk maps
+            // exhaustion onto its distinct walk-gap abort).
+            if ( attempted_peers == peer_failover_budget )
+            {
+                logger_->error( "Fetch for CID {} abandoned: per-CID peer-failover budget of {} exhausted - "
+                                "recovery is exhausted",
+                                cid.toString().value(),
+                                peer_failover_budget );
+                break;
+            }
+            ++attempted_peers;
 
             ClearRequestStatus( cid );
             auto subscription = RequestNode( peerID, address, cid );

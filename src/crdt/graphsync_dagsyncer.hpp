@@ -4,6 +4,9 @@
 #include <memory>
 #include <chrono>
 #include <atomic>
+#include <optional>
+#include <limits>
+#include <cstdint>
 
 #include <libp2p/host/host.hpp>
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
@@ -21,6 +24,11 @@ namespace sgns::crdt
     // forward declarations here keep the include cycle broken).
     class ColdReadFallback;
     struct ColdReadStatus;
+    // D-05 (v1.2 Phase 15): seam-side evidence classification - defined in
+    // the same ungated header; forward-declared with its fixed underlying
+    // type so the optional-shaped accessor below can name it without
+    // reopening the include cycle.
+    enum class PruneEvidenceClass : uint8_t;
 
     /**
    * @brief A DAGSyncer is an abstraction to an IPLD-based p2p storage layer.
@@ -46,6 +54,32 @@ namespace sgns::crdt
         using PeerKey      = size_t; // Unique identifier for a peer in our registry
         using PeerEntry    = std::pair<PeerId, std::vector<Multiaddress>>;
         using RouteMapType = std::map<CID, std::vector<PeerKey>>; // Maps CIDs to ordered peer registry keys
+
+        /**
+         * @brief      Per-CID peer-failover budget for the forced walk's
+         *             recovery fetches (RECOVER-04/D-06, v1.2 Phase 15).
+         *
+         * Derivation - the codebase's three independent 8-bounds converge:
+         * the failed-root retry ladder (MAX_FAILED_ROOT_RETRIES = 8,
+         * crdt_datastore.hpp), the bootstrap walk retry bound
+         * (bootstrap_walk_max_retries_ = 8, GeniusNode.hpp), and the
+         * observed refusal-failover attempts (<= 8 RefusalFailover,
+         * develop 19-07-SUMMARY); PrunedMesh's observed [1,4] shows
+         * healthy meshes need well under it. The count bound COMPOSES
+         * with, never fights, the time bounds: CID_FAILURE_SUPPRESSION
+         * (4 s) already prevents immediate re-consultation of a failed
+         * peer and kTotalFetchTimeout (20 s) stays the wall-clock
+         * backstop - count for fairness/DoS, time for liveness.
+         *
+         * Deliberately NOT a config knob (Phase 14 D-04 no-new-config-
+         * surface posture): Phase 17 SC2's ancestry-density probe
+         * validates/re-tunes this constant against real walk-recovery
+         * numbers (derive-now, refine-later - both halves of the recorded
+         * Phase 15 <-> 17 dependency stay honored). Today the forced walk
+         * is the sole bounded caller; every general 1-arg getNode caller
+         * keeps today's unbounded behavior.
+         */
+        static constexpr uint32_t kForcedWalkPeerFailoverPerCid{ 8 };
 
         enum class Error : uint8_t
         {
@@ -129,6 +163,43 @@ namespace sgns::crdt
         outcome::result<void> addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node ) override;
 
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> getNode( const CID &cid ) const override;
+
+        /**
+         * @brief       Bounded getNode overload (RECOVER-04/D-06, v1.2
+         *              Phase 15): identical resolution semantics to the
+         *              1-arg virtual (hot -> cold chain -> peers), with
+         *              the peer leg's distinct-peer fan-out capped at
+         *              @p peer_failover_budget attempted requests per CID.
+         * @param[in]   cid the content identifier
+         * @param[in]   peer_failover_budget maximum distinct peers a
+         *              request is ATTEMPTED against (past the blacklist
+         *              and suppression gates) before the route loop exits
+         *              into the existing terminal path
+         * @return      the resolved node, or the existing failure
+         *              taxonomy (no new error shape at this layer - the
+         *              forced walk maps exhaustion onto its distinct
+         *              walk-gap abort)
+         * @note        NOT an override - a sibling overload, so the
+         *              general 1-arg virtual keeps today's unbounded
+         *              behavior for every other caller (walk-passed
+         *              parameter only, D-06).
+         */
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> getNode( const CID    &cid,
+                                                                            uint32_t      peer_failover_budget ) const;
+
+        /**
+         * @brief       Optional-shaped prune-evidence consult for the
+         *              forced walk (D-04/D-05, v1.2 Phase 15).
+         * @param[in]   cid the content identifier
+         * @return      the predicate's classification, or std::nullopt
+         *              when no cold-read hook is injected (cold storage
+         *              disabled) - the walk's surface-availability
+         *              signal: nullopt = preserve the legacy skip
+         * @note        Rides the SAME single predicate every classifying
+         *              serve surface derives from (SC3
+         *              source-consistency) - no independent lookup path.
+         */
+        std::optional<PruneEvidenceClass> LookupPruneEvidence( const CID &cid ) const;
 
         outcome::result<void> removeNode( const CID &cid ) override;
 
@@ -233,6 +304,18 @@ namespace sgns::crdt
         // retries against a sole route no-op: at 30s the first two retries (t+5s,
         // t+15s) deterministically skip the only route and burn their budget.
         static constexpr std::chrono::seconds CID_FAILURE_SUPPRESSION{ 4 };
+
+        /// D-06 (v1.2 Phase 15): the unbounded sentinel the general 1-arg
+        /// getNode virtual delegates through - the per-CID budget check can
+        /// never fire against it, keeping every non-walk caller's fetch
+        /// behavior byte-identical.
+        static constexpr uint32_t kUnboundedPeerFailoverBudget = std::numeric_limits<uint32_t>::max();
+
+        /// D-06 (v1.2 Phase 15): the getNode core both the 1-arg virtual and
+        /// the bounded sibling overload delegate into; @p peer_failover_budget
+        /// caps distinct peers ATTEMPTED per CID in the route loop.
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithRouteBudget(
+            const CID &cid, uint32_t peer_failover_budget ) const;
 
         outcome::result<ipfs_lite::ipfs::graphsync::Subscription> RequestNode(
             const PeerId                              &peer,

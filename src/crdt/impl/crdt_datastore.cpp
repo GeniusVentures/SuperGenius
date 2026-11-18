@@ -1,6 +1,10 @@
 #include <fmt/std.h>
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
+// D-05 (v1.2 Phase 15): the complete PruneEvidenceClass enum the walk's
+// evidence matrix switches on (graphsync_dagsyncer.hpp only forward-declares
+// it to keep the include cycle broken).
+#include "crdt/cold_read_fallback.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
@@ -31,6 +35,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, CrdtDatastore::Error, e )
             return "Can't fetch the node";
         case CrdtDatastoreErr::INVALID_JOB:
             return "The job is invalid";
+        case CrdtDatastoreErr::FORCED_WALK_GAP:
+            return "Forced walk gap: bounded cold+peer recovery exhausted (abort-never-skip)";
     }
     return "Unknown error";
 }
@@ -298,16 +304,21 @@ namespace sgns::crdt
 
     void CrdtDatastore::FinishForcedWalkLocked()
     {
+        // RECOVER-04/D-05 (v1.2 Phase 15): a walk gap finishes the walk
+        // Incomplete - the abort is categorical, not budgetary (first gap
+        // aborts; no threshold constant exists to tune).
         forcedWalkStatus_.state = forcedWalkStatus_.errors != 0 || forcedWalkStatus_.deferred != 0
+                                      || forcedWalkStatus_.walk_gaps != 0
                                       ? ForcedWalkState::Incomplete
                                       : ForcedWalkState::Completed;
         logger_->info( "Forced walk {}: visited={}, fetched={}, restored={}, skipped_pruned={}, "
-                       "skipped_existing={}, deferred={}, errors={}, limit_reached={}",
+                       "walk_gaps={}, skipped_existing={}, deferred={}, errors={}, limit_reached={}",
                        forcedWalkStatus_.state == ForcedWalkState::Completed ? "completed" : "incomplete",
                        forcedWalkStatus_.visited,
                        forcedWalkStatus_.fetched,
                        forcedWalkStatus_.restored,
                        forcedWalkStatus_.skipped_pruned,
+                       forcedWalkStatus_.walk_gaps,
                        forcedWalkStatus_.skipped_existing,
                        forcedWalkStatus_.deferred,
                        forcedWalkStatus_.errors,
@@ -362,8 +373,10 @@ namespace sgns::crdt
 
         ForcedWalkStatus progress;
         auto             result = ProcessForcedWalkCID( cid, topics, guard, require_registered_filters, progress );
-        if ( result.has_failure() && !shutdown_started_ )
+        if ( result.has_failure() && !shutdown_started_ && progress.walk_gaps == 0 )
         {
+            // Every non-gap failure keeps the existing accounting (errors
+            // increments, the warn fires, the walk finishes Incomplete).
             ++progress.errors;
             logger_->warn( "Forced walk failed for CID {}: {}", cid.toString().value(), result.error().message() );
         }
@@ -373,9 +386,20 @@ namespace sgns::crdt
             forcedWalkStatus_.fetched          += progress.fetched;
             forcedWalkStatus_.restored         += progress.restored;
             forcedWalkStatus_.skipped_pruned   += progress.skipped_pruned;
+            forcedWalkStatus_.walk_gaps        += progress.walk_gaps;
             forcedWalkStatus_.skipped_existing += progress.skipped_existing;
             forcedWalkStatus_.deferred         += progress.deferred;
             forcedWalkStatus_.errors           += progress.errors;
+            if ( progress.walk_gaps > 0 )
+            {
+                // RECOVER-04/D-05 abort-never-skip: a walk gap never resolves
+                // (contrast deferred), so the remaining queue is never
+                // processed - clearing the frontier finishes the walk
+                // Incomplete through FinishForcedWalkLocked below. Routing
+                // keys off the counter (not error-value comparison) so the
+                // abort is robust regardless of plumbing details.
+                forcedWalkFrontier_ = {};
+            }
             if ( shutdown_started_ )
             {
                 CancelForcedWalkLocked();
@@ -446,11 +470,57 @@ namespace sgns::crdt
         BOOST_OUTCOME_TRY( auto cid_string, cid.toString() );
         BOOST_OUTCOME_TRY( auto retained, dagSyncer_->HasStoredBlock( cid ) );
         BOOST_OUTCOME_TRY( auto sealed, dagSyncer_->isResolved( cid ) );
+        // D-04/D-06 plumbing point (v1.2 Phase 15): the evidence predicate
+        // and the bounded getNode overload live on the concrete
+        // GraphsyncDAGSyncer, not the DAGSyncer base the datastore holds.
+        // A non-Graphsync syncer (test doubles only - production always
+        // injects the graphsync syncer at the globaldb construction seam)
+        // resolves null and keeps the cold-disabled walk posture below.
+        const auto graphsync_syncer = std::dynamic_pointer_cast<GraphsyncDAGSyncer>( dagSyncer_ );
         if ( !retained && sealed )
         {
-            ++progress.skipped_pruned;
-            logger_->debug( "Forced walk CID {}: missing sealed block, preserving prune boundary", cid_string );
-            return outcome::success();
+            // D-05 (v1.2 Phase 15): the evidence matrix replaces the old
+            // conflation that treated every missing sealed block as pruned.
+            // The consult rides the SAME single predicate the serving
+            // surfaces derive from (SC3 source-consistency) - no
+            // independent lookup path. nullopt = cold disabled.
+            std::optional<PruneEvidenceClass> evidence;
+            if ( graphsync_syncer != nullptr )
+            {
+                evidence = graphsync_syncer->LookupPruneEvidence( cid );
+            }
+            if ( !evidence.has_value() )
+            {
+                // Cold-disabled walk posture (Phase-7 bar): sealed+missing
+                // on a node without a cold tier is necessarily
+                // TxPruner-erased (GC eviction requires a cold tier), so
+                // today's skip is preserved byte-for-byte.
+                ++progress.skipped_pruned;
+                logger_->debug( "Forced walk CID {}: missing sealed block, preserving prune boundary", cid_string );
+                return outcome::success();
+            }
+            if ( *evidence == PruneEvidenceClass::Pruned )
+            {
+                // RECOVER-03: an evidence-bearing missing block - the
+                // block-level skip bounds the walk while the element-level
+                // CanRestoreElement guard stays terminal authority
+                // (both layers, never either alone).
+                ++progress.skipped_pruned;
+                logger_->debug( "Forced walk CID {}: prune evidence present, preserving prune boundary", cid_string );
+                return outcome::success();
+            }
+            if ( *evidence == PruneEvidenceClass::Malformed )
+            {
+                // Malformed evidence fails closed (T-17-0502 discipline /
+                // Pitfall 7): an ERROR, never a silent verdict - counted in
+                // errors by the step handler, walk Incomplete.
+                logger_->error( "Forced walk CID {}: prune evidence malformed - failing closed", cid_string );
+                return outcome::failure( std::errc::bad_message );
+            }
+            // NoEvidence: a GC-evicted ancestor (or a true gap). NO early
+            // return - fall through to the existing fetch discipline below
+            // (RECOVER-02: getNode's cold-before-peers chain restores it,
+            // the walk owns sealing after replay).
         }
         if ( shutdown_started_ )
         {
@@ -461,9 +531,41 @@ namespace sgns::crdt
         {
             dagSyncer_->InitCIDBlock( cid );
         }
-        auto node_result = retained ? dagSyncer_->GetStoredNode( cid ) : dagSyncer_->getNode( cid );
+        // D-06 (v1.2 Phase 15): the walk's non-retained fetch rides getNode's
+        // EXISTING cold-before-peers chain (no new fetch machinery) bounded
+        // by the per-CID failover budget; a non-Graphsync syncer keeps the
+        // base 1-arg virtual (today's behavior).
+        auto node_result = [&]() -> outcome::result<std::shared_ptr<IPLDNode>> {
+            if ( retained )
+            {
+                return dagSyncer_->GetStoredNode( cid );
+            }
+            if ( graphsync_syncer != nullptr )
+            {
+                return graphsync_syncer->getNode( cid, GraphsyncDAGSyncer::kForcedWalkPeerFailoverPerCid );
+            }
+            return dagSyncer_->getNode( cid );
+        }();
         if ( node_result.has_failure() )
         {
+            if ( !retained && sealed )
+            {
+                // RECOVER-04/D-05 fourth quadrant: bounded cold+peer recovery
+                // exhausted on the NoEvidence leg. ABORT-NEVER-SKIP: a walk
+                // gap never resolves (contrast deferred) and must never
+                // masquerade as a prune boundary - dedicated counter,
+                // distinct error, the step handler clears the frontier so
+                // the walk finishes Incomplete.
+                ++progress.walk_gaps;
+                logger_->error( "Forced walk gap at CID {}: bounded cold+peer recovery exhausted "
+                                "(per-CID peer budget {}) - aborting the walk",
+                                cid_string,
+                                graphsync_syncer != nullptr
+                                    ? GraphsyncDAGSyncer::kForcedWalkPeerFailoverPerCid
+                                    : 0 );
+                (void) dagSyncer_->DeleteCIDBlock( cid );
+                return outcome::failure( Error::FORCED_WALK_GAP );
+            }
             if ( !retained )
             {
                 (void) dagSyncer_->DeleteCIDBlock( cid );
