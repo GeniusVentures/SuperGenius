@@ -363,6 +363,51 @@ endif()
 set_tests_properties(cold_prune_toctou_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Evidence-aware cold-serving matrix (SERVE-01/02/04 + TEST-01, v1.2
+# Phase 15 plan 15-01): the /prune/blk evidence consult refuses cold
+# serves for erased CIDs (distinct terminal errors, no resurrection),
+# serves no-evidence cold bytes verbatim (evict = DETACH), fails closed
+# on malformed rows, stages BOTH marker rows atomically through a real
+# TxPruner erase, and proves the cold-disabled build never consults
+# evidence. Registered ONLY under SGNS_COLD_STORAGE; same link set as
+# cold_prune_gate_test (the TxPruner/TransactionManager fixture needs
+# the genius_node_test whole-archive) plus the in-memory datastore the
+# re-warm gate leg uses.
+if(SGNS_COLD_STORAGE)
+addtest(cold_evidence_matrix_test
+    cold_evidence_matrix_test.cpp
+)
+
+target_include_directories(cold_evidence_matrix_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_evidence_matrix_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+    ipfs-lite-cpp::ipfs_datastore_in_memory
+)
+
+if(MSVC)
+    target_link_options(cold_evidence_matrix_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_evidence_matrix_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_evidence_matrix_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_evidence_matrix_test PROPERTIES LABELS "Tier1")
+endif()
+
 # Dev-gated live-stack smoke (D-08c, v1.2 Phase 14 plan 14-03): the REAL
 # MinIO wire (production S3 client + real drainer transitions) passes the
 # cold-durability gate. Env-gated opt-in via SGNS_BLOCKSTORE_TEST_MINIO_BIN

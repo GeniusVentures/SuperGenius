@@ -894,7 +894,14 @@ namespace sgns::crdt
                         return PruneEvidenceClass::Malformed;
                     }
                     SGTransaction::PrunedBlockRecord record;
-                    if ( !record.ParseFromArray( marker.value().data(), static_cast<int>( marker.value().size() ) ) )
+                    // The explicit empty check mirrors
+                    // LookupPrunedBlockEntry: protobuf accepts zero input
+                    // as a valid all-defaults encoding, but a zero-length
+                    // /prune/blk row is corruption (production never
+                    // writes one) - Malformed, never NoEvidence (Pitfall 7).
+                    if ( marker.value().empty()
+                         || !record.ParseFromArray( marker.value().data(),
+                                                    static_cast<int>( marker.value().size() ) ) )
                     {
                         // Fail-closed (Pitfall 7, T-17-0502 discipline): a
                         // malformed - including zero-length - row is

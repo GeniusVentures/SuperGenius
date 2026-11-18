@@ -314,11 +314,17 @@ namespace sgns
         }
 
         SGTransaction::PrunedBlockRecord record;
-        if ( !record.ParseFromArray( marker.value().data(), static_cast<int>( marker.value().size() ) ) )
+        if ( marker.value().empty()
+             || !record.ParseFromArray( marker.value().data(), static_cast<int>( marker.value().size() ) ) )
         {
-            // T-17-0502 discipline (Pitfall 7): a malformed — including a
-            // zero-length — marker is an ERROR, never a silent verdict in
-            // either direction.
+            // T-17-0502 discipline (Pitfall 7): a malformed marker is an
+            // ERROR, never a silent verdict in either direction. The
+            // explicit empty check: protobuf accepts zero input as a
+            // valid all-defaults encoding, but production NEVER writes an
+            // empty row (BuildPruneBlockMarkerEntry always serializes
+            // nonzero bytes), so a zero-length value is corruption and
+            // must land here too - never a silent PRUNED-with-empty-record
+            // and never a NoEvidence.
             MarkerLogger()->error( "Pruned block marker for cid {} is malformed", cid_string );
             return outcome::failure( std::errc::bad_message );
         }
