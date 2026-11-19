@@ -44,8 +44,14 @@
  *                        for 17-03's D-12 band)
  *   SGNS_SEAL_SEED     - dataset seed baked into every content string
  *                        (default 20261118)
+ *   SGNS_SEAL_DEPTH    - deep-chain depth (default 64; also the fidelity
+ *                        walk-chain length - 17-02)
+ *   SGNS_SEAL_FANOUT   - wide fan-out breadth (default 8 - 17-02)
+ *   SGNS_SEAL_MIX      - mixed-shape chain percent (default 50 - 17-02)
  *
- * Hermetic: no S3, no node, no network - one hot RocksDB fixture.
+ * Hermetic: no S3, no node, no network beyond the loopback pubsub host
+ * the fidelity fixture's GlobalDB stack needs (17-02); the volume legs
+ * are one hot RocksDB fixture plus nothing.
  */
 
 #include <gtest/gtest.h>
@@ -56,14 +62,36 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
+#include <boost/asio.hpp>
+#include <boost/filesystem.hpp>
+
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_pubsub/gossip_pubsub.hpp>
+#include <libp2p/basic/scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/host/host.hpp>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+#include <soralog/impl/configurator_from_yaml.hpp>
+
+#include "crdt/crdt_datastore.hpp"
+#include "crdt/crdt_options.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
+#include "transaction/PruneEligibility.hpp"
 
 #include "storage/rocksdb/rocksdb.hpp"
 
@@ -72,6 +100,17 @@
 namespace
 {
     using sgns::storage::rocksdb;
+
+    /// The link/destination name tying fixture DAG links together (any
+    /// stable string; the fixtures are never broadcast or walked via
+    /// topic routing - only the CRDT chain is).
+    constexpr const char *kFidelityTopic  = "seal-growth-fidelity";
+    constexpr const char *kFidelityLink   = "seal-growth-link";
+    constexpr const char *kFloorRoot      = "test-data/cold-seal-growth/floor";
+    constexpr const char *kGrowRoot       = "test-data/cold-seal-growth/grow";
+    constexpr const char *kFidelityHotRoot  = "test-data/cold-seal-growth/fidelity-hot";
+    constexpr const char *kFidelityTwinRoot = "test-data/cold-seal-growth/fidelity-twin";
+    constexpr const char *kFidelityKeyRoot  = "test-data/cold-seal-growth/fidelity-keypair";
 
     /// Seals to seed in the floor leg (D-08 knob; bounded for Tier-1).
     uint64_t EnvOr( const char *name, uint64_t fallback )
@@ -93,9 +132,324 @@ namespace
     /// Fixed fixture roots under the suite's test-data base (NOT
     /// FreshDir): the floor root is wiped per run (determinism); the
     /// grow root is the persistent 17-02 D-02 dataset - created empty,
-    /// never wiped, never enumerated by this plan.
-    constexpr const char *kFloorRoot = "test-data/cold-seal-growth/floor";
-    constexpr const char *kGrowRoot  = "test-data/cold-seal-growth/grow";
+    /// never wiped, never enumerated by this plan; the fidelity roots
+    /// are per-run comparison fixtures (both wiped; the twin exists so
+    /// the byte-identity comparison spans two structurally distinct
+    /// stores). The constants live in the header block above.
+
+    /// The sanctioned bounded-poll helper (the soak/wall-clock shape).
+    bool PollUntil( const std::function<bool()> &predicate,
+                    std::chrono::milliseconds       deadline,
+                    std::chrono::milliseconds       step = std::chrono::milliseconds( 50 ) )
+    {
+        const auto end = std::chrono::steady_clock::now() + deadline;
+        while ( std::chrono::steady_clock::now() < end )
+        {
+            if ( predicate() )
+            {
+                return true;
+            }
+            std::this_thread::sleep_for( step );
+        }
+        return predicate();
+    }
+
+    /// Soralog config for the GlobalDB stack (the cold-kit YAML shape).
+    std::string LoggingConfigYaml()
+    {
+        return R"(
+sinks:
+  - name: console
+    type: console
+    capacity: 4294967295
+    buffer: 16384
+    lazy_flush: true
+groups:
+  - name: main
+    sink: console
+    level: error
+    children:
+      - name: libp2p
+        level: error
+      - name: Gossip
+        level: error
+# ----------------
+  )";
+    }
+
+    /// One-shot soralog bootstrap (the cold-kit SetUpTestSuite shape).
+    bool EnsureLoggingSystem()
+    {
+        static bool configured = []
+        {
+            auto log_system = std::make_shared<soralog::LoggingSystem>(
+                std::make_shared<soralog::ConfiguratorFromYAML>(
+                    std::make_shared<libp2p::log::Configurator>(), LoggingConfigYaml() ) );
+            (void)log_system->configure();
+            libp2p::log::setLoggingSystem( log_system );
+            return true;
+        }();
+        return configured;
+    }
+
+    /// Wipes (when @p wipe) and creates a fixture directory.
+    void PrepareDir( const std::string &dir, bool wipe )
+    {
+        if ( wipe )
+        {
+            std::error_code ec;
+            std::filesystem::remove_all( dir, ec );
+        }
+        std::error_code mk;
+        std::filesystem::create_directories( dir, mk );
+    }
+
+    /// The concrete DAG syncer behind the GlobalDB's broadcaster (the
+    /// cold_evidence_matrix_test syncerOf accessor idiom) - the surface
+    /// whose markResolved is the walk's own sealing surface (GATE-03's
+    /// merkle-dag alias; the W3 precedent's seeding path).
+    std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> SyncerOf( const std::shared_ptr<sgns::crdt::GlobalDB> &db )
+    {
+        return std::static_pointer_cast<sgns::crdt::GraphsyncDAGSyncer>( db->GetBroadcaster()->GetDagSyncer() );
+    }
+
+    /// Hermetic GlobalDB stack (cold DISABLED - the fidelity/density
+    /// legs need no cold tier), the Phase-14 kit's construction reduced
+    /// to the CRDT core: loopback pubsub host + scheduler + graphsync
+    /// network + GlobalDB. NO account, NO blockchain, NO transaction
+    /// manager - puts and walks are pure CRDT-surface operations.
+    struct GlobalDbStack
+    {
+        std::shared_ptr<boost::asio::io_context>                           io;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                   pubs;
+        std::shared_ptr<libp2p::basic::SchedulerImpl>                      scheduler;
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>         network;
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator;
+        std::shared_ptr<sgns::crdt::GlobalDB>                              db;
+    };
+
+    /// Teardown order (the CRDTFixture invariant): the GlobalDB is
+    /// released BEFORE the pubsub host stops, so ~BasicHost never
+    /// deregisters connections from a db-backed handle.
+    void TeardownGlobalDbStack( GlobalDbStack &stack )
+    {
+        if ( stack.db )
+        {
+            stack.db->ShutdownNow();
+        }
+        stack.db.reset();
+        stack.generator.reset();
+        stack.network.reset();
+        stack.scheduler.reset();
+        try
+        {
+            if ( stack.pubs )
+            {
+                stack.pubs->Stop();
+            }
+        }
+        catch ( const std::exception &err )
+        {
+            std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
+        }
+        stack.pubs.reset();
+        stack.io.reset();
+    }
+
+    bool BuildGlobalDbStack( const std::string &hot_dir, GlobalDbStack &out )
+    {
+        EnsureLoggingSystem();
+        PrepareDir( hot_dir, /*wipe=*/true );
+        PrepareDir( kFidelityKeyRoot, /*wipe=*/true );
+        // The key FILE path (nonexistent - GetKeyPair then generates and
+        // writes it; a pre-existing DIRECTORY here would send the reader
+        // down the load path against a directory and fail).
+        const std::string keypair_file = std::string( kFidelityKeyRoot ) + "/key";
+
+        out.io   = std::make_shared<boost::asio::io_context>();
+        out.pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
+            sgns::crdt::KeyPairFileStorage( keypair_file ).GetKeyPair().value() );
+        auto start_future = out.pubs->Start( 0, {} );
+        if ( !PollUntil( [&] { return start_future.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready; },
+                          std::chrono::milliseconds( 20000 ) ) )
+        {
+            return false;
+        }
+        if ( start_future.get() )
+        {
+            return false;
+        }
+        out.scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( out.pubs->GetAsioContext() ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+        out.network   = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( out.pubs->GetHost(), out.scheduler );
+        out.generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+
+        // Cold DISABLED (default options) - no tier, no fakes, no seam.
+        sgns::crdt::GlobalDB::ColdStorageOptions cold;
+        auto globaldb_ret = sgns::crdt::GlobalDB::New( out.io,
+                                                       hot_dir,
+                                                       out.pubs,
+                                                       sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                       out.network,
+                                                       out.scheduler,
+                                                       out.generator,
+                                                       nullptr,
+                                                       sgns::crdt::GlobalDB::BackupOptions{ false, 15, 12, true },
+                                                       cold );
+        if ( !globaldb_ret.has_value() )
+        {
+            return false;
+        }
+        out.db = std::move( globaldb_ret.value() );
+        out.db->AddListenTopic( kFidelityTopic );
+        out.db->AddBroadcastTopic( kFidelityTopic );
+        (void)out.db->Start();
+        return out.db->HasColdStorage() == false;
+    }
+
+    /// One knobbed DAG-spectrum fixture (D-05; new code by design - no
+    /// in-repo analog, 17-PATTERNS). Three named shapes, deterministic
+    /// from the seed (content strings carry shape+seed+index; the W3
+    /// ghost-CID precedent - bytes exist nowhere). Single root per
+    /// shape; ancestry is every node (known exactly by construction -
+    /// the D-06/Pitfall-7 denominator).
+    struct SpectrumFixture
+    {
+        std::string              shape;
+        std::vector<sgns::CID>   cids;             // emission order (the deterministic selection order)
+        std::vector<std::string> cid_strings;
+        std::vector<uint64_t>    node_generation;  // per-node depth from the root (the D-06 generation tag)
+        uint64_t                 ancestry_size = 0;
+        uint64_t                 max_depth     = 0;
+        uint64_t                 max_breadth   = 0;
+    };
+
+    std::shared_ptr<sgns::ipfs_lite::ipld::IPLDNode> MakeFixtureNode( const std::string &shape,
+                                                                      uint64_t           seed,
+                                                                      uint64_t           idx )
+    {
+        std::ostringstream content;
+        content << "seal-growth spectrum shape=" << shape << " seed=" << seed << " idx=" << idx;
+        return sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromString( content.str() );
+    }
+
+    SpectrumFixture GenerateSpectrumFixture( const std::string &shape,
+                                             uint64_t           depth,
+                                             uint64_t           fanout,
+                                             uint64_t           mix_pct,
+                                             uint64_t           seed )
+    {
+        SpectrumFixture fixture;
+        fixture.shape = shape;
+        std::vector<std::shared_ptr<sgns::ipfs_lite::ipld::IPLDNode>> nodes;
+
+        auto append_node = [&]( uint64_t generation )
+        {
+            auto node = MakeFixtureNode( shape, seed, nodes.size() );
+            nodes.push_back( node );
+            fixture.node_generation.push_back( generation );
+            if ( generation > fixture.max_depth )
+            {
+                fixture.max_depth = generation;
+            }
+        };
+
+        if ( shape == "deep" )
+        {
+            // A chain of @p depth nodes: node 0 is the root, node i
+            // links to node i-1 (single head at node depth-1).
+            append_node( 0 );
+            for ( uint64_t i = 1; i < depth; ++i )
+            {
+                append_node( i );
+                const auto parent_cid = nodes[i - 1]->getCID();
+                auto parent_bytes     = parent_cid.toBytes();
+                nodes[i]->addLink( sgns::ipfs_lite::ipld::IPLDLink( parent_cid, kFidelityLink, parent_bytes.value().size() ) );
+            }
+            fixture.max_breadth = 1;
+        }
+        else if ( shape == "wide" )
+        {
+            // Root with @p fanout branches, each with @p fanout
+            // children (depth 2, breadth fanout).
+            append_node( 0 );
+            const auto root_cid = nodes[0]->getCID();
+            auto root_bytes     = root_cid.toBytes();
+            for ( uint64_t j = 0; j < fanout; ++j )
+            {
+                append_node( 1 );
+                nodes.back()->addLink( sgns::ipfs_lite::ipld::IPLDLink( root_cid, kFidelityLink, root_bytes.value().size() ) );
+                const auto branch_cid = nodes.back()->getCID();
+                auto branch_bytes     = branch_cid.toBytes();
+                for ( uint64_t k = 0; k < fanout; ++k )
+                {
+                    append_node( 2 );
+                    nodes.back()->addLink( sgns::ipfs_lite::ipld::IPLDLink( branch_cid, kFidelityLink, branch_bytes.value().size() ) );
+                }
+            }
+            fixture.max_breadth = fanout;
+        }
+        else // mixed
+        {
+            // Root carrying BOTH a deep chain (mix% of depth links) and
+            // a wide fan (@p fanout direct branches): the mix knob is
+            // the chain fraction of the deep half.
+            append_node( 0 );
+            const auto root_cid = nodes[0]->getCID();
+            auto root_bytes     = root_cid.toBytes();
+            const uint64_t chain_len = std::max<uint64_t>( 1, depth * mix_pct / 100 );
+            for ( uint64_t i = 0; i < chain_len; ++i )
+            {
+                append_node( i + 1 );
+                const auto parent_cid = i == 0 ? root_cid : nodes[nodes.size() - 2]->getCID();
+                auto parent_bytes     = parent_cid.toBytes();
+                nodes.back()->addLink( sgns::ipfs_lite::ipld::IPLDLink( parent_cid, kFidelityLink, parent_bytes.value().size() ) );
+            }
+            for ( uint64_t j = 0; j < fanout; ++j )
+            {
+                append_node( 1 );
+                nodes.back()->addLink( sgns::ipfs_lite::ipld::IPLDLink( root_cid, kFidelityLink, root_bytes.value().size() ) );
+            }
+            fixture.max_breadth = fanout + 1;
+        }
+
+        fixture.ancestry_size = nodes.size();
+        fixture.cids.reserve( nodes.size() );
+        fixture.cid_strings.reserve( nodes.size() );
+        for ( const auto &node : nodes )
+        {
+            fixture.cids.push_back( node->getCID() );
+            fixture.cid_strings.push_back( node->getCID().toString().value() );
+        }
+        return fixture;
+    }
+
+    /// Suffix-scan of one hot store's seal rows (the SAME sanctioned
+    /// comparison the enumeration leg uses): returns the exact key-byte
+    /// set and sets @p all_values_empty false if ANY seal row carries a
+    /// non-empty value (values are empty by the vendored row shape).
+    std::set<std::string> ScanSealKeys( const std::shared_ptr<rocksdb> &hot, bool *all_values_empty )
+    {
+        std::set<std::string> keys;
+        *all_values_empty = true;
+        auto db_handle = hot->getDB();
+        std::unique_ptr<ROCKSDB_NAMESPACE::Iterator> it(
+            db_handle->NewIterator( ROCKSDB_NAMESPACE::ReadOptions() ) );
+        for ( it->SeekToFirst(); it->Valid(); it->Next() )
+        {
+            const auto k = it->key().ToString();
+            if ( k.size() > 6 && k.compare( k.size() - 6, 6, "sealed" ) == 0 )
+            {
+                keys.insert( k );
+                if ( it->value().size() != 0 )
+                {
+                    *all_values_empty = false;
+                }
+            }
+        }
+        return keys;
+    }
 
     /// Minimal hot-store stack (D-08): plain storage::rocksdb ->
     /// vendored IpfsRocksDb::create(getDB()) -> vendored
@@ -500,5 +854,188 @@ namespace
             ++grow_entries;
         }
         ASSERT_EQ( grow_entries, 0 ) << "grow root was touched by the floor leg";
+    }
+
+    /// The D-04 fidelity leg: a REAL walk-driven CRDT chain (real
+    /// GlobalDB puts through the fidelity topic, real DAG jobs, the
+    /// walk's own sealing path - UpdateCRDTHeads -> markResolved ->
+    /// vendored seal) plus the three spectrum-shape CID sets seeded
+    /// through the syncer's public markResolved (the W3 ghost-CID
+    /// surface, the walk's sealing surface per GATE-03), compared
+    /// BYTE-FOR-BYTE against a twin minimal-stack store seeded directly
+    /// through the vendored seal() surface - the proof that makes
+    /// direct volume seeding admissible evidence.
+    ///
+    /// Topology ruling (recorded in the emitted evidence): the walk
+    /// chain is driven DATASTORE-LEVEL (GlobalDB RequestForcedWalk +
+    /// the GetForcedWalkStatus poll, the cold_evidence_matrix drive
+    /// idiom); the per-shape sets use the W3 syncer-alias surface.
+    /// Fidelity is topology-agnostic - both paths converge on the one
+    /// vendored seal home.
+    TEST( Fidelity, RealWalkByteIdentity )
+    {
+        const uint64_t depth   = EnvOr( "SGNS_SEAL_DEPTH", 64 );
+        const uint64_t fanout  = EnvOr( "SGNS_SEAL_FANOUT", 8 );
+        const uint64_t mix_pct = EnvOr( "SGNS_SEAL_MIX", 50 );
+        const uint64_t seed    = EnvOr( "SGNS_SEAL_SEED", 20261118 );
+        ASSERT_GE( depth, 2 );
+        ASSERT_GE( fanout, 1 );
+        ASSERT_LE( mix_pct, 100 );
+
+        // ---- Store A: the GlobalDB-stack fixture (walk-produced seals) ----
+        GlobalDbStack stack;
+        ASSERT_TRUE( BuildGlobalDbStack( kFidelityHotRoot, stack ) ) << "GlobalDB fixture failed to build";
+        auto syncer = SyncerOf( stack.db );
+
+        // The real CRDT chain: N puts through the topic; each Put
+        // enqueues a DAG root whose job success seals the root and the
+        // replaced previous head (UpdateCRDTHeads -> markResolved).
+        std::vector<sgns::CID> chain_cids;
+        chain_cids.reserve( depth );
+        for ( uint64_t i = 0; i < depth; ++i )
+        {
+            std::ostringstream key_oss;
+            key_oss << "/seal-growth/fidelity/" << i;
+            std::ostringstream payload;
+            payload << "fidelity walk chain seed=" << seed << " idx=" << i;
+            sgns::crdt::GlobalDB::Buffer buffer;
+            buffer.put( payload.str() );
+            auto put = stack.db->Put( sgns::crdt::HierarchicalKey( key_oss.str() ), buffer, { kFidelityTopic } );
+            ASSERT_TRUE( put.has_value() ) << "Put failed at idx=" << i;
+            chain_cids.push_back( put.value() );
+        }
+        // Wait for every job to complete (the sanctioned presence check
+        // - isResolved per CID; jobs drain on the worker tick).
+        ASSERT_TRUE( PollUntil(
+            [&]
+            {
+                for ( const auto &cid : chain_cids )
+                {
+                    auto resolved = syncer->isResolved( cid );
+                    if ( resolved.has_error() || !resolved.value() )
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            },
+            std::chrono::milliseconds( 60000 ) ) )
+            << "DAG jobs never sealed the put chain";
+
+        // ---- The walk (the public drive + status poll) ----
+        auto requested = stack.db->RequestForcedWalk(
+            { kFidelityTopic },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            depth * 4 );
+        ASSERT_TRUE( requested.has_value() ) << requested.error().message();
+        using sgns::crdt::CrdtDatastore;
+        ASSERT_TRUE( PollUntil(
+            [&]
+            {
+                const auto state = stack.db->GetForcedWalkStatus().state;
+                return state == CrdtDatastore::ForcedWalkState::Completed
+                       || state == CrdtDatastore::ForcedWalkState::Incomplete;
+            },
+            std::chrono::milliseconds( 60000 ) ) )
+            << "fidelity walk never reached a terminal state";
+        const auto walk_status = stack.db->GetForcedWalkStatus();
+        EXPECT_EQ( walk_status.state, CrdtDatastore::ForcedWalkState::Completed );
+        EXPECT_GT( walk_status.visited, 0u ) << "the walk must revisit the chain's ancestry";
+        EXPECT_EQ( walk_status.walk_gaps, 0u );
+        EXPECT_EQ( walk_status.errors, 0u );
+
+        // ---- Spectrum fixtures + W3-alias sealing into store A ----
+        const std::vector<std::string> shapes = { "deep", "wide", "mixed" };
+        std::vector<SpectrumFixture>   fixtures;
+        fixtures.reserve( shapes.size() );
+        for ( const auto &shape : shapes )
+        {
+            fixtures.push_back( GenerateSpectrumFixture( shape, depth, fanout, mix_pct, seed ) );
+            for ( const auto &cid : fixtures.back().cids )
+            {
+                ASSERT_TRUE( syncer->markResolved( cid ).has_value() );
+            }
+        }
+
+        // ---- Store B: the twin minimal stack (directly-seeded seals) ----
+        MinimalSealStack twin;
+        ASSERT_TRUE( BuildMinimalStack( kFidelityTwinRoot, /*wipe=*/true, twin ) ) << "twin store failed to build";
+        for ( const auto &cid : chain_cids )
+        {
+            ASSERT_TRUE( twin.datastore->seal( cid ).has_value() );
+        }
+        for ( const auto &fixture : fixtures )
+        {
+            for ( const auto &cid : fixture.cids )
+            {
+                ASSERT_TRUE( twin.datastore->seal( cid ).has_value() );
+            }
+        }
+
+        // ---- The byte-identity comparison (prefix-spy discipline:
+        // exact key bytes, sorted-set equality, values empty by shape) ----
+        bool values_a_empty = false;
+        bool values_b_empty = false;
+        const auto keys_a = ScanSealKeys( stack.db->GetDataStore(), &values_a_empty );
+        const auto keys_b = ScanSealKeys( twin.hot, &values_b_empty );
+        EXPECT_TRUE( values_a_empty ) << "walk-produced seal rows carry values";
+        EXPECT_TRUE( values_b_empty ) << "directly-seeded seal rows carry values";
+
+        size_t expected_seals = chain_cids.size();
+        for ( const auto &fixture : fixtures )
+        {
+            expected_seals += fixture.ancestry_size;
+        }
+        EXPECT_EQ( keys_b.size(), expected_seals ) << "twin store seal count";
+        EXPECT_EQ( keys_a.size(), expected_seals ) << "walk-fixture seal count (extra seals would break identity)";
+        EXPECT_EQ( keys_a, keys_b ) << "seeded and walk-produced seal rows are NOT byte-identical";
+        const bool identity_equal = ( keys_a == keys_b ) && values_a_empty && values_b_empty
+                                 && keys_a.size() == expected_seals;
+        EXPECT_TRUE( identity_equal );
+
+        // ---- Evidence emission (D-09) ----
+        FlatJsonEvidence json;
+        json.Add( "meta.harness", "cold_seal_growth_test" );
+        json.Add( "meta.phase_plan", "17-02" );
+        json.Add( "meta.host", HostTag() );
+        json.Add( "meta.os", OsTag() );
+        json.Add( "meta.build_config", BuildConfigTag() );
+        json.Add( "meta.generated_utc", GeneratedUtc() );
+        json.Add( "meta.dataset_fingerprint",
+                  "seed=" + std::to_string( seed ) + ";depth=" + std::to_string( depth )
+                      + ";fanout=" + std::to_string( fanout ) + ";mix=" + std::to_string( mix_pct ) );
+        json.Add( "leg.fidelity.topology",
+                  "datastore-level (GlobalDB RequestForcedWalk) + W3 syncer-alias for spectrum shape sets" );
+        json.Add( "leg.fidelity.chain_puts", static_cast<uint64_t>( chain_cids.size() ) );
+        json.Add( "leg.fidelity.walk.state",
+                  walk_status.state == CrdtDatastore::ForcedWalkState::Completed ? "Completed" : "other" );
+        json.Add( "leg.fidelity.walk.visited", static_cast<uint64_t>( walk_status.visited ) );
+        json.Add( "leg.fidelity.walk.fetched", static_cast<uint64_t>( walk_status.fetched ) );
+        json.Add( "leg.fidelity.walk.restored", static_cast<uint64_t>( walk_status.restored ) );
+        json.Add( "leg.fidelity.walk.skipped_pruned", static_cast<uint64_t>( walk_status.skipped_pruned ) );
+        json.Add( "leg.fidelity.walk.skipped_existing", static_cast<uint64_t>( walk_status.skipped_existing ) );
+        json.Add( "leg.fidelity.walk.walk_gaps", static_cast<uint64_t>( walk_status.walk_gaps ) );
+        json.Add( "leg.fidelity.walk.deferred", static_cast<uint64_t>( walk_status.deferred ) );
+        json.Add( "leg.fidelity.walk.errors", static_cast<uint64_t>( walk_status.errors ) );
+        json.Add( "leg.fidelity.identity_equal", identity_equal ? "true" : "false" );
+        json.Add( "leg.fidelity.seal_keys_compared", static_cast<uint64_t>( expected_seals ) );
+        for ( const auto &fixture : fixtures )
+        {
+            const std::string prefix = "leg.fidelity." + fixture.shape;
+            json.Add( prefix + ".ancestry_size", fixture.ancestry_size );
+            json.Add( prefix + ".max_depth", fixture.max_depth );
+            json.Add( prefix + ".max_breadth", fixture.max_breadth );
+            json.Add( prefix + ".identity_equal", identity_equal ? "true" : "false" );
+        }
+        const std::string json_text = json.ToString();
+        std::cout << "[evidence-json] " << json_text << std::endl;
+        const std::filesystem::path evidence_path =
+            std::filesystem::path( kFidelityHotRoot ) / "evidence-fidelity.json";
+        std::ofstream out( evidence_path );
+        ASSERT_TRUE( out.is_open() ) << "cannot open " << evidence_path.string();
+        out << json_text << std::endl;
+        out.close();
+
+        TeardownGlobalDbStack( stack );
     }
 } // namespace
