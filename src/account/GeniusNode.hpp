@@ -1220,6 +1220,9 @@ namespace sgns
         NodeType                 node_type_ = NodeType::Light;   ///< Role from sgns_config.json (default Light).
         PruningConfig
             pruning_config_; ///< Pruning policy from sgns_config.json (default disabled — GATE-06 consent gate).
+        bool   force_bootstrap_walk_       = false; ///< Opt-in recovery from sgns_config.json (default disabled).
+        size_t bootstrap_walk_max_blocks_  = 10000; ///< Maximum distinct blocks per recovery walk.
+        size_t bootstrap_walk_max_retries_ = 8;     ///< Maximum retries of non-empty incomplete walks.
         base::Logger             node_logger_;                   ///< Main node logger.
         GeniusNodeConfig         dev_config_;                    ///< Runtime node configuration.
         std::string              ipfs_cache_dir_ = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
@@ -1294,8 +1297,8 @@ namespace sgns
 
         /**
          * @brief Loads sgns_config.json which contains net_id, subnet_id, bootstrap_fullnodes,
-         *        authorized_full_node, and is_processor. All fields are optional and default to
-         *        safe values (DEV net, empty bootstrap, is_processor=true).
+         *        authorized_full_node, is_processor, and bootstrap recovery settings. All fields are
+         *        optional and default to safe values (DEV net, empty bootstrap, recovery disabled).
          */
         void LoadSgnsConfig();
 
@@ -1525,6 +1528,12 @@ namespace sgns
         void StateTransition( NodeState next_state );
 
         /**
+         * @brief Requests replicated trust heads while economic startup is gated, then schedules a retry.
+         * @param[in] transition_epoch Lifecycle epoch that owns this bootstrap attempt.
+         */
+        void RequestTrustBootstrapHeads( uint64_t transition_epoch );
+
+        /**
          * @brief Runs versioned database migrations on a detached thread.
          * @param[in] callback Callback invoked with the migration result.
          */
@@ -1540,6 +1549,12 @@ namespace sgns
          * @param[in] delay Delay before retrying blockchain initialization.
          */
         void ScheduleBlockchainRetry( std::chrono::seconds delay = std::chrono::seconds( 5 ) );
+
+        /** @brief Requests opt-in recovery while bootstrap is gated, without clearing existing CID seals. */
+        void RequestBootstrapWalk();
+
+        /** @brief Polls recovery on the node context even after bootstrap transitions to READY. */
+        void ScheduleBootstrapWalkCheck();
 
         /**
          * @brief Resolves the bridge_chains_config.json path using D-01 priority:
@@ -1714,6 +1729,12 @@ namespace sgns
         BootstrapReconnectConfig                           reconnect_config_;
         std::optional<libp2p::event::Handle>               bootstrap_disconnect_subscription_;
         std::optional<libp2p::basic::Scheduler::Handle>    health_check_handle_;
+        /// Retry cadence for trust discovery before TransactionManager starts; configured in network_config.json.
+        std::chrono::seconds trust_bootstrap_sync_interval_{ 15 };
+        /// Pending trust discovery retry, protected by lifecycle_mutex_.
+        std::optional<libp2p::basic::Scheduler::Handle>    trust_bootstrap_sync_handle_;
+        std::shared_ptr<boost::asio::steady_timer> bootstrap_walk_timer_; ///< Opt-in recovery continuation timer.
+        size_t bootstrap_walk_retry_count_{ 0 }; ///< Incomplete non-empty walks retried for the active database.
         std::unordered_map<libp2p::peer::PeerId, unsigned> reconnect_attempts_;
         std::mutex                                         reconnect_mutex_;
 

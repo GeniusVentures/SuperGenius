@@ -19,6 +19,7 @@
 #include <condition_variable>
 #include <optional>
 #include <thread>
+#include <functional>
 
 #include <boost/asio/steady_timer.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
@@ -62,6 +63,31 @@ namespace sgns::crdt
         using CRDTElementFilterCallback  = CRDTDataFilter::ElementFilterCallback;
         using CRDTNewElementCallback     = CRDTCallbackManager::NewDataCallback;
         using CRDTDeletedElementCallback = CRDTCallbackManager::DeletedDataCallback;
+
+        using RecoveryElementGuard = std::function<outcome::result<bool>( const Element & )>;
+
+        enum class ForcedWalkState
+        {
+            Idle,
+            Queued,
+            Running,
+            Completed,
+            Incomplete,
+            Cancelled
+        };
+
+        struct ForcedWalkStatus
+        {
+            ForcedWalkState state            = ForcedWalkState::Idle;
+            size_t          visited          = 0;
+            size_t          fetched          = 0;
+            size_t          restored         = 0;
+            size_t          skipped_pruned   = 0;
+            size_t          skipped_existing = 0;
+            size_t          deferred         = 0;
+            size_t          errors           = 0;
+            bool            limit_reached    = false;
+        };
 
         enum class JobStatus
         {
@@ -294,6 +320,24 @@ namespace sgns::crdt
         bool IsBroadcastEnabled() const;
 
         std::unordered_set<std::string> GetTopicNames() const;
+
+        /**
+         * @brief Revisit retained topic heads and their ancestry despite completion seals.
+         * @param topics Nonempty subset of enrolled topics to follow.
+         * @param guard Required domain guard; false preserves intentionally pruned elements.
+         * Returning resource_unavailable_try_again defers that element until a later guarded walk.
+         * @param max_blocks Maximum distinct CIDs retained in this request's frontier/visited set.
+         * @param require_registered_filters Defer elements without a matching registered validator.
+         * @return Success when queued, or an error for invalid input, shutdown, or an active walk.
+         * @note Does not remove seals, rewrite heads, or re-filter already present elements.
+         */
+        outcome::result<void> RequestForcedWalk( const std::set<std::string> &topics,
+                                                 RecoveryElementGuard         guard,
+                                                 size_t                       max_blocks,
+                                                 bool                         require_registered_filters = false );
+
+        /** @return A synchronized snapshot of the most recent forced walk. */
+        ForcedWalkStatus GetForcedWalkStatus() const;
 
         outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
@@ -564,6 +608,22 @@ namespace sgns::crdt
         bool ShouldContinueWorkerThread( DagWorker &dagWorker );
         bool ProcessJobs( std::queue<RootCIDJob> &jobs );
         bool SeedNextExternalRoot();
+        bool                  HasPendingForcedWalk() const;
+        void                  ProcessForcedWalkStep();
+        outcome::result<void> ProcessForcedWalkCID( const CID                   &cid,
+                                                    const std::set<std::string> &topics,
+                                                    const RecoveryElementGuard  &guard,
+                                                    bool                         require_registered_filters,
+                                                    ForcedWalkStatus            &progress );
+        void                  QueueForcedWalkLinks( const IPLDNode &node, const std::set<std::string> &topics );
+        outcome::result<void> RecoverMissingElements( const CID                  &cid,
+                                                      const Delta                &delta,
+                                                      bool                        sealed,
+                                                      const RecoveryElementGuard &guard,
+                                                      bool                        require_registered_filters,
+                                                      ForcedWalkStatus           &progress );
+        void                  FinishForcedWalkLocked();
+        void                  CancelForcedWalkLocked();
         void StopWorkerLoops();
         bool IsCurrentThreadInternalWorker() const;
         void WaitForWorkersToExit();
@@ -624,6 +684,18 @@ namespace sgns::crdt
         std::mutex                                           pendingHeadsMutex_;
         std::queue<CID>                                      pendingRootQueue_;
         std::optional<CID>                                   activeRootCID_;
+
+        // Recovery owns its own bounded frontier and never borrows root-job state.
+        static constexpr size_t FORCED_WALK_PROGRESS_INTERVAL = 100;
+        mutable std::mutex      forcedWalkMutex_;
+        ForcedWalkStatus        forcedWalkStatus_;
+        std::queue<CID>         forcedWalkFrontier_;
+        std::set<CID>           forcedWalkScheduled_;
+        std::set<std::string>   forcedWalkTopics_;
+        RecoveryElementGuard    forcedWalkGuard_;
+        size_t                  forcedWalkMaxBlocks_                = 0;
+        bool                    forcedWalkStepActive_               = false;
+        bool                    forcedWalkRequireRegisteredFilters_ = false;
 
         std::shared_ptr<CRDTWorkJournal> work_journal_;
         CRDTDataFilter                   crdt_filter_;

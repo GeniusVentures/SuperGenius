@@ -87,7 +87,7 @@ namespace sgns::crdt
                                    tombstone_registry_.end() );
     }
 
-    bool CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
+    bool CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta, bool require_registered_filter ) const
     {
         std::vector<std::string>         additional_elements_to_delete;
         std::set<int, std::greater<int>> elements_to_delete_indices; // Set with reverse order
@@ -145,10 +145,11 @@ namespace sgns::crdt
                 }
             }
 
-            if ( !filter_matched && !accept_by_default_ )
+            if ( !filter_matched && ( require_registered_filter || !accept_by_default_ ) )
             {
                 //at least delete the current element
                 elements_to_delete_indices.insert( i );
+                dependency_stalled = dependency_stalled || require_registered_filter;
             }
         }
 

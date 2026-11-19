@@ -4,6 +4,9 @@
     "net_id": 333,
     "node_type": "Light",
     "subnet_id": 333,
+    "force_bootstrap_walk": false,
+    "bootstrap_walk_max_blocks": 10000,
+    "bootstrap_walk_max_retries": 8,
     "authorized_full_node": "9798e85e31bcb9ee077d9152c30af391ea0a555ff4680e17bede5a09a1183dd2c158a6da9e626f3c0527b23bef57d95b82f47a6ffb43f4efa07fedd7c8509b16",
     "trusted_peers": [
         "544ebd2133eb05b014ee8f14235cbb5f15e0e25a9c64ad1c9a090c532c10eb937a7f031f4e065ca2d34021db48db15933d19a6a822e19b905e3275b7b3088bc6",

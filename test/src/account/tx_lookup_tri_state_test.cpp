@@ -104,8 +104,7 @@ public:
         account_.reset();
     }
 
-    /// Constructs the manager under test (and the fresh-instance arm of the
-    /// FoundCrdt case: same live db/account/blockchain, empty tracked map).
+    /// Constructs the manager under test before any transaction seeds are published.
     void MakeManager()
     {
         constexpr auto kTimestampTolerance = std::chrono::milliseconds( 300000 );
@@ -215,10 +214,10 @@ TEST_F( TxLookupTriStateTest, FoundTrackedAnswersFromTrackedMapWithPayload )
 }
 
 /**
- * A transaction present in the CRDT but not in the tracked map (a fresh
- * manager instance over the same live DB) answers FOUND through the CRDT
- * found-source: the tracked map is proven empty first, so only the
- * exact-hash CRDT probe can produce the payload.
+ * A transaction published after manager initialization, without processing its
+ * queued callback, answers FOUND through the CRDT found-source: the transaction
+ * is proven absent from the tracked map first, so only the exact-hash CRDT probe
+ * can produce the payload.
  */
 TEST_F( TxLookupTriStateTest, FoundCrdtAnswersThroughCrdtSourceOnFreshManager )
 {
@@ -226,10 +225,8 @@ TEST_F( TxLookupTriStateTest, FoundCrdtAnswersThroughCrdtSourceOnFreshManager )
     ASSERT_NE( tx, nullptr );
     SeedTransaction( tx );
 
-    // Fresh manager over the SAME live db/account/blockchain: durable CRDT
-    // value intact, tracked map empty by construction.
-    tm_.reset();
-    MakeManager();
+    // SetUp initialized the manager before seeding. Its new-element callback
+    // only queues the transaction; no StartCore or TickOnce has processed it.
     ASSERT_EQ( tm_->GetTransactionStatusByTxId( tx->GetHash() ), TransactionManager::TransactionStatus::INVALID )
         << "negative proof: tracked map is empty";
 

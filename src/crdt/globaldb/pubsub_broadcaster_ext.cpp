@@ -636,9 +636,12 @@ namespace sgns::crdt
                 continue;
             }
 
+            // Explicit recovery may revisit retained heads after restart and
+            // needs their source peers to fetch previously omitted ancestry.
+            dagSyncer_->AddRoute( cid, peer_id, addr_vector );
             if ( hb.value() )
             {
-                m_logger->trace( "{}: Not adding route node {} from {} (already have block)",
+                m_logger->trace( "{}: Refreshed route for node {} from {} (already have block)",
                                  __func__,
                                  cid.toString().value(),
                                  addr_vector[0].getStringAddress() );
@@ -661,7 +664,6 @@ namespace sgns::crdt
                                  addr_vector[0].getStringAddress(),
                                  peer_id.toBase58() );
             }
-            dagSyncer_->AddRoute( cid, peer_id, addr_vector );
         }
         return new_content;
     }

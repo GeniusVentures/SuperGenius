@@ -137,12 +137,12 @@ namespace sgns
             new PruneEligibility( globaldb, transaction_manager, utxo_manager, config ) );
     }
 
-    bool PruneEligibility::IsAllowlistedTxKey( const std::string &key ) const
+    bool PruneEligibility::IsAllowlistedTxKey( const std::string &key )
     {
         // THE one allowlist home (D-C7): exact base + "tx/" startswith over the
         // monitored networks only. The trailing slash is load-bearing — the
         // slashless form also matches "txfoo"-style siblings (T-17-0401).
-        for ( auto network_id : transaction_manager_m.GetMonitoredNetworkIDs() )
+        for ( auto network_id : TransactionManager::GetMonitoredNetworkIDs() )
         {
             const std::string prefix = TransactionManager::GetBlockChainBase( network_id ) + "tx/";
             if ( key.rfind( prefix, 0 ) == 0 )
@@ -151,6 +151,22 @@ namespace sgns
             }
         }
         return false;
+    }
+
+    outcome::result<bool> PruneEligibility::CanRestoreElement( crdt::GlobalDB &db, const std::string &key )
+    {
+        const auto canonical_key = crdt::HierarchicalKey( key ).GetKey();
+        if ( !IsAllowlistedTxKey( canonical_key ) )
+        {
+            return true;
+        }
+        const auto hash = canonical_key.substr( canonical_key.rfind( '/' ) + 1 );
+        BOOST_OUTCOME_TRY( auto evidence, LookupPrunedEntry( db, hash ) );
+        if ( evidence.first == PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
+        {
+            return outcome::failure( std::errc::bad_message );
+        }
+        return evidence.first != PrunedLookup::PRUNED;
     }
 
     std::string PruneEligibility::BuildPruneMarkerKey( const std::string &tx_hash )

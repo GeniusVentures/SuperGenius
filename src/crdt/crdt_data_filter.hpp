@@ -123,12 +123,13 @@ namespace sgns::crdt
         /**
          * @brief       Tries to filter the elements on delta according to stored filters
          * @param[in]   delta The delta to be filtered
+         * @param[in]   require_registered_filter Defer unmatched elements until their validator is registered.
          * @return      true when a filter stalled on a missing local dependency:
          *              that element is stripped unjournaled and the caller must
          *              re-evaluate the delta once the dependency can arrive;
          *              false when every element was accepted or rejected.
          */
-        bool FilterElementsOnDelta( pb::Delta &delta ) const;
+        bool FilterElementsOnDelta( pb::Delta &delta, bool require_registered_filter = false ) const;
 
         /**
          * @brief       Tries to filter the tombstones on delta according to stored filters

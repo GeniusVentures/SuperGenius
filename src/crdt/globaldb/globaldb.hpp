@@ -175,6 +175,20 @@ namespace sgns::crdt
         void                  AddTopicName( std::string topicName );
         void                  AddListenTopic( std::string topicName );
 
+        /**
+         * @brief Queues a recovery walk with explicit validators, including retained sealed blocks.
+         * @param[in] topics Enrolled topics whose current history should be revisited.
+         * @param[in] guard Domain-owned check protecting absent elements from restoration after pruning.
+         * @param[in] max_blocks Maximum number of blocks inspected in this walk.
+         * @return Success when queued, or a validation, shutdown, or concurrent-walk error.
+         */
+        outcome::result<void> RequestForcedWalk( const std::set<std::string>        &topics,
+                                                 CrdtDatastore::RecoveryElementGuard guard,
+                                                 size_t                              max_blocks );
+
+        /** @brief Returns progress of the most recently requested forced walk. */
+        CrdtDatastore::ForcedWalkStatus GetForcedWalkStatus() const;
+
         void PrintDataStore();
 
         std::shared_ptr<RocksDB>                          GetDataStore();
