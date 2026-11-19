@@ -48,6 +48,10 @@
  *                        walk-chain length - 17-02)
  *   SGNS_SEAL_FANOUT   - wide fan-out breadth (default 8 - 17-02)
  *   SGNS_SEAL_MIX      - mixed-shape chain percent (default 50 - 17-02)
+ *   SGNS_SEAL_BIG_ENABLE - set to run the dev-gated big legs (the
+ *                          growing 10^6->10^7 dataset + cold variants;
+ *                          loud labelled skip otherwise - D-07)
+ *   SGNS_SEAL_BIG_SCALE  - the big legs' target scale (default 10000000)
  *
  * Hermetic: no S3, no node, no network beyond the loopback pubsub host
  * the fidelity fixture's GlobalDB stack needs (17-02); the volume legs
@@ -56,7 +60,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
@@ -517,12 +523,17 @@ groups:
         double   per_row_bytes     = 0.0;
     };
 
-    EnumPass RunEnumerationPass( const std::shared_ptr<rocksdb> &hot )
+    EnumPass RunEnumerationPass( const std::shared_ptr<rocksdb> &hot, bool fill_cache = true )
     {
         EnumPass pass;
         auto    db_handle = hot->getDB();
+        ROCKSDB_NAMESPACE::ReadOptions read_options;
+        // The D-03 cold variant: fill_cache=false keeps the pass from
+        // warming the block cache (the in-run cold point; the fresh
+        // REOPEN is the cold point of record - see the big legs).
+        read_options.fill_cache = fill_cache;
         std::unique_ptr<ROCKSDB_NAMESPACE::Iterator> it(
-            db_handle->NewIterator( ROCKSDB_NAMESPACE::ReadOptions() ) );
+            db_handle->NewIterator( read_options ) );
         const auto t0 = std::chrono::steady_clock::now();
         for ( it->SeekToFirst(); it->Valid(); it->Next() )
         {
@@ -701,10 +712,23 @@ groups:
         ASSERT_GE( repeats, 1 ) << "SGNS_SEAL_REPEATS must be at least 1";
 
         // The persistent grow root: create-if-missing, NEVER wiped,
-        // never opened by this leg (17-02's D-02 growing dataset).
+        // never opened by this leg (17-02's D-02 growing dataset owns
+        // its population - 17-01's "created empty" form was correct
+        // only before 17-02 landed; the floor-leg contract is
+        // UNTOUCHED-BY-THIS-LEG, so snapshot the listing before and
+        // compare after).
         std::error_code mk_grow;
         std::filesystem::create_directories( kGrowRoot, mk_grow );
         ASSERT_TRUE( std::filesystem::exists( kGrowRoot ) ) << "grow root must exist";
+        std::vector<std::string> grow_before;
+        {
+            std::error_code lec;
+            for ( const auto &entry : std::filesystem::directory_iterator( kGrowRoot, lec ) )
+            {
+                grow_before.push_back( entry.path().filename().string() );
+            }
+            std::sort( grow_before.begin(), grow_before.end() );
+        }
 
         MinimalSealStack stack;
         ASSERT_TRUE( BuildMinimalStack( kFloorRoot, /*wipe=*/true, stack ) )
@@ -843,18 +867,20 @@ groups:
         ASSERT_TRUE( out.good() ) << "failed writing " << evidence_path.string();
 
         // ---- Growing-root untouched re-assert (invariant 3 posture) ----
-        // The grow root was created empty by this leg and never opened:
-        // it must still exist and still be empty (17-02 owns its first
-        // real population).
+        // The grow root was snapshotted before this leg ran and is
+        // never opened by it: the listing must be byte-identical after
+        // (17-02's big legs own its population on gated runs).
         ASSERT_TRUE( std::filesystem::exists( kGrowRoot ) ) << "grow root vanished";
-        size_t grow_entries = 0;
-        std::error_code ec;
-        for ( const auto &entry : std::filesystem::directory_iterator( kGrowRoot, ec ) )
+        std::vector<std::string> grow_after;
         {
-            (void)entry;
-            ++grow_entries;
+            std::error_code lec;
+            for ( const auto &entry : std::filesystem::directory_iterator( kGrowRoot, lec ) )
+            {
+                grow_after.push_back( entry.path().filename().string() );
+            }
+            std::sort( grow_after.begin(), grow_after.end() );
         }
-        ASSERT_EQ( grow_entries, 0 ) << "grow root was touched by the floor leg";
+        ASSERT_EQ( grow_after, grow_before ) << "grow root was touched by the floor leg";
     }
 
     /// The D-04 fidelity leg: a REAL walk-driven CRDT chain (real
@@ -1250,5 +1276,267 @@ groups:
         out.close();
 
         TeardownGlobalDbStack( stack );
+    }
+
+    /// Variance statistics over repeated passes (the D-12 band inputs):
+    /// max deviation from the mean (percent) and the coefficient of
+    /// variation (stddev/mean, percent).
+    struct VarianceStats
+    {
+        double mean          = 0.0;
+        double max_deviation_pct = 0.0;
+        double cv_pct        = 0.0;
+    };
+
+    VarianceStats VarianceOver( const std::vector<double> &samples )
+    {
+        VarianceStats stats;
+        if ( samples.empty() )
+        {
+            return stats;
+        }
+        double sum = 0.0;
+        for ( const double s : samples )
+        {
+            sum += s;
+        }
+        stats.mean = sum / static_cast<double>( samples.size() );
+        double sq_sum = 0.0;
+        for ( const double s : samples )
+        {
+            sq_sum += ( s - stats.mean ) * ( s - stats.mean );
+            const double dev = stats.mean > 0.0 ? std::abs( s - stats.mean ) / stats.mean * 100.0 : 0.0;
+            if ( dev > stats.max_deviation_pct )
+            {
+                stats.max_deviation_pct = dev;
+            }
+        }
+        const double variance = sq_sum / static_cast<double>( samples.size() );
+        stats.cv_pct = stats.mean > 0.0 ? std::sqrt( variance ) / stats.mean * 100.0 : 0.0;
+        return stats;
+    }
+
+    /// The dev-gated big legs (D-01/D-02/D-03): the PERSISTENT grow root
+    /// is seeded to 10^6 then grown IN PLACE to 10^7 (never wiped - the
+    /// cumulative LSM state is the representative long-lived-node
+    /// shape), enumerated to exhaustion at BOTH scale points warm AND
+    /// cold (fill_cache=false variants plus a fresh-reopen cold point of
+    /// record), and the 10^8 numbers computed by extrapolation - every
+    /// 10^8 entry flagged extrapolated (the honesty marker; never
+    /// presented as measured).
+    TEST( Big, GrowingDatasetWarmColdEnumeration )
+    {
+        if ( !EnvSet( "SGNS_SEAL_BIG_ENABLE" ) )
+        {
+            GTEST_SKIP() << "big legs are dev-gated: set SGNS_SEAL_BIG_ENABLE=1 to run the "
+                            "growing 10^6->10^7 dataset legs (D-07 - the Tier-1 lane runtime "
+                            "stays bounded)";
+        }
+        const uint64_t scale     = EnvOr( "SGNS_SEAL_SCALE", 1000000 );
+        const uint64_t big_scale = EnvOr( "SGNS_SEAL_BIG_SCALE", 10000000 );
+        const uint64_t repeats   = EnvOr( "SGNS_SEAL_REPEATS", 3 );
+        const uint64_t seed      = EnvOr( "SGNS_SEAL_SEED", 20261118 );
+        ASSERT_GE( big_scale, scale );
+
+        // ---- Phase 1: the persistent grow root, seeded to 10^6 ----
+        MinimalSealStack stack;
+        ASSERT_TRUE( BuildMinimalStack( kGrowRoot, /*wipe=*/false, stack ) )
+            << "grow-root stack failed to build";
+        std::string first_cid;
+        std::string last_cid;
+        uint64_t    base_seals      = 0;
+        double      phase1_seed_rate = 0.0; // seals/sec while reaching the 10^6 point (0 when already seeded)
+        {
+            const EnumPass current = RunEnumerationPass( stack.hot );
+            base_seals             = current.seals;
+            ASSERT_EQ( current.others, 0u ) << "grow root must contain only seals";
+        }
+        if ( base_seals < scale )
+        {
+            const auto t0 = std::chrono::steady_clock::now();
+            for ( uint64_t i = base_seals; i < scale; ++i )
+            {
+                std::ostringstream content;
+                content << "seal-growth grow root seed=" << seed << " idx=" << i;
+                auto node = sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromString( content.str() );
+                ASSERT_TRUE( node != nullptr );
+                const auto cid = node->getCID();
+                if ( i == 0 )
+                {
+                    first_cid = cid.toString().value();
+                }
+                last_cid = cid.toString().value();
+                auto sealed = stack.datastore->seal( cid );
+                ASSERT_TRUE( sealed.has_value() ) << "grow seed failed at idx=" << i;
+            }
+            const auto grow_ms = std::chrono::duration<double, std::milli>( std::chrono::steady_clock::now() - t0 ).count();
+            phase1_seed_rate = grow_ms > 0.0 ? static_cast<double>( scale - base_seals ) / ( grow_ms / 1000.0 ) : 0.0;
+            std::cout << "[seal-growth] grow root seeded to " << scale << " in " << std::fixed
+                      << std::setprecision( 0 ) << grow_ms << " ms" << std::endl;
+            base_seals = scale;
+        }
+
+        // 10^6 scale point: warm + cold(fill_cache=false) repeats.
+        std::vector<double> warm_rps_small;
+        std::vector<double> cold_rps_small;
+        double              per_row_small = 0.0;
+        for ( uint64_t r = 0; r < repeats; ++r )
+        {
+            warm_rps_small.push_back( RunEnumerationPass( stack.hot, /*fill_cache=*/true ).rows_per_sec );
+            cold_rps_small.push_back( RunEnumerationPass( stack.hot, /*fill_cache=*/false ).rows_per_sec );
+        }
+        {
+            const EnumPass pass = RunEnumerationPass( stack.hot );
+            per_row_small       = pass.per_row_bytes;
+            ASSERT_EQ( pass.seals, scale ) << "grow root 10^6 point count";
+            if ( first_cid.empty() )
+            {
+                first_cid = "reopened (first CID recorded on the seeding run)";
+            }
+        }
+        const VarianceStats warm_var_small = VarianceOver( warm_rps_small );
+        const VarianceStats cold_var_small = VarianceOver( cold_rps_small );
+        std::cout << "[seal-growth] 10^6 point: warm mean " << std::setprecision( 0 )
+                  << warm_var_small.mean << " rows/sec (max dev " << std::setprecision( 3 )
+                  << warm_var_small.max_deviation_pct << "%, CV " << warm_var_small.cv_pct
+                  << "%), cold mean " << std::setprecision( 0 ) << cold_var_small.mean
+                  << " rows/sec, per-row " << std::setprecision( 3 ) << per_row_small << " B" << std::endl;
+
+        // ---- Phase 2: grow IN PLACE to 10^7, measure the increment ----
+        double grow_increment_ms = 0.0;
+        double grow_increment_rate = 0.0;
+        {
+            const auto t0 = std::chrono::steady_clock::now();
+            for ( uint64_t i = scale; i < big_scale; ++i )
+            {
+                std::ostringstream content;
+                content << "seal-growth grow root seed=" << seed << " idx=" << i;
+                auto node = sgns::ipfs_lite::ipld::IPLDNodeImpl::createFromString( content.str() );
+                ASSERT_TRUE( node != nullptr );
+                auto sealed = stack.datastore->seal( node->getCID() );
+                ASSERT_TRUE( sealed.has_value() ) << "grow-to-10^7 failed at idx=" << i;
+                if ( i == big_scale - 1 )
+                {
+                    last_cid = node->getCID().toString().value();
+                }
+            }
+            grow_increment_ms = std::chrono::duration<double, std::milli>( std::chrono::steady_clock::now() - t0 ).count();
+            grow_increment_rate = grow_increment_ms > 0.0
+                                      ? static_cast<double>( big_scale - scale ) / ( grow_increment_ms / 1000.0 )
+                                      : 0.0;
+            std::cout << "[seal-growth] grown in place to " << big_scale << " in " << std::fixed
+                      << std::setprecision( 0 ) << grow_increment_ms << " ms (" << std::setprecision( 0 )
+                      << grow_increment_rate << " seals/sec increment rate)" << std::endl;
+        }
+
+        // 10^7 scale point: warm + cold repeats.
+        std::vector<double> warm_rps_big;
+        std::vector<double> cold_rps_big;
+        double              per_row_big = 0.0;
+        uint64_t            seals_big   = 0;
+        for ( uint64_t r = 0; r < repeats; ++r )
+        {
+            warm_rps_big.push_back( RunEnumerationPass( stack.hot, /*fill_cache=*/true ).rows_per_sec );
+            cold_rps_big.push_back( RunEnumerationPass( stack.hot, /*fill_cache=*/false ).rows_per_sec );
+        }
+        {
+            const EnumPass pass = RunEnumerationPass( stack.hot );
+            per_row_big         = pass.per_row_bytes;
+            seals_big           = pass.seals;
+            ASSERT_EQ( seals_big, big_scale ) << "grow root 10^7 point count";
+        }
+        const VarianceStats warm_var_big = VarianceOver( warm_rps_big );
+        const VarianceStats cold_var_big = VarianceOver( cold_rps_big );
+        std::cout << "[seal-growth] 10^7 point: warm mean " << std::setprecision( 0 )
+                  << warm_var_big.mean << " rows/sec (max dev " << std::setprecision( 3 )
+                  << warm_var_big.max_deviation_pct << "%, CV " << warm_var_big.cv_pct
+                  << "%), cold mean " << std::setprecision( 0 ) << cold_var_big.mean
+                  << " rows/sec, per-row " << std::setprecision( 3 ) << per_row_big << " B" << std::endl;
+
+        // The cold point of record: a FRESH REOPEN over the same root
+        // (the soak's resume posture; the OS page cache is outside the
+        // harness's control and noted as the caveat in the JSON).
+        stack.hot.reset();
+        stack.datastore.reset();
+        MinimalSealStack reopened;
+        ASSERT_TRUE( BuildMinimalStack( kGrowRoot, /*wipe=*/false, reopened ) );
+        const EnumPass reopen_pass = RunEnumerationPass( reopened.hot, /*fill_cache=*/false );
+        ASSERT_EQ( reopen_pass.seals, big_scale );
+        std::cout << "[seal-growth] fresh-reopen cold point of record: " << std::setprecision( 0 )
+                  << reopen_pass.rows_per_sec << " rows/sec" << std::endl;
+
+        // ---- 10^8 extrapolation (D-01) - every entry flagged ----
+        const double enum_rps_10e8   = warm_var_big.mean > 0.0 ? warm_var_big.mean : 0.0;
+        const double enum_wall_10e8  = enum_rps_10e8 > 0.0 ? 1e8 / enum_rps_10e8 * 1000.0 : 0.0;
+        const double bytes_10e8      = per_row_big * 1e8;
+        const double seed_time_10e8  = grow_increment_rate > 0.0 ? 1e8 / grow_increment_rate * 1000.0 : 0.0;
+        // Spot-check: the 10^6-point SEEDING rate's prediction of the
+        // 10^6->10^7 increment vs the measured increment time (the
+        // curve's sanity anchor - a large deviation means the seeding
+        // rate is not flat in scale and the 10^8 projection must say
+        // so).
+        const double predicted_increment_ms = phase1_seed_rate > 0.0
+                                                  ? static_cast<double>( big_scale - scale ) / phase1_seed_rate * 1000.0
+                                                  : 0.0;
+        const double spot_deviation_pct = predicted_increment_ms > 0.0
+                                              ? ( grow_increment_ms - predicted_increment_ms ) / predicted_increment_ms * 100.0
+                                              : 0.0;
+        std::cout << "[seal-growth] 10^8 EXTRAPOLATED: bytes " << std::setprecision( 1 )
+                  << bytes_10e8 / 1e9 << " GB, enum wall " << std::setprecision( 0 ) << enum_wall_10e8
+                  << " ms, seeding time " << seed_time_10e8 << " ms (spot-check deviation "
+                  << std::setprecision( 2 ) << spot_deviation_pct << "%)" << std::endl;
+
+        // ---- Evidence emission (D-09; flat per-run JSON) ----
+        FlatJsonEvidence json;
+        json.Add( "meta.harness", "cold_seal_growth_test" );
+        json.Add( "meta.phase_plan", "17-02" );
+        json.Add( "meta.host", HostTag() );
+        json.Add( "meta.os", OsTag() );
+        json.Add( "meta.build_config", BuildConfigTag() );
+        json.Add( "meta.generated_utc", GeneratedUtc() );
+        json.Add( "meta.dataset_fingerprint",
+                  "seed=" + std::to_string( seed ) + ";scale=" + std::to_string( big_scale )
+                      + ";first=" + first_cid + ";last=" + last_cid );
+        json.Add( "options.target_file_size_base", static_cast<uint64_t>( 32 * 1024 * 1024 ) );
+        json.Add( "options.max_compaction_bytes", static_cast<uint64_t>( 32 * 1024 * 1024 ) );
+        json.Add( "options.write_buffer_size", static_cast<uint64_t>( 32 * 1024 * 1024 ) );
+        json.Add( "options.level0_file_num_compaction_trigger", static_cast<uint64_t>( 1 ) );
+        json.Add( "options.target_file_size_multiplier", static_cast<uint64_t>( 1 ) );
+        json.Add( "options.level_compaction_dynamic_level_bytes", "false" );
+        json.Add( "options.wal_posture", "default (WAL on)" );
+        json.Add( "leg.volume_10e6.grow_seed_rate_per_sec", phase1_seed_rate );
+        json.Add( "leg.volume_10e6.seal_rows", static_cast<uint64_t>( scale ) );
+        json.Add( "leg.volume_10e6.enum_warm_rows_per_sec_mean", warm_var_small.mean );
+        json.Add( "leg.volume_10e6.enum_warm_max_deviation_pct", warm_var_small.max_deviation_pct );
+        json.Add( "leg.volume_10e6.enum_warm_cv_pct", warm_var_small.cv_pct );
+        json.Add( "leg.volume_10e6.enum_cold_rows_per_sec_mean", cold_var_small.mean );
+        json.Add( "leg.volume_10e6.per_row_bytes", per_row_small );
+        json.Add( "leg.volume_10e7.seal_rows", seals_big );
+        json.Add( "leg.volume_10e7.enum_warm.rows_per_s", warm_var_big.mean );
+        json.Add( "leg.volume_10e7.enum_warm.max_deviation_pct", warm_var_big.max_deviation_pct );
+        json.Add( "leg.volume_10e7.enum_warm.cv_pct", warm_var_big.cv_pct );
+        json.Add( "leg.volume_10e7.enum_cold.rows_per_s", cold_var_big.mean );
+        json.Add( "leg.volume_10e7.enum_reopen_cold.rows_per_s", reopen_pass.rows_per_sec );
+        json.Add( "leg.volume_10e7.enum_reopen_cold.wall_ms", reopen_pass.wall_ms );
+        json.Add( "leg.volume_10e7.enum_reopen_cold.caveat", "fresh DB reopen; OS page cache outside harness control" );
+        json.Add( "leg.volume_10e7.per_row_bytes", per_row_big );
+        json.Add( "leg.volume_10e7.grow_increment_ms", grow_increment_ms );
+        json.Add( "leg.volume_10e7.grow_increment_rate_per_sec", grow_increment_rate );
+        json.Add( "leg.volume_10e8_extrapolated.extrapolated", "true" );
+        json.Add( "leg.volume_10e8_extrapolated.total_bytes", bytes_10e8 );
+        json.Add( "leg.volume_10e8_extrapolated.enum_rows_per_sec", enum_rps_10e8 );
+        json.Add( "leg.volume_10e8_extrapolated.enum_wall_ms", enum_wall_10e8 );
+        json.Add( "leg.volume_10e8_extrapolated.seeding_time_ms", seed_time_10e8 );
+        json.Add( "leg.volume_10e8_extrapolated.spot_check_deviation_pct", spot_deviation_pct );
+        json.Add( "leg.volume_10e8_extrapolated.spot_check_basis",
+                  "10^6-point seeding-rate prediction of the 10^6->10^7 increment vs measured" );
+        const std::string json_text = json.ToString();
+        std::cout << "[evidence-json] " << json_text << std::endl;
+        const std::filesystem::path evidence_path =
+            std::filesystem::path( kGrowRoot ) / "evidence-big.json";
+        std::ofstream out( evidence_path );
+        ASSERT_TRUE( out.is_open() ) << "cannot open " << evidence_path.string();
+        out << json_text << std::endl;
+        out.close();
     }
 } // namespace
