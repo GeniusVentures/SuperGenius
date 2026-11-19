@@ -2263,6 +2263,11 @@ groups:
      * idempotence-on-absent-keys floor + fixed-point stability). The
      * trivial variant (no erasable classes at all) converges with zero
      * TxPruner-side changes in every order.
+     *
+     * v1.2 Phase 18 (18-01): the fixed point asserted here is the
+     * POST-exemption disposal fixed point - the walk completes through
+     * the cycle's evidenced gap (previously every pass aborted), so the
+     * GC is driven to quiescence before the before-snapshot.
      */
     TEST_F( ColdComposeMatrixTest, Converge_FixedPointIsStable_ReRunsChangeNothing )
     {
@@ -2274,6 +2279,21 @@ groups:
             sgns::PruneCycleStats stats;
             RunSettledCycle( *pruner, stats );
         }
+        // [v1.2 Phase 18 (18-01) posture update] Pre-exemption this leg's
+        // fixed point was trivially stable: the cycle's /prune/blk rows
+        // made the head-reachable erased links walk GAPS, every GC pass
+        // aborted (under-eviction), and no disposal ever ran after the
+        // snapshot. The 18-01 GC walk-gap evidence exemption lets the walk
+        // COMPLETE through the evidenced gap, so the GC now converges to a
+        // DISPOSAL fixed point for the classes BELOW the exempted link
+        // (the seeded pruned block and the gc-only root). Drive that
+        // convergence BEFORE the before-snapshot - the re-run-stability
+        // claim is asserted AT the fixed point, exactly like the sibling
+        // Converge/Crossfire legs. The overlap group stays WALK-REACHABLE
+        // in this leg (no DetachT2Chain - the interleave legs' leg-time
+        // detach is deliberately absent here), so it is NOT a disposal
+        // target: drive with include_overlap=false.
+        DriveGcToQuiescence( inv, /*include_overlap=*/false );
         MatrixSnapshot before;
         SnapshotOf( inv, before );
 

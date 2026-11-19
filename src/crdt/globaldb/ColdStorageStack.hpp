@@ -120,6 +120,7 @@ namespace sgns::crdt
         size_t   gc_last_pass_candidates{ 0 };        ///< cold-eligible CIDs the last pass identified
         size_t   gc_last_pass_reclaimed_count{ 0 };   ///< evicted CIDs the last pass deleted (11-02+)
         uint64_t gc_last_pass_reclaimed_bytes{ 0 };   ///< local bytes reclaimed by the last pass (11-02+)
+        size_t   gc_last_pass_exempted{ 0 };          ///< prune-evidenced absent links the last pass walk-exempted (v1.2 Phase 18, D-04)
         size_t   gc_disposed_marker_count{ 0 };       ///< disposed-CID markers currently persisted (11-02+)
     };
 

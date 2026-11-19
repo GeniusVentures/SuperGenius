@@ -30,6 +30,7 @@
 
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 
+#include "crdt/cold_read_fallback.hpp"
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 
@@ -455,6 +456,7 @@ namespace sgns::crdt
         status.gc_last_pass_candidates  = gc_last_pass_candidates_.load( std::memory_order_relaxed );
         status.gc_last_pass_reclaimed_count = gc_last_pass_reclaimed_count_.load( std::memory_order_relaxed );
         status.gc_last_pass_reclaimed_bytes = gc_last_pass_reclaimed_bytes_.load( std::memory_order_relaxed );
+        status.gc_last_pass_exempted        = gc_last_pass_exempted_.load( std::memory_order_relaxed );
         status.gc_disposed_marker_count = gc_disposed_marker_count_.load( std::memory_order_relaxed );
         return status;
     }
@@ -845,10 +847,44 @@ namespace sgns::crdt
             auto node = gc_dag_syncer_->GetNodeWithoutRequest( current );
             if ( !node.has_value() )
             {
+                // [D-01/D-02/D-04, v1.2 Phase 18 — GC walk-gap evidence
+                // exemption] The two-halves rule: what may be absent =
+                // what may be collected. A prune-evidenced absent link is
+                // EXPECTED-ABSENT (this node deliberately erased it under
+                // Phase 15's evidence-outranks-bytes rule), so the walk
+                // treats it as a terminal LEAF and CONTINUES, counted -
+                // the history below an evidenced CID is gone by
+                // construction, so reachability there is not needed. The
+                // consult routes through the ONE Phase 15 predicate,
+                // GraphsyncDAGSyncer::LookupPruneEvidence on the
+                // gc_dag_syncer_ handle this walk already holds (D-02
+                // extends the SERVE-03/D-04 source-consistency ruling to
+                // the GC walk) - never a GC-local /prune/blk read, never
+                // error-code matching, never age. ONLY the Pruned verdict
+                // exempts: Malformed fails closed (unreadable evidence is
+                // never exemption - Pitfall 7), and NoEvidence as well as
+                // the cold-disabled nullopt keep today's abort (fail
+                // toward under-eviction). Full record:
+                // notes/18-collectibility-policy-downgrade-interlock.md]
+                const auto evidence = gc_dag_syncer_->LookupPruneEvidence( current );
+                if ( evidence.has_value() && *evidence == PruneEvidenceClass::Pruned )
+                {
+                    // D-04 counted-continue: per-exempted-CID increment,
+                    // per-pass reset (never-healthy-by-omission - a
+                    // persistently growing exempted count on a steady
+                    // graph is the operator's early warning that v2
+                    // collection is eating the walk). Leaf semantics
+                    // (Pitfall 6): the exempted CID's links are NEVER
+                    // descended into - its bytes are unavailable by
+                    // definition.
+                    ++pass_walk_exempted_;
+                    continue;
+                }
                 // Walk gap: a head-reachable link is missing from EVERY
-                // tier (hot, LRU, cold dir, remote). Reachability below it
-                // is not computable - abort the pass toward under-eviction
-                // rather than guessing (the only safe direction).
+                // tier (hot, LRU, cold dir, remote) with NO prune
+                // evidence. Reachability below it is not computable -
+                // abort the pass toward under-eviction rather than
+                // guessing (the only safe direction).
                 auto current_str = current.toString();
                 logger_->warn(
                     "gc: pass-aborted-walk-gap - CID {} is head-reachable but missing from "
@@ -912,6 +948,10 @@ namespace sgns::crdt
         ++gc_tick_counter_;
         pass_reclaimed_count_  = 0;
         pass_reclaimed_bytes_  = 0;
+        // D-04 (v1.2 Phase 18): the walk-exempted accumulator resets
+        // beside the reclaimed accumulators - per-pass, single-writer
+        // under gc_pass_mutex_ (WalkReachable runs inside this pass).
+        pass_walk_exempted_    = 0;
 
         // GC-02 (§4.2): the orphaned-hot-bytes re-scan runs FIRST - a
         // crash between the D-16 halves left hot bytes behind a committed
@@ -939,9 +979,11 @@ namespace sgns::crdt
         gc_last_pass_candidates_.store( candidates.size(), std::memory_order_relaxed );
         gc_last_pass_reclaimed_count_.store( pass_reclaimed_count_, std::memory_order_relaxed );
         gc_last_pass_reclaimed_bytes_.store( pass_reclaimed_bytes_, std::memory_order_relaxed );
-        logger_->info( "gc: pass complete - {} candidate(s), {} evicted (retention {} ms, dry_run {})",
+        gc_last_pass_exempted_.store( pass_walk_exempted_, std::memory_order_relaxed );
+        logger_->info( "gc: pass complete - {} candidate(s), {} evicted, {} walk-exempted (retention {} ms, dry_run {})",
                        candidates.size(),
                        pass_reclaimed_count_,
+                       pass_walk_exempted_,
                        retention_.retention_age_ms,
                        gc_dry_run_ );
         // SC4 round 8: the eligibility breakdown answers "WHY zero

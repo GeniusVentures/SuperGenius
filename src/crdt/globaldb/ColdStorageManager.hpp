@@ -672,6 +672,17 @@ namespace sgns::crdt
         uint64_t                  gc_tick_counter_{ 0 };
         size_t                    pass_reclaimed_count_{ 0 };
         uint64_t                  pass_reclaimed_bytes_{ 0 };
+        /// D-04 (v1.2 Phase 18): per-pass walk-exempted accumulator -
+        /// incremented ONCE per prune-evidenced CID the walk treats as an
+        /// expected-absent leaf (never per pass, never per consult miss),
+        /// reset beside pass_reclaimed_count_ at pass start, published to
+        /// gc_last_pass_exempted_ at pass end. Never-healthy-by-omission
+        /// (Phase 14 D-03 / Phase 16 D-10 precedent): a persistently
+        /// growing exempted count on a steady graph is the operator's
+        /// early warning that v2 collection is eating the walk - the
+        /// per-pass INFO line and GetStatus surface it every pass, zero
+        /// included.
+        size_t                    pass_walk_exempted_{ 0 };
         /// SC4 round 8: per-gate eligibility skip counters for the pass
         /// summary line (single-writer under gc_pass_mutex_ like the
         /// marks). Run 41024756227 (OSX+Windows full-wire resurrection)
@@ -702,6 +713,9 @@ namespace sgns::crdt
         std::atomic<size_t>      gc_last_pass_candidates_{ 0 };
         std::atomic<size_t>      gc_last_pass_reclaimed_count_{ 0 };
         std::atomic<uint64_t>    gc_last_pass_reclaimed_bytes_{ 0 };
+        /// D-04 (v1.2 Phase 18): last pass's walk-exempted CID count
+        /// (published from pass_walk_exempted_; sibling relaxed posture).
+        std::atomic<size_t>      gc_last_pass_exempted_{ 0 };
         std::atomic<size_t>      gc_disposed_marker_count_{ 0 };
 
         sgns::base::Logger logger_ = sgns::base::createLogger( "ColdStorageManager" );

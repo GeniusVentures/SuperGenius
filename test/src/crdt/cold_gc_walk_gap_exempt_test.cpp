@@ -620,6 +620,10 @@ TEST_F( ColdGcWalkGapExemptTest, Leg1PoisonedTriangleWalkCompletesViaExemption )
            "completes, the canary is nominated";
     EXPECT_TRUE( pass1[0] == canary );
     EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 1u );
+    // D-04 (Task 2): the exemption is counted - one evidenced gap seen
+    // this pass, never-healthy-by-omission.
+    EXPECT_GT( manager->GetStatus().gc_last_pass_exempted, 0u );
+    const uint64_t exempted_pass1 = manager->GetStatus().gc_last_pass_exempted;
 
     // Repeat-pass (POLICY-01 idempotency): the consult is a pure read -
     // an unchanged evidenced graph yields the same verdict per CID and a
@@ -628,6 +632,10 @@ TEST_F( ColdGcWalkGapExemptTest, Leg1PoisonedTriangleWalkCompletesViaExemption )
     ASSERT_EQ( pass2.size(), 1u ) << "the repeat pass must reach the same verdict";
     EXPECT_EQ( pass1.size(), pass2.size() );
     EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 1u );
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, exempted_pass1 )
+        << "the repeat pass must report an IDENTICAL walk-exempted count "
+           "on the unchanged evidenced graph (per-CID counting, per-pass "
+           "reset)";
 }
 
 // ---------------------------------------------------------------------------
@@ -673,6 +681,8 @@ TEST_F( ColdGcWalkGapExemptTest, Leg2DeletedColdWalkCompletesViaExemption )
            "expected-absent verdict, the pass completes";
     EXPECT_TRUE( candidates[0] == canary );
     EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 1u );
+    // D-04 (Task 2): the deleted-cold exemption is counted identically.
+    EXPECT_GT( manager->GetStatus().gc_last_pass_exempted, 0u );
 }
 
 // ---------------------------------------------------------------------------
@@ -709,6 +719,8 @@ TEST_F( ColdGcWalkGapExemptTest, ControlNoEvidenceGapStillAborts )
         << "an unevidenced gap must abort the pass (under-eviction) - the "
            "exemption never opens on NoEvidence";
     EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u )
+        << "NoEvidence must never be counted as exemption";
 }
 
 /**
@@ -740,4 +752,31 @@ TEST_F( ColdGcWalkGapExemptTest, ControlMalformedEvidenceStillAborts )
         << "a malformed evidence row must abort the pass - fail closed, "
            "never exempted (Pitfall 7)";
     EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u )
+        << "Malformed must never be counted as exemption";
+}
+
+/**
+ * @given a clean graph with NO gaps at all (a published young two-block
+ *        chain, nothing removed, nothing evidenced, nothing old)
+ * @when  a driven GC pass runs
+ * @then  the pass completes with zero candidates and the walk-exempted
+ *        observable reads EXACTLY 0 through GetStatus - the counter is
+ *        never-healthy-by-omission in BOTH directions (D-04: a zero
+ *        baseline proves the surface is live, not defaulted)
+ */
+TEST_F( ColdGcWalkGapExemptTest, NoEvidenceBaselinePassReportsZeroExempted )
+{
+    (void)PublishElement( "gap/base/key1", "value1" );
+    (void)PublishElement( "gap/base/key2", "value2" );
+
+    auto manager = MakeManager();
+    manager->Start();
+
+    const auto candidates = manager->GcPassOnce();
+    EXPECT_TRUE( candidates.empty() ) << "a young clean graph nominates nothing";
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+    EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u )
+        << "a pass with zero evidenced gaps must report walk-exempted 0 - "
+           "the operator surface is live both ways";
 }
