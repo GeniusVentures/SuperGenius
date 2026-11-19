@@ -1546,6 +1546,29 @@ namespace sgns::crdt
         return false;
     }
 
+    void GlobalDB::SetGcBetweenHalvesHookForTest( std::function<void()> hook )
+    {
+        // TEST-ONLY (v1.2 Phase 16, COMP-02): forward the between-halves
+        // park point to the (private) retention-GC manager. Observation
+        // scaffolding ONLY - never coordination.
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        sgns::crdt::SetGcBetweenHalvesHookForTesting( cold_manager_, std::move( hook ) );
+    }
+
+    void GlobalDB::SetGcPreHalfOneHookForTest( std::function<void()> hook )
+    {
+        // TEST-ONLY (v1.2 Phase 16, COMP-02): the pre-half-one knife edge.
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        sgns::crdt::SetGcPreHalfOneHookForTesting( cold_manager_, std::move( hook ) );
+    }
+
+    void GlobalDB::SetGcPreMarkProcessHookForTest( std::function<void()> hook )
+    {
+        // TEST-ONLY (v1.2 Phase 16, COMP-02): before the eligibility scan.
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        sgns::crdt::SetGcPreMarkProcessHookForTesting( cold_manager_, std::move( hook ) );
+    }
+
     outcome::result<void> GlobalDB::EraseEntry(
         const std::string                                              &key,
         const CID                                                      &cid,

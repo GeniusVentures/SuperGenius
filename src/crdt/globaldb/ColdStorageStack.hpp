@@ -246,6 +246,20 @@ namespace sgns::crdt
                                         const CID                                &cid );
 
     /**
+     * @brief      Null-safe TEST-ONLY GC park-point forwardings (v1.2
+     *             Phase 16, COMP-02 matrix legs): between-halves,
+     *             pre-half-one, and pre-mark-process hooks on the
+     *             (otherwise private) retention-GC manager. No-ops on a
+     *             null manager. PRODUCTION CODE MUST NEVER CALL these.
+     */
+    void SetGcBetweenHalvesHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                            std::function<void()>                    hook );
+    void SetGcPreHalfOneHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                         std::function<void()>                    hook );
+    void SetGcPreMarkProcessHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                             std::function<void()>                    hook );
+
+    /**
      * @brief      Enqueue an ops-triggered drain (flag + notify only - the
      *             drain body NEVER runs on the caller's thread; SC2).
      * @param[in]  manager the bundle's manager (may be null)

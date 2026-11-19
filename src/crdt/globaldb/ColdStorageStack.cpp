@@ -385,6 +385,35 @@ namespace sgns::crdt
         return std::nullopt;
     }
 
+    void SetGcBetweenHalvesHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                            std::function<void()>                    hook )
+    {
+        // TEST-ONLY (v1.2 Phase 16, COMP-02): observation scaffolding
+        // ONLY - never coordination.
+        if ( manager )
+        {
+            manager->SetGcBetweenHalvesHookForTesting( std::move( hook ) );
+        }
+    }
+
+    void SetGcPreHalfOneHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                         std::function<void()>                    hook )
+    {
+        if ( manager )
+        {
+            manager->SetGcPreHalfOneHookForTesting( std::move( hook ) );
+        }
+    }
+
+    void SetGcPreMarkProcessHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                             std::function<void()>                    hook )
+    {
+        if ( manager )
+        {
+            manager->SetGcPreMarkProcessHookForTesting( std::move( hook ) );
+        }
+    }
+
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager )
     {
         if ( manager )

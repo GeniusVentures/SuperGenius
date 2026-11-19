@@ -650,6 +650,23 @@ namespace sgns::crdt
         bool IsColdDisposed( const CID &cid ) const;
 
         /**
+         * @brief      TEST-ONLY forwarding to the retention-GC's
+         *             between-halves park point (v1.2 Phase 16, COMP-02
+         *             matrix legs — the manager is otherwise private to
+         *             the live stack). Null-safe no-op without a cold
+         *             tier; PRODUCTION CODE MUST NEVER CALL these.
+         */
+        void SetGcBetweenHalvesHookForTest( std::function<void()> hook );
+
+        /// TEST-ONLY forwarding to the retention-GC's pre-half-one park
+        /// point (the cancel-vs-commit knife edge). See above.
+        void SetGcPreHalfOneHookForTest( std::function<void()> hook );
+
+        /// TEST-ONLY forwarding to the retention-GC's pre-mark-process
+        /// park point (before the eligibility scan). See above.
+        void SetGcPreMarkProcessHookForTest( std::function<void()> hook );
+
+        /**
          * @brief      Cold-tier presence signal (v1.2 Phase 14, PRUNE-01):
          *             true iff this GlobalDB was constructed with a cold
          *             storage tier (cold_manager_ != nullptr).

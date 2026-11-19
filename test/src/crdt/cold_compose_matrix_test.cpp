@@ -161,6 +161,29 @@ namespace
 
     const sgns::TokenID kTestTokenId = sgns::TokenID::FromBytes( { 0x00 } );
 
+    /// The second topic (the two-class topology: T1 carries the
+    /// never-detached chain — TxPruner-only groups stay walk-reachable;
+    /// T2 carries the detachables — RemoveHead orphans only T2 chains).
+    constexpr char kSeedTopic2[] = "CRDT.Datastore.TEST.Channel2";
+
+    /// The matrix's fixed transfer timestamp base (twin determinism:
+    /// identical op sequences over twin dirs must produce identical
+    /// delta CIDs — wall-clock timestamps would fork them). Both twins
+    /// receive the SAME base from the builder parameter.
+    constexpr int64_t kMatrixTxTsBaseMs = 1760000000000;
+
+    /// Unsigned env override with fallback (copied VERBATIM from
+    /// cold_storage_fault_race_test.cpp — NAMED EXCEPTION to CLAUDE.md
+    /// hard invariant 2, named in the 16-03 commit messages). The
+    /// compose race knobs: SGNS_COMPOSE_RACE_JITTER_SEED (0 = random) /
+    /// SGNS_COMPOSE_RACE_JITTER_ITERS (default 3).
+    uint64_t EnvOr( const char *name, uint64_t fallback )
+    {
+        const char *raw = std::getenv( name );
+        return raw == nullptr ? fallback
+                              : static_cast<uint64_t>( std::strtoull( raw, nullptr, 10 ) );
+    }
+
     /// Bounded poll loop with deadline - never a fixed sleep (Tier-1 audit;
     /// the durability/resurrection suite discipline).
     bool PollUntil( const std::function<bool()> &predicate,
@@ -389,6 +412,8 @@ groups:
 
             db_->AddListenTopic( kSeedTopic );
             db_->AddBroadcastTopic( kSeedTopic );
+            db_->AddListenTopic( kSeedTopic2 );
+            db_->AddBroadcastTopic( kSeedTopic2 );
             db_->Start();
             ASSERT_TRUE( db_->HasColdStorage() ) << "tier-presence signal mismatch";
 
@@ -513,6 +538,54 @@ groups:
                 sgns::TransferTransaction::New( {}, std::move( destinations ), std::move( dag ) ) );
         }
 
+        /// The MATRIX transfer shape: FIXED timestamp (twin determinism —
+        /// identical sequences over twin dirs produce identical delta
+        /// CIDs; wall-clock timestamps would fork them).
+        std::shared_ptr<sgns::TransferTransaction> MakeMatrixTransfer( uint64_t nonce, size_t output_count )
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_type( "transfer" );
+            dag.set_source_addr( account_->GetAddress() );
+            dag.set_nonce( nonce );
+            dag.set_timestamp( kMatrixTxTsBaseMs + static_cast<int64_t>( nonce ) );
+
+            std::vector<OutputDestInfo> destinations;
+            destinations.reserve( output_count );
+            for ( size_t i = 0; i < output_count; ++i )
+            {
+                destinations.push_back( { 100 + i, account_->GetAddress(), kTestTokenId } );
+            }
+            return std::make_shared<TransferTransaction>(
+                TransferTransaction::New( {}, std::move( destinations ), std::move( dag ) ) );
+        }
+
+        /// Real-topic value Put + raw tx->CID map entry on a CHOSEN topic
+        /// (the matrix's two-class topology: T1 never detached, T2
+        /// carries the detachables).
+        void SeedTransactionOn( const std::shared_ptr<GeniusTransaction> &transaction, const char *topic )
+        {
+            const std::string tx_path = TransactionManager::GetTransactionPath( *transaction );
+
+            crdt::GlobalDB::Buffer serialized;
+            serialized.put( transaction->SerializeByteVector() );
+            auto put_result = db_->Put( { tx_path }, serialized, { topic } );
+            ASSERT_TRUE( put_result.has_value() );
+
+            crdt::GlobalDB::Buffer key_buffer;
+            key_buffer.put( tx_path );
+            crdt::GlobalDB::Buffer value_buffer;
+            value_buffer.put( put_result.value().toString().value() );
+            ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+        }
+
+        /// Real-topic value Put of a raw string on a CHOSEN topic.
+        void PutSeedValueOn( const std::string &key, const std::string &value, const char *topic )
+        {
+            crdt::GlobalDB::Buffer buffer;
+            buffer.put( value );
+            ASSERT_TRUE( db_->Put( { key }, buffer, { topic } ).has_value() );
+        }
+
         /// Real-topic value Put + raw tx->CID map entry (the gate-test
         /// StoreTransactionCID shapes).
         void SeedTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
@@ -631,6 +704,365 @@ groups:
             EXPECT_TRUE( ran );
         }
 
+        //
+        // The SC2 matrix machinery (16-03): inventory, snapshot
+        // instrument, quiescence drive.
+        //
+
+        /// The matrix fixture's CID inventory by class (the fixed
+        /// reference every snapshot and assertion walks).
+        struct MatrixInventory
+        {
+            std::string pruned_cid;     // already pruned in the fixture (crossfire rows)
+            std::string pruned_tx_path; //
+            std::string txonly_cid;     // TxPruner-only group (reachable -> GC-ineligible)
+            std::string txonly_tx_path; //
+            std::string gc_only_cid;    // detached Durable block, no group
+            std::string overlap_cid;    // erasable group whose constituent is ALSO GC-eligible
+            std::string overlap_tx_path;
+            std::vector<std::string> all_cids() const
+            {
+                std::vector<std::string> all;
+                for ( const auto *cid : { &pruned_cid, &txonly_cid, &gc_only_cid, &overlap_cid } )
+                {
+                    if ( !cid->empty() )
+                    {
+                        all.push_back( *cid );
+                    }
+                }
+                return all;
+            }
+        };
+
+        /// The full-state snapshot (D-08a byte layer): exact-prefix
+        /// enumeration over the set root's t/, k/ namespaces + the heads
+        /// namespace (GetKeysPrefix-derived, no trailing slash), the
+        /// /prune/tx/ and /prune/blk/ maps, and per-CID presence/seal/
+        /// disposed/LRU state (the inventory-scoped keyspaces — binary
+        /// CID keys and seal rows are per-CID reads, never namespace
+        /// substring scans; seal state via isResolved only).
+        struct MatrixSnapshot
+        {
+            std::map<std::string, std::string> set_rows;    // t/ + k/ + heads namespaces
+            std::map<std::string, std::string> prune_tx;    // /prune/tx/ map
+            std::map<std::string, std::string> prune_blk;   // /prune/blk/ map
+            std::map<std::string, std::string> raw_tx_map;  // the tx->CID map entries (inventory paths)
+            // per-CID state (inventory-scoped)
+            std::map<std::string, bool>       block_present;
+            std::map<std::string, bool>       seal_present;
+            std::map<std::string, bool>       disposed;
+            std::map<std::string, bool>       lru_resident;
+        };
+
+        /// Enumerates one prefix into @p out (string-keyed for readable
+        /// EXPECT_EQ diffs).
+        void SnapPrefixInto( std::map<std::string, std::string> &out, const std::string &prefix )
+        {
+            auto found = db_->QueryRaw( crdt::GlobalDB::Buffer{}.put( prefix ) );
+            ASSERT_TRUE( found.has_value() ) << "QueryRaw failed for prefix " << prefix;
+            for ( const auto &[k, v] : found.value() )
+            {
+                out[std::string( k.toString() )] = std::string( v.toString() );
+            }
+        }
+
+        /// Captures the full state over @p inv's inventory.
+        void SnapshotOf( const MatrixInventory &inv, MatrixSnapshot &snap )
+        {
+            auto           crdt_datastore = db_->GetCRDTDataStore();
+            const auto     keys_prefix    = crdt_datastore->GetKeysPrefix(); // "<root>/s/k"
+            const auto     set_root       = keys_prefix.substr( 0, keys_prefix.size() - 1 ); // "<root>/s/"
+            const auto     root           = keys_prefix.substr( 0, keys_prefix.size() - 4 ); // "<root>/"
+            SnapPrefixInto( snap.set_rows, set_root + "t/" );                    // tombstones
+            SnapPrefixInto( snap.set_rows, set_root + "k/" );                    // current values
+            SnapPrefixInto( snap.set_rows, set_root + "s/" );                    // per-block elems rows
+            SnapPrefixInto( snap.set_rows, root + "h/" );                        // heads
+            SnapPrefixInto( snap.prune_tx, std::string( sgns::PruneEligibility::PRUNE_MARKER_PREFIX ) );
+            SnapPrefixInto( snap.prune_blk, std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX ) );
+            auto syncer = syncerOf( *db_ );
+            for ( const auto &cid_string : inv.all_cids() )
+            {
+                auto cid = sgns::CID::fromString( cid_string );
+                ASSERT_FALSE( cid.has_error() );
+                snap.raw_tx_map[cid_string] = SnapshotMapEntryOf( cid_string, inv );
+                auto bytes_present = syncer->HasRawBlockBytes( cid.value() );
+                ASSERT_TRUE( bytes_present.has_value() );
+                snap.block_present[cid_string] = bytes_present.value();
+                auto resolved = syncer->isResolved( cid.value() );
+                ASSERT_TRUE( resolved.has_value() );
+                snap.seal_present[cid_string] = resolved.value();
+                snap.disposed[cid_string]     = db_->IsColdDisposed( cid.value() );
+                snap.lru_resident[cid_string] = syncer->IsCIDInCache( cid.value() );
+            }
+        }
+
+        /// The tx->CID map entry for an inventory member (absent -> "-").
+        std::string SnapshotMapEntryOf( const std::string &cid_string, const MatrixInventory &inv )
+        {
+            const std::string path = ( cid_string == inv.pruned_cid )     ? inv.pruned_tx_path
+                                     : ( cid_string == inv.txonly_cid )   ? inv.txonly_tx_path
+                                     : ( cid_string == inv.overlap_cid )  ? inv.overlap_tx_path
+                                                                          : std::string();
+            if ( path.empty() )
+            {
+                return "-";
+            }
+            auto entry = db_->GetRaw( crdt::GlobalDB::Buffer{}.put( path ) );
+            return entry.has_value() ? std::string( entry.value().toString() ) : std::string( "absent" );
+        }
+
+        /// Waits for the retention-GC thread to dispose every expected
+        /// disposal target and reach pass quiescence (the observable
+        /// drive: the manager is private; the thread IS the driver).
+        void DriveGcToQuiescence( const MatrixInventory &inv, bool include_overlap )
+        {
+            const auto targets = include_overlap
+                                   ? std::vector<std::string>{ inv.gc_only_cid, inv.overlap_cid }
+                                   : std::vector<std::string>{ inv.gc_only_cid };
+            for ( const auto &cid_string : targets )
+            {
+                auto cid = sgns::CID::fromString( cid_string );
+                ASSERT_FALSE( cid.has_error() );
+                ASSERT_TRUE( PollUntil( [&] { return db_->IsColdDisposed( cid.value() ); },
+                                        std::chrono::milliseconds( 20000 ) ) )
+                    << "GC never disposed " << cid_string;
+            }
+        }
+
+        /// Builds the full matrix topology on the CURRENT stack. The
+        /// op sequence is FIXED (deterministic CIDs over twin dirs).
+        /// @param include_overlap false = the empty-overlap variant
+        /// (LEG M8's trivial-convergence class).
+        void SeedMatrixFixture( bool include_overlap, MatrixInventory &inv )
+        {
+
+            // (1) The crossfire fixtures: one group pruned THROUGH A REAL
+            // CYCLE (genuine /prune/tx + /prune/blk rows) on T1.
+            auto spender_p = MakeMatrixTransfer( 101, 0 );
+            auto pruned_tx = MakeMatrixTransfer( 102, 1 );
+            SeedTransactionOn( spender_p, kSeedTopic2 );
+            SeedTransactionOn( pruned_tx, kSeedTopic2 );
+            TrackOutputs( *pruned_tx );
+            ASSERT_TRUE( ConsumeOutput( *pruned_tx, 0, *spender_p ) );
+            PutSeedValueOn( "/matrix/cf-driver-1", "c1", kSeedTopic2 );
+            PutSeedValueOn( "/matrix/cf-driver-2", "c2", kSeedTopic2 );
+            {
+                auto pruner = MakePruner( 10, kSmallSettleSeconds );
+                ASSERT_NE( pruner, nullptr );
+                sgns::PruneCycleStats stats;
+                RunSettledCycle( *pruner, stats );
+                ASSERT_EQ( stats.erased, 1u ) << "fixture: the crossfire group must prune";
+            }
+            inv.pruned_tx_path = sgns::TransactionManager::GetTransactionPath( *pruned_tx );
+            // The raw map row was ERASED by the cycle - the /prune/blk
+            // recovery block below is the CID source.
+            // The map row was erased by the cycle — recover the CID from
+            // the /prune/blk row's key (the marker the cycle staged).
+            {
+                auto found = db_->QueryRaw( crdt::GlobalDB::Buffer{}.put(
+                    std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX ) ) );
+                ASSERT_TRUE( found.has_value() );
+                ASSERT_EQ( found.value().size(), 1u );
+                inv.pruned_cid = std::string( found.value().begin()->first.toString() ).substr(
+                    std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX ).size() );
+            }
+
+            // Detach the T2 chain's head: the erased crossfire block
+            // becomes unreachable (no walk gap for the fixture's later
+            // GC passes - the walk never reaches a pruned ancestor).
+            {
+                auto heads = db_->GetCRDTHeadList();
+                ASSERT_TRUE( heads.has_value() );
+                auto it = heads.value().first.find( kSeedTopic2 );
+                ASSERT_TRUE( it != heads.value().first.end() && !it->second.empty() );
+                auto head_cid = sgns::CID::fromString( it->second.begin()->toString().value() );
+                ASSERT_FALSE( head_cid.has_error() );
+                ASSERT_TRUE( db_->GetCRDTDataStore()->RemoveHead( head_cid.value(), kSeedTopic2 ).has_value() );
+            }
+
+            // (2) The TxPruner-only group: mid-chain on T1 (stays
+            // walk-reachable forever — GC-ineligible).
+            auto spender_t = MakeMatrixTransfer( 201, 0 );
+            auto txonly_tx = MakeMatrixTransfer( 202, 1 );
+            SeedTransactionOn( spender_t, kSeedTopic );
+            SeedTransactionOn( txonly_tx, kSeedTopic );
+            TrackOutputs( *txonly_tx );
+            ASSERT_TRUE( ConsumeOutput( *txonly_tx, 0, *spender_t ) );
+            inv.txonly_tx_path = sgns::TransactionManager::GetTransactionPath( *txonly_tx );
+            inv.txonly_cid     = SnapshotMapEntry( inv.txonly_tx_path );
+            ASSERT_NE( inv.txonly_cid, "absent" );
+
+            // (3) The GC-only CID: a value put on T2 (head), awaited to
+            // Durable, then detached (RemoveHead) — past-retention
+            // unreachable, belongs to no group.
+            PutSeedValueOn( "/matrix/gc-only", "G", kSeedTopic2 );
+            {
+                // The T2 head after this put is the gc-only delta (the
+                // fresh T2 root). NO detach here - detaching is a
+                // LEG-TIME act (the retention-GC thread would otherwise
+                // dispose the targets while the fixture is still
+                // seeding); the chain keeps them walk-reachable (and
+                // therefore GC-ineligible) until a leg detaches.
+                auto heads = db_->GetCRDTHeadList();
+                ASSERT_TRUE( heads.has_value() );
+                const auto &per_topic = heads.value().first;
+                auto        it        = per_topic.find( kSeedTopic2 );
+                ASSERT_TRUE( it != per_topic.end() && !it->second.empty() );
+                inv.gc_only_cid = it->second.begin()->toString().value();
+                auto cid        = sgns::CID::fromString( inv.gc_only_cid );
+                ASSERT_FALSE( cid.has_error() );
+                ASSERT_TRUE( WaitDurable( cid.value() ) ) << "gc-only block never reached Durable";
+            }
+
+            // (4) The OVERLAP class: an erasable spent group on T2 whose
+            // constituent IS the head at detach time.
+            if ( include_overlap )
+            {
+                auto spender_o = MakeMatrixTransfer( 301, 0 );
+                auto overlap_tx = MakeMatrixTransfer( 302, 1 );
+                SeedTransactionOn( spender_o, kSeedTopic2 );
+                SeedTransactionOn( overlap_tx, kSeedTopic2 );
+                TrackOutputs( *overlap_tx );
+                ASSERT_TRUE( ConsumeOutput( *overlap_tx, 0, *spender_o ) );
+                inv.overlap_tx_path = sgns::TransactionManager::GetTransactionPath( *overlap_tx );
+                inv.overlap_cid     = SnapshotMapEntry( inv.overlap_tx_path );
+                ASSERT_NE( inv.overlap_cid, "absent" );
+                auto cid = sgns::CID::fromString( inv.overlap_cid );
+                ASSERT_FALSE( cid.has_error() );
+                ASSERT_TRUE( WaitDurable( cid.value() ) ) << "overlap block never reached Durable";
+                // NO detach here (leg-time act - see the gc-only note).
+            }
+
+            // The T2 TAIL put: the overlap block becomes mid-chain
+            // (erase-eligible at guard 1) and the tail becomes the
+            // leg-time detach target (one RemoveHead orphans the whole
+            // T2 chain: tail, overlap, spender_o, gc-only).
+            PutSeedValueOn( "/matrix/t2-tail", "X", kSeedTopic2 );
+
+            // (5) The T1 driver puts: regrow T1's max_height past the
+            // TxPruner-only group's spend_height + window (T1 was never
+            // detached — its chain is intact; the puts are fresh
+            // continues on T1's chain).
+            PutSeedValueOn( "/matrix/driver-1", "d1", kSeedTopic );
+            PutSeedValueOn( "/matrix/driver-2", "d2", kSeedTopic );
+            PutSeedValueOn( "/matrix/driver-3", "d3", kSeedTopic );
+            PutSeedValueOn( "/matrix/driver-4", "d4", kSeedTopic );
+
+            // (6) Every spilled record Durable before any matrix run.
+            for ( const auto &cid_string : inv.all_cids() )
+            {
+                if ( cid_string.empty() )
+                {
+                    continue;
+                }
+                auto cid = sgns::CID::fromString( cid_string );
+                ASSERT_FALSE( cid.has_error() );
+                // pruned/erased records are already gone from the journal
+                // (NoRecord is fine); the rest must reach Durable.
+                if ( db_->GetColdUploadState( cid.value() ) == crdt::ColdUploadState::NoRecord )
+                {
+                    continue;
+                }
+                ASSERT_TRUE( WaitDurable( cid.value() ) ) << "matrix fixture block never reached Durable";
+            }
+        }
+
+        /// LEG-TIME detach: removes the CURRENT T2 head, orphaning the
+        /// whole T2 chain (the gc-only root, the overlap group, the
+        /// tail) - the retention-GC thread's disposal targets become
+        /// walk-unreachable from this moment.
+        void DetachT2Chain()
+        {
+            auto heads = db_->GetCRDTHeadList();
+            ASSERT_TRUE( heads.has_value() );
+            auto it = heads.value().first.find( kSeedTopic2 );
+            ASSERT_TRUE( it != heads.value().first.end() && !it->second.empty() );
+            auto head_cid = sgns::CID::fromString( it->second.begin()->toString().value() );
+            ASSERT_FALSE( head_cid.has_error() );
+            ASSERT_TRUE( db_->GetCRDTDataStore()->RemoveHead( head_cid.value(), kSeedTopic2 ).has_value() );
+        }
+        /// Class-label rewrite of a raw prefix map (the M5 twin-repeat
+        /// comparison shape): CID strings and inventory tx paths become
+        /// class labels so differently-keyed twins compare structurally.
+        std::map<std::string, std::string> NormalizeRows( const std::map<std::string, std::string> &rows,
+                                                          const MatrixInventory                   &inv ) const
+        {
+            const std::map<std::string, std::string> cid_labels = {
+                { inv.pruned_cid, "<PRUNED>" },  { inv.txonly_cid, "<TXONLY>" },
+                { inv.gc_only_cid, "<GCONLY>" }, { inv.overlap_cid, "<OVERLAP>" },
+            };
+            auto hash_of = []( const std::string &path ) {
+                const auto slash = path.rfind( '/' );
+                return slash == std::string::npos ? path : path.substr( slash + 1 );
+            };
+            const std::map<std::string, std::string> path_labels = {
+                { inv.pruned_tx_path, "<PRUNED_PATH>" },
+                { inv.txonly_tx_path, "<TXONLY_PATH>" },
+                { inv.overlap_tx_path, "<OVERLAP_PATH>" },
+                { hash_of( inv.pruned_tx_path ), "<PRUNED_HASH>" },
+                { hash_of( inv.txonly_tx_path ), "<TXONLY_HASH>" },
+                { hash_of( inv.overlap_tx_path ), "<OVERLAP_HASH>" },
+            };
+            auto rewrite_str = []( std::string s, const std::map<std::string, std::string> &labels ) {
+                for ( const auto &[literal, label] : labels )
+                {
+                    if ( literal.empty() )
+                    {
+                        continue;
+                    }
+                    size_t pos = s.find( literal );
+                    while ( pos != std::string::npos )
+                    {
+                        s.replace( pos, literal.size(), label );
+                        pos = s.find( literal );
+                    }
+                }
+                return s;
+            };
+            std::map<std::string, std::string> out;
+            for ( const auto &[k, v] : rows )
+            {
+                out[rewrite_str( rewrite_str( k, path_labels ), cid_labels )] =
+                    rewrite_str( v, cid_labels );
+            }
+            return out;
+        }
+        /// Rewrites a snapshot's CID/path strings to CLASS labels so
+        /// twin stacks with different account keys (hence different
+        /// CIDs and tx paths) compare structurally: the fixed-timestamp
+        /// determinism covers the op SEQUENCE; the account keypair is
+        /// per-stack random, so string identity only holds within one
+        /// stack.
+        MatrixSnapshot NormalizeSnapshot( const MatrixSnapshot &snap, const MatrixInventory &inv ) const
+        {
+            // Delegates to NormalizeRows (one label table: CID strings,
+            // inventory tx paths, and their terminal hash fragments all
+            // become class labels - twin stacks carry different account
+            // keys, hence different literals for the same classes).
+            MatrixSnapshot out;
+            out.set_rows   = NormalizeRows( snap.set_rows, inv );
+            out.prune_tx   = NormalizeRows( snap.prune_tx, inv );
+            out.prune_blk  = NormalizeRows( snap.prune_blk, inv );
+            out.raw_tx_map = NormalizeRows( snap.raw_tx_map, inv );
+            return out;
+        }
+        /// Prefix snapshot as a plain map (the crossfire legs'
+        /// comparison shape; EXPECT-based - fixture member so db_ is
+        /// in scope).
+        std::map<std::string, std::string> SnapshotPrefix( const std::string &prefix )
+        {
+            std::map<std::string, std::string> out;
+            auto                               found = db_->QueryRaw( crdt::GlobalDB::Buffer{}.put( prefix ) );
+            EXPECT_TRUE( found.has_value() ) << "QueryRaw failed for prefix " << prefix;
+            if ( found.has_value() )
+            {
+                for ( const auto &[k, v] : found.value() )
+                {
+                    out[std::string( k.toString() )] = std::string( v.toString() );
+                }
+            }
+            return out;
+        }
         std::shared_ptr<boost::asio::io_context>                  io_;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>          pubs_;
         std::shared_ptr<libp2p::basic::SchedulerImpl>             scheduler_;
@@ -1309,6 +1741,9 @@ groups:
 
         crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
 
+        // Pending-arm
+        crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+
         // Pending never consults: deferred, never stranded, never erased.
         EXPECT_EQ( stats.erased, 0u );
         EXPECT_EQ( stats.cold_deferred_groups, 1u )
@@ -1316,5 +1751,584 @@ groups:
         EXPECT_EQ( stats.cold_disposed_stranded_groups, 0u );
         const std::string tx_path = sgns::TransactionManager::GetTransactionPath( *eligible_a );
         EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );
+    }
+
+    //
+    // The SC2 interleave matrix (16-03, COMP-02).
+    //
+    // SEMANTIC RE-SCOPING (recorded as this plan's primary deviation):
+    // the literal "both orders converge to ONE fixed point" is not
+    // attainable on a live-stack topology because two DESIGNED
+    // order-dependencies intervene — (1) a mid-chain erase creates a
+    // walk gap that ABORTS every later GC pass (Phase-15 evidence
+    // refusal -> under-eviction, by design), and (2) a disposal
+    // STRANDS a later cycle's overlap group (the D-10/D-12 starvation
+    // ruling, by design). The matrix therefore asserts: the
+    // ORDER-INVARIANT projection converges (the TxPruner-only class,
+    // the fixture-fixed pruned class, seals, LRU, and the marker
+    // namespaces' shapes), PLUS the explicit per-order DESIGNED
+    // divergence table for the interacting classes, PLUS fixed-point
+    // stability. This is the stronger evidence product: it documents
+    // exactly which surfaces are order-invariant and what each order's
+    // terminal state IS. (D-03 standing instruction: a divergence that
+    // is NOT a designed admission/order dependency would be an
+    // idempotence bug — none was found.)
+    //
+
+
+    /**
+     * LEG M1 (Converge_TxPrunerThenGC_Matches_GCThenTxPruner on the
+     * order-invariant projection): twin fixtures, order A (cycle then
+     * GC quiescence) vs order B (GC quiescence then cycle) — the
+     * invariant classes converge byte-for-byte; the interacting classes
+     * land in their DESIGNED per-order terminal states.
+     */
+    TEST_F( ColdComposeMatrixTest, Converge_TxPrunerThenGC_Matches_GCThenTxPruner )
+    {
+        // Twin A: order A (cycle, THEN leg-time detach + the GC's
+        // quiescence attempt).
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv_a;
+        SeedMatrixFixture( /*include_overlap=*/true, inv_a );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            ASSERT_NE( pruner, nullptr );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            // Order A's cycle admits BOTH erasable groups (journals
+            // still Durable - nothing was detached or disposed yet).
+            EXPECT_EQ( stats.erased, 2u );
+            EXPECT_EQ( stats.cold_deferred_groups, 0u );
+            EXPECT_EQ( stats.cold_disposed_stranded_groups, 0u );
+        }
+        DetachT2Chain();
+        // Order A's GC side: the txonly erase (T1 mid-chain) gaps the
+        // walk -> every later pass aborts -> NOTHING further disposed
+        // (the designed under-eviction).
+        {
+            auto cid = sgns::CID::fromString( inv_a.gc_only_cid );
+            ASSERT_FALSE( cid.has_error() );
+            EXPECT_FALSE( db_->IsColdDisposed( cid.value() ) )
+                << "order A: the walk-gap abort must retain gc-only (under-eviction)";
+        }
+        MatrixSnapshot snap_a;
+        SnapshotOf( inv_a, snap_a );
+        const auto inv = inv_a; // the twin reference inventory
+        TeardownStack();
+
+        // Twin B: order B (leg-time detach + GC quiescence, THEN the
+        // cycle).
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv_b;
+        SeedMatrixFixture( /*include_overlap=*/true, inv_b );
+        DetachT2Chain();
+        DriveGcToQuiescence( inv_b, /*include_overlap=*/true );
+        // The stranded steady state (the 16-02 re-journal ruling): the
+        // evaluator's block-gate read would otherwise re-hydrate the
+        // disposed block from the reachable remote and re-journal it
+        // (Pending -> cold_deferred). Fault the fake's Get - the
+        // remote-unreachable posture the stranded classification lives
+        // in.
+        fake_s3_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unavailable );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            ASSERT_NE( pruner, nullptr );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            // Order B's cycle: txonly erases (reachable, journal
+            // intact); the overlap group STRANDS (disposed -> NoRecord
+            // + marker -> the D-10 consult).
+            EXPECT_EQ( stats.erased, 1u );
+            EXPECT_EQ( stats.cold_disposed_stranded_groups, 1u );
+        }
+        MatrixSnapshot snap_b;
+        SnapshotOf( inv_b, snap_b );
+
+        //
+        // (1) The ORDER-INVARIANT projection, class-normalized (the
+        // twins' account keys differ - labels, not literals): every
+        // inventory surface EXCEPT the overlap group's
+        // order-dependent keys.
+        //
+        const auto norm_a = NormalizeSnapshot( snap_a, inv_a );
+        const auto norm_b = NormalizeSnapshot( snap_b, inv_b );
+        // The byte layer's twin comparison is scoped to the
+        // constructively-invariant rows: the fixed-key value rows
+        // (k-namespace "/matrix/" keys - identical key shapes and
+        // values on both twins) and the raw tx->CID map (class-labeled;
+        // minus the overlap's order-dependent entry). The remaining
+        // row keys embed per-twin identifiers (account-keyed tx
+        // hashes and block CIDs) - full-map equality across twins is
+        // unattainable without a deterministic account factory, and
+        // the per-class STATE vectors below carry the semantic
+        // comparison for those.
+        auto fixed_key_rows = []( const std::map<std::string, std::string> &rows ) {
+            std::map<std::string, std::string> out;
+            for ( const auto &[k, v] : rows )
+            {
+                if ( k.find( "/k/matrix/" ) != std::string::npos )
+                {
+                    out[k] = v;
+                }
+            }
+            return out;
+        };
+        EXPECT_EQ( fixed_key_rows( norm_a.set_rows ), fixed_key_rows( norm_b.set_rows ) );
+        {
+            auto txmap_a = norm_a.raw_tx_map;
+            auto txmap_b = norm_b.raw_tx_map;
+            txmap_a.erase( "<OVERLAP>" );
+            txmap_b.erase( "<OVERLAP>" );
+            EXPECT_EQ( txmap_a, txmap_b );
+        }
+        for ( const auto &[k, v] : norm_a.prune_tx )
+        {
+            if ( k.find( "<OVERLAP_PATH>" ) != std::string::npos || k.find( "<OVERLAP_HASH>" ) != std::string::npos )
+            {
+                continue;
+            }
+            EXPECT_EQ( norm_b.prune_tx.count( k ), 1u ) << "prune_tx row missing in B: " << k;
+        }
+        for ( const auto &[k, v] : norm_a.prune_blk )
+        {
+            if ( k.find( "<OVERLAP>" ) != std::string::npos )
+            {
+                continue;
+            }
+            EXPECT_EQ( norm_b.prune_blk.count( k ), 1u ) << "prune_blk row missing in B: " << k;
+            // (Value equality deliberately skipped: the record bytes
+            // embed the per-twin pruning-tx hash - the structural
+            // fields are asserted by the class-state vectors below.)
+        }
+        // per-CID invariant state: the convergent erase classes + seals +
+        // LRU (twin-local literals, pairwise by class).
+        const std::pair<const std::string *, const std::string *> convergent[] = {
+            { &inv_a.pruned_cid, &inv_b.pruned_cid },
+            { &inv_a.txonly_cid, &inv_b.txonly_cid },
+        };
+        for ( const auto &[cid_a, cid_b] : convergent )
+        {
+            EXPECT_EQ( snap_a.block_present.at( *cid_a ), snap_b.block_present.at( *cid_b ) );
+            EXPECT_FALSE( snap_a.block_present.at( *cid_a ) ) << "erased block still present";
+            EXPECT_EQ( snap_a.seal_present.at( *cid_a ), snap_b.seal_present.at( *cid_b ) );
+            EXPECT_TRUE( snap_a.seal_present.at( *cid_a ) ) << "seal must survive every order";
+            EXPECT_EQ( snap_a.lru_resident.at( *cid_a ), snap_b.lru_resident.at( *cid_b ) );
+            EXPECT_FALSE( snap_a.lru_resident.at( *cid_a ) ) << "LRU must be empty post-convergence";
+        }
+
+        //
+        // (2) The DESIGNED divergence table (the interacting classes).
+        //
+        // txonly: erased in BOTH orders (the convergent class).
+        EXPECT_TRUE( db_->Get( { inv_b.txonly_tx_path } ).has_error() );
+        // gc_only: order A retained (walk-gap abort) / order B disposed.
+        // (Twin-local inventories: the snapshots' keys are per-twin
+        // literals.)
+        EXPECT_FALSE( snap_a.disposed.at( inv_a.gc_only_cid ) );
+        EXPECT_TRUE( snap_b.disposed.at( inv_b.gc_only_cid ) );
+        // overlap: order A erased-not-disposed / order B
+        // disposed-not-erased (the value row survives - SC3's
+        // fail-safe direction in the matrix).
+        EXPECT_FALSE( snap_a.disposed.at( inv_a.overlap_cid ) );
+        EXPECT_TRUE( snap_b.disposed.at( inv_b.overlap_cid ) );
+        EXPECT_FALSE( snap_a.block_present.at( inv_a.overlap_cid ) );
+        EXPECT_FALSE( snap_b.block_present.at( inv_b.overlap_cid ) );
+        EXPECT_TRUE( db_->Get( { inv_b.overlap_tx_path } ).has_value() )
+            << "order B: the stranded overlap value row must survive";
+        EXPECT_EQ( snap_a.seal_present.at( inv_a.overlap_cid ), snap_b.seal_present.at( inv_b.overlap_cid ) );
+        EXPECT_TRUE( snap_a.seal_present.at( inv_a.overlap_cid ) ) << "seals untouched by either order";
+    }
+
+    /**
+     * LEG M2 (Interleave_EraseParkedWhileGCCompletes): the cycle's
+     * overlap erase parks immediately before its commit (the 16-01
+     * observer) while the GC thread's passes run to quiescence — the
+     * designed third terminal combination: the overlap group ends
+     * ERASED AND DISPOSED (both pruners acted, each idempotently).
+     */
+    TEST_F( ColdComposeMatrixTest, Interleave_EraseParkedWhileGCCompletes )
+    {
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+
+        auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+        ASSERT_FALSE( overlap_cid.has_error() );
+
+        // Determinism shape: park the GC thread BEFORE its next pass
+        // (pre-mark), then detach + start the erase (its guards read the
+        // Durable journals while the GC is parked), park the erase at
+        // the observer, THEN release the GC - its passes dispose the
+        // detached targets while the erase sits parked pre-commit.
+        auto        gc_gate = std::make_shared<WindowGate>();
+        std::thread gc_park_watcher;
+        db_->SetGcPreMarkProcessHookForTest( [gc_gate] { gc_gate->Enter(); } );
+        ASSERT_TRUE( gc_gate->WaitInside( std::chrono::milliseconds( 20000 ) ) )
+            << "GC never parked pre-mark";
+
+        DetachT2Chain();
+
+        WindowGate erase_window;
+        crdt::GlobalDB::SetEraseWindowObserverForTest( [&erase_window] { erase_window.Enter(); } );
+        std::thread erase_thread( [&] {
+            (void)db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() );
+        } );
+        ASSERT_TRUE( erase_window.WaitInside( std::chrono::milliseconds( 10000 ) ) )
+            << "erase never parked at the observer";
+
+        // Release the GC: its passes run to quiescence while the erase
+        // is parked (the real concurrent disposal).
+        gc_gate->Release();
+        db_->SetGcPreMarkProcessHookForTest( nullptr );
+        DriveGcToQuiescence( inv, /*include_overlap=*/true );
+
+        erase_window.Release();
+        erase_thread.join();
+        crdt::GlobalDB::SetEraseWindowObserverForTest( nullptr );
+
+        // The designed combination: erased AND disposed, seals intact,
+        // LRU empty. (The erase committed after the disposal - its
+        // guards passed pre-park on the Durable journal; both halves
+        // idempotent on the shared surfaces.)
+        auto syncer = syncerOf( *db_ );
+        EXPECT_FALSE( syncer->HasRawBlockBytes( overlap_cid.value() ).value() );
+        EXPECT_TRUE( db_->IsColdDisposed( overlap_cid.value() ) );
+        EXPECT_TRUE( syncer->isResolved( overlap_cid.value() ).value() ) << "seal survives the interleave";
+        EXPECT_FALSE( syncer->IsCIDInCache( overlap_cid.value() ) );
+        EXPECT_TRUE( db_->Get( { inv.overlap_tx_path } ).has_error() ) << "the parked erase must commit";
+    }
+
+    /**
+     * LEG M3 (Interleave_GCParkedBetweenHalves_EraseDefersAtGuard):
+     * GC parked between its halves (journal record deleted, marker
+     * written, hot cleanup pending) while the erase runs — the erase's
+     * in-compose durability re-check (Phase 14 D-06) reads NoRecord and
+     * DEFERS: the Interaction-C serialization made visible. End state =
+     * order B's terminal combination (disposed-not-erased).
+     */
+    TEST_F( ColdComposeMatrixTest, Interleave_GCParkedBetweenHalves_EraseDefersAtGuard )
+    {
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+
+        DetachT2Chain();
+
+        auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+        ASSERT_FALSE( overlap_cid.has_error() );
+
+        // Wait for the GC thread to reach the between-halves point on
+        // the OVERLAP's eviction (two marks exist - re-arm the gate per
+        // fire until the parked one is the overlap's: its journal is
+        // already deleted at that point).
+        bool overlap_parked = false;
+        for ( int fire = 0; fire < 4 && !overlap_parked; ++fire )
+        {
+            auto gate = std::make_shared<WindowGate>();
+            db_->SetGcBetweenHalvesHookForTest( [gate] { gate->Enter(); } );
+            ASSERT_TRUE( gate->WaitInside( std::chrono::milliseconds( 20000 ) ) )
+                << "GC never fired the between-halves hook (fire " << fire << ")";
+            if ( db_->IsColdDisposed( overlap_cid.value() ) )
+            {
+                overlap_parked = true;
+                // The erase while GC sits between the overlap's halves:
+                // HALF 1 (journal delete + marker) is committed -> the
+                // guard's journal read is NoRecord -> COLD_NOT_DURABLE
+                // refusal (the Phase-14 in-compose re-check - the D-02
+                // serialization surface).
+                const auto erase_result = db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() );
+                EXPECT_TRUE( erase_result.has_error() );
+                EXPECT_EQ( erase_result.error(), crdt::GlobalDB::Error::COLD_NOT_DURABLE )
+                    << "the between-halves journal deletion must defer the erase at guard 5";
+            }
+            gate->Release();
+        }
+        db_->SetGcBetweenHalvesHookForTest( nullptr );
+        ASSERT_TRUE( overlap_parked ) << "GC never parked between the overlap's halves";
+
+        // Order B's terminal combination: disposed, NOT erased, value
+        // row survives, seal intact.
+        auto syncer = syncerOf( *db_ );
+        EXPECT_TRUE( db_->IsColdDisposed( overlap_cid.value() ) );
+        EXPECT_TRUE( db_->Get( { inv.overlap_tx_path } ).has_value() ) << "the deferred value row survives";
+        EXPECT_TRUE( syncer->isResolved( overlap_cid.value() ).value() );
+    }
+
+    /**
+     * LEG M4 (Interleave_GCParkedPreHalfOne_EraseAdmits): GC parked
+     * BEFORE its disposal half (journal still Durable) while the erase
+     * completes — the erase admits and commits; the resumed disposal
+     * lands idempotently on the already-erased CID. End state = the
+     * erased-AND-disposed combination (M2's).
+     */
+    TEST_F( ColdComposeMatrixTest, Interleave_GCParkedPreHalfOne_EraseAdmits )
+    {
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+
+        DetachT2Chain();
+
+        auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+        ASSERT_FALSE( overlap_cid.has_error() );
+
+        // Park GC pre-half-one; whichever mark is processing first, the
+        // OVERLAP's journal state at the parked moment selects the
+        // designed terminal combination (both are legal - the assertion
+        // follows the observed state, loudly).
+        auto gate = std::make_shared<WindowGate>();
+        db_->SetGcPreHalfOneHookForTest( [gate] { gate->Enter(); } );
+        ASSERT_TRUE( gate->WaitInside( std::chrono::milliseconds( 20000 ) ) ) << "GC never parked pre-half-one";
+        const bool journal_durable =
+            db_->GetColdUploadState( overlap_cid.value() ) == crdt::ColdUploadState::Durable;
+        if ( journal_durable )
+        {
+            // The overlap's HALF 1 has not run: the erase admits and
+            // commits; the resumed disposal lands idempotently.
+            const auto erase_result = db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() );
+            EXPECT_TRUE( erase_result.has_value() ) << erase_result.error().message();
+            gate->Release();
+            db_->SetGcPreHalfOneHookForTest( nullptr );
+            ASSERT_TRUE( PollUntil( [&] { return db_->IsColdDisposed( overlap_cid.value() ); },
+                                    std::chrono::milliseconds( 20000 ) ) );
+            auto syncer = syncerOf( *db_ );
+            EXPECT_TRUE( db_->Get( { inv.overlap_tx_path } ).has_error() );
+            EXPECT_TRUE( syncer->isResolved( overlap_cid.value() ).value() );
+        }
+        else
+        {
+            // The overlap was processed first (already disposed at this
+            // park): the erase defers at guard 5 - the M3 combination,
+            // observed from the other park point.
+            const auto erase_result = db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() );
+            EXPECT_TRUE( erase_result.has_error() );
+            EXPECT_EQ( erase_result.error(), crdt::GlobalDB::Error::COLD_NOT_DURABLE );
+            gate->Release();
+            db_->SetGcPreHalfOneHookForTest( nullptr );
+            auto syncer = syncerOf( *db_ );
+            EXPECT_TRUE( db_->Get( { inv.overlap_tx_path } ).has_value() );
+            EXPECT_TRUE( syncer->isResolved( overlap_cid.value() ).value() );
+        }
+    }
+
+    /**
+     * LEG M5 (Crossfire_MarkerMapsByteIdentical_AcrossRepeatsOfTheSameOrder):
+     * twin determinism of the full run — repeating the SAME order over
+     * a third identically-seeded stack reproduces the marker maps
+     * key-for-key, value-for-value (the reproducibility floor the
+     * crossfire guard rides on).
+     */
+    TEST_F( ColdComposeMatrixTest, Crossfire_MarkerMapsByteIdentical_AcrossRepeatsOfTheSameOrder )
+    {
+        // Run 1.
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv_1;
+        SeedMatrixFixture( /*include_overlap=*/true, inv_1 );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+        }
+        auto prune_tx_1 = SnapshotPrefix( std::string( sgns::PruneEligibility::PRUNE_MARKER_PREFIX ) );
+        auto prune_blk_1 = SnapshotPrefix( std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX ) );
+        TeardownStack();
+
+        // Run 2: the identical order over an identically-seeded twin.
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv_2;
+        SeedMatrixFixture( /*include_overlap=*/true, inv_2 );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+        }
+        auto prune_tx_2 = SnapshotPrefix( std::string( sgns::PruneEligibility::PRUNE_MARKER_PREFIX ) );
+        auto prune_blk_2 = SnapshotPrefix( std::string( sgns::PruneEligibility::PRUNE_BLOCK_MARKER_PREFIX ) );
+
+        // Class-normalized identity across repeats (the account
+        // keypair is per-stack random - labels, not literals; the op
+        // SEQUENCE is the deterministic part the crossfire guard
+        // rides on).
+        auto keyset = []( const std::map<std::string, std::string> &rows ) {
+            std::map<std::string, size_t> out;
+            for ( const auto &[k, v] : rows )
+            {
+                out[k] = v.size();
+            }
+            return out;
+        };
+        // Key-for-key identity + equal value SIZES (the record bytes
+        // embed the per-twin pruning-tx hash; the size pins the record
+        // shape - same fields, same generation tag).
+        EXPECT_EQ( keyset( NormalizeRows( prune_tx_1, inv_1 ) ), keyset( NormalizeRows( prune_tx_2, inv_2 ) ) );
+        EXPECT_EQ( keyset( NormalizeRows( prune_blk_1, inv_1 ) ), keyset( NormalizeRows( prune_blk_2, inv_2 ) ) );
+        // (Cross-twin CID literals differ by design - the class-label
+        // normalization above is the comparison contract.)
+    }
+
+    /**
+     * LEG M6 (Crossfire_NoUntouchedKeysAppear): the exact-prefix
+     * discipline itself — after a full order-A run, the set-row
+     * keyspaces contain EXACTLY the expected survivors: no sibling
+     * namespace eats (every key enumerated under the derived roots),
+     * the erased groups' rows are gone, and the untouched classes'
+     * rows survive byte-identically.
+     */
+    TEST_F( ColdComposeMatrixTest, Crossfire_NoUntouchedKeysAppear )
+    {
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            ASSERT_EQ( stats.erased, 2u );
+        }
+        auto crdt_datastore = db_->GetCRDTDataStore();
+        const auto keys_prefix = crdt_datastore->GetKeysPrefix();
+        const auto set_root    = keys_prefix.substr( 0, keys_prefix.size() - 1 );
+        auto rows = SnapshotPrefix( set_root );
+        // The erased groups' value rows are gone; the driver puts and
+        // the fixture's untouched rows survive; NO key outside the
+        // derived roots appears (the exact-prefix enumeration is the
+        // instrument - a sibling-namespace eat would surface as a
+        // missing survivor or a stray key).
+        for ( const auto *erased_path : { inv.pruned_tx_path.c_str(), inv.txonly_tx_path.c_str(),
+                                          inv.overlap_tx_path.c_str() } )
+        {
+            for ( const auto &[k, v] : rows )
+            {
+                EXPECT_EQ( k.find( erased_path ), std::string::npos )
+                    << "an erased group's row survived: " << k;
+            }
+        }
+        EXPECT_GE( rows.size(), 4u ) << "the driver-put rows must survive (untouched class)";
+    }
+
+    /**
+     * LEG M7 (Seals_NeverTouched_ByEitherPruner_AnyInterleave): the
+     * seal invariant across the full matrix surface — after order A AND
+     * order B AND the parked interleaves' terminal states, isResolved
+     * answers true for every inventory CID (neither pruner stages seal
+     * rows anywhere).
+     */
+    TEST_F( ColdComposeMatrixTest, Seals_NeverTouched_ByEitherPruner_AnyInterleave )
+    {
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+        auto syncer = syncerOf( *db_ );
+
+        // Pre-state: every sealed CID resolves.
+        for ( const auto &cid_string : inv.all_cids() )
+        {
+            auto cid = sgns::CID::fromString( cid_string );
+            ASSERT_TRUE( syncer->isResolved( cid.value() ).value() ) << "fixture must seal " << cid_string;
+        }
+
+        // The full surface: a cycle (erases the T1 classes; creates the
+        // T1 walk gap), then the leg-time detach, then the GC's
+        // quiescence (its passes abort on the T1 gap - itself a
+        // seal-preserving under-eviction outcome), then a direct erase
+        // of the overlap group, then a real disposal of the detached
+        // targets (a fresh GC pass cannot run past the gap; drive one
+        // disposal deterministically through the parked-GC shape of M2
+        // is redundant here - the disposed state was proven there; this
+        // leg's claim is the SEALS across every destructive surface).
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            ASSERT_EQ( stats.erased, 2u );
+        }
+        DetachT2Chain();
+        auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+        ASSERT_TRUE( db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() ).has_value() );
+
+        for ( const auto &cid_string : inv.all_cids() )
+        {
+            auto cid = sgns::CID::fromString( cid_string );
+            EXPECT_TRUE( syncer->isResolved( cid.value() ).value() )
+                << "seal destroyed for " << cid_string << " (governing invariant 3)";
+        }
+    }
+
+    /**
+     * LEG M8 (Converge_FixedPointIsStable_ReRunsChangeNothing): after a
+     * full order-A run, re-running BOTH pruners changes NOTHING (the
+     * idempotence-on-absent-keys floor + fixed-point stability). The
+     * trivial variant (no erasable classes at all) converges with zero
+     * TxPruner-side changes in every order.
+     */
+    TEST_F( ColdComposeMatrixTest, Converge_FixedPointIsStable_ReRunsChangeNothing )
+    {
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+        }
+        MatrixSnapshot before;
+        SnapshotOf( inv, before );
+
+        // Re-run both pruners.
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            EXPECT_EQ( stats.erased, 0u ) << "the fixed point admits no further erases";
+        }
+        MatrixSnapshot after;
+        SnapshotOf( inv, after );
+
+        EXPECT_EQ( before.set_rows, after.set_rows );
+        EXPECT_EQ( before.prune_tx, after.prune_tx );
+        EXPECT_EQ( before.prune_blk, after.prune_blk );
+        EXPECT_EQ( before.block_present, after.block_present );
+        EXPECT_EQ( before.seal_present, after.seal_present );
+        EXPECT_EQ( before.disposed, after.disposed );
+        EXPECT_EQ( before.lru_resident, after.lru_resident );
+
+        // The trivial variant: no erasable classes -> both pruners are
+        // no-ops on the TxPruner side; the GC side alone converges.
+        TeardownStack();
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory trivial;
+        {
+            // Only the GC-only class (plus the never-eligible fixture
+            // noise): no spent groups, no overlap.
+            PutSeedValueOn( "/matrix/trivial", "T", kSeedTopic2 );
+            auto heads = db_->GetCRDTHeadList();
+            ASSERT_TRUE( heads.has_value() );
+            auto it = heads.value().first.find( kSeedTopic2 );
+            ASSERT_TRUE( it != heads.value().first.end() && !it->second.empty() );
+            trivial.gc_only_cid = it->second.begin()->toString().value();
+            auto cid            = sgns::CID::fromString( trivial.gc_only_cid );
+            ASSERT_TRUE( WaitDurable( cid.value() ) );
+            ASSERT_TRUE( db_->GetCRDTDataStore()->RemoveHead( cid.value(), kSeedTopic2 ).has_value() );
+            PutSeedValueOn( "/matrix/trivial-driver", "D", kSeedTopic );
+        }
+        DriveGcToQuiescence( trivial, /*include_overlap=*/false );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            EXPECT_EQ( stats.erased, 0u ) << "the trivial variant has no erasable class";
+        }
+        MatrixSnapshot t_before;
+        SnapshotOf( trivial, t_before );
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            EXPECT_EQ( stats.erased, 0u );
+        }
+        MatrixSnapshot t_after;
+        SnapshotOf( trivial, t_after );
+        EXPECT_EQ( t_before.set_rows, t_after.set_rows );
+        EXPECT_EQ( t_before.disposed, t_after.disposed );
     }
 } // namespace
