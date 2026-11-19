@@ -62,6 +62,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -70,6 +71,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <random>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -2330,5 +2332,294 @@ groups:
         SnapshotOf( trivial, t_after );
         EXPECT_EQ( t_before.set_rows, t_after.set_rows );
         EXPECT_EQ( t_before.disposed, t_after.disposed );
+    }
+
+    /// The seeded-jitter knobs (env-overridable, printed on failure):
+    /// SGNS_COMPOSE_RACE_JITTER_SEED (0 = time-seeded),
+    /// SGNS_COMPOSE_RACE_JITTER_ITERS (default 3).
+    struct ComposeJitter
+    {
+        uint64_t    seed;
+        uint64_t    iters;
+        std::mt19937 rng;
+        explicit ComposeJitter( const char *leg_name )
+            : seed( EnvOr( "SGNS_COMPOSE_RACE_JITTER_SEED", 0 ) ),
+              iters( EnvOr( "SGNS_COMPOSE_RACE_JITTER_ITERS", 3 ) ),
+              rng( seed != 0 ? seed
+                             : static_cast<uint32_t>( std::chrono::steady_clock::now().time_since_epoch().count() ) )
+        {
+            std::cout << "[compose-race] " << leg_name << " seed=" << ( seed != 0 ? seed : uint64_t{ rng() } )
+                      << " iters=" << iters << std::endl;
+        }
+    };
+
+    /**
+     * LEG R1 (Race_TxPrunerGCInserter_ConcurrentTriple_SameFixedPoint):
+     * the triple race - the erase thread parked at the observer, the GC
+     * thread parked pre-mark, and an inserter racing AddCIDBlock - all
+     * released into the same fixture; the end state is the designed
+     * erased-AND-disposed combination (M2's), seals intact. Then
+     * jitter-seeded free-running inserter iterations over the converged
+     * fixture (the seed prints on every run; failures name the leg).
+     */
+    TEST_F( ColdComposeMatrixTest, Race_TxPrunerGCInserter_ConcurrentTriple_SameFixedPoint )
+    {
+        ComposeJitter jitter( "R1" );
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+
+        auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+        ASSERT_FALSE( overlap_cid.has_error() );
+
+        auto        gc_gate = std::make_shared<WindowGate>();
+        std::thread gc_park_watcher;
+        db_->SetGcPreMarkProcessHookForTest( [gc_gate] { gc_gate->Enter(); } );
+        ASSERT_TRUE( gc_gate->WaitInside( std::chrono::milliseconds( 20000 ) ) ) << "GC never parked pre-mark";
+
+        DetachT2Chain();
+
+        WindowGate erase_window;
+        crdt::GlobalDB::SetEraseWindowObserverForTest( [&erase_window] { erase_window.Enter(); } );
+        auto        syncer = syncerOf( *db_ );
+        std::thread erase_thread( [&] {
+            (void)db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() );
+        } );
+        ASSERT_TRUE( erase_window.WaitInside( std::chrono::milliseconds( 10000 ) ) ) << "erase never parked";
+
+        // The inserter racer: drives the BlockReceivedCallback primitive
+        // for the overlap CID while both pruners are parked (the parked
+        // erase's close must evict whatever lands).
+        auto        node_result = syncer->GetNodeFromMerkleDAG( overlap_cid.value() );
+        ASSERT_TRUE( node_result.has_value() );
+        const auto node = node_result.value();
+        std::thread inserter_thread( [&] {
+            for ( uint64_t i = 0; i < std::max<uint64_t>( jitter.iters, 1 ); ++i )
+            {
+                (void)syncer->AddCIDBlock( overlap_cid.value(), node );
+            }
+        } );
+        inserter_thread.join();
+
+        // Release both pruners (jitter-seeded order).
+        WindowGate *gates[2] = { gc_gate.get(), &erase_window };
+        std::shuffle( gates, gates + 2, jitter.rng );
+        gates[0]->Release();
+        gates[1]->Release();
+        db_->SetGcPreMarkProcessHookForTest( nullptr );
+
+        DriveGcToQuiescence( inv, /*include_overlap=*/true );
+        erase_thread.join();
+        crdt::GlobalDB::SetEraseWindowObserverForTest( nullptr );
+
+        // The designed fixed point: erased AND disposed; the racer's
+        // inserts cannot outlive the committed erase (the SC1 close);
+        // seals intact.
+        EXPECT_FALSE( syncer->HasRawBlockBytes( overlap_cid.value() ).value() );
+        EXPECT_TRUE( db_->IsColdDisposed( overlap_cid.value() ) );
+        EXPECT_TRUE( db_->Get( { inv.overlap_tx_path } ).has_error() ) << "the raced erase must commit";
+        EXPECT_FALSE( syncer->IsCIDInCache( overlap_cid.value() ) ) << "the racer's insert must not outlive the erase";
+        EXPECT_TRUE( syncer->isResolved( overlap_cid.value() ).value() );
+
+        // The stability floor: drain the remaining eligible group
+        // (txonly - still present), then a FURTHER cycle changes
+        // nothing.
+        {
+            auto pruner = MakePruner( 10, kSmallSettleSeconds );
+            sgns::PruneCycleStats drain;
+            RunSettledCycle( *pruner, drain );
+            sgns::PruneCycleStats stats;
+            RunSettledCycle( *pruner, stats );
+            EXPECT_EQ( stats.erased, 0u );
+        }
+    }
+
+    /**
+     * LEG R2 (Race_EraseVsInserter_StaleServeImpossible): the W2 shape
+     * generalized over the inventory under jitter - every erasable
+     * group's erase parks at the observer while an inserter races its
+     * CID; post-join, no erased CID serves from the LRU.
+     */
+    TEST_F( ColdComposeMatrixTest, Race_EraseVsInserter_StaleServeImpossible )
+    {
+        ComposeJitter jitter( "R2" );
+        BuildStack( /*retention_age_ms=*/1 );
+        MatrixInventory inv;
+        SeedMatrixFixture( /*include_overlap=*/true, inv );
+        auto syncer = syncerOf( *db_ );
+
+        // The erasable groups of the pristine fixture (nothing detached:
+        // both are mid-chain and Durable).
+        const std::vector<std::pair<std::string, std::string>> targets = {
+            { inv.txonly_tx_path, inv.txonly_cid },
+            { inv.overlap_tx_path, inv.overlap_cid },
+        };
+        const uint64_t iterations = std::min<uint64_t>( jitter.iters == 0 ? 1 : jitter.iters, targets.size() );
+        for ( uint64_t i = 0; i < iterations; ++i )
+        {
+            const auto &[tx_path, cid_string] = targets[i % targets.size()];
+            // Already-erased targets (iteration re-use) skip cleanly.
+            if ( db_->Get( { tx_path } ).has_error() )
+            {
+                continue;
+            }
+            auto cid = sgns::CID::fromString( cid_string );
+            ASSERT_FALSE( cid.has_error() );
+            auto node_result = syncer->GetNodeFromMerkleDAG( cid.value() );
+            ASSERT_TRUE( node_result.has_value() );
+
+            WindowGate erase_window;
+            crdt::GlobalDB::SetEraseWindowObserverForTest( [&erase_window] { erase_window.Enter(); } );
+            outcome::result<void> erase_result = outcome::failure( std::errc::operation_canceled );
+            std::thread          erase_thread(
+                 [&] { erase_result = db_->EraseEntry( tx_path, cid.value() ); } );
+            ASSERT_TRUE( erase_window.WaitInside( std::chrono::milliseconds( 10000 ) ) ) << "erase never parked";
+
+            std::thread inserter_thread( [&] { (void)syncer->AddCIDBlock( cid.value(), node_result.value() ); } );
+            inserter_thread.join();
+
+            erase_window.Release();
+            erase_thread.join();
+            crdt::GlobalDB::SetEraseWindowObserverForTest( nullptr );
+
+            ASSERT_TRUE( erase_result.has_value() ) << erase_result.error().message();
+            EXPECT_FALSE( syncer->IsCIDInCache( cid.value() ) ) << "SC1-STALE-SERVE: racer insert outlived the erase";
+            EXPECT_TRUE( syncer->GrabCIDBlock( cid.value() ).has_error() );
+        }
+    }
+
+    /**
+     * LEG R3 (InteractionC_DurabilityFlipStraddlingReads_LastCopySurvives)
+     * - D-02's race test: the durability belief flips (the state hook
+     * overrides to NoRecord) at every straddle ordering around the two
+     * destructive readers; in EVERY variant the last copy survives -
+     * the outcome is under-prune (defer or strand), never a destructive
+     * erase or disposal.
+     */
+    TEST_F( ColdComposeMatrixTest, InteractionC_DurabilityFlipStraddlingReads_LastCopySurvives )
+    {
+        ComposeJitter jitter( "R3" );
+
+        // Variant (a): the flip is VISIBLE TO BOTH readers (before GC's
+        // gate read) - nothing destructive happens at all.
+        {
+            BuildStack( /*retention_age_ms=*/1 );
+            MatrixInventory inv;
+            SeedMatrixFixture( /*include_overlap=*/true, inv );
+            auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+            ASSERT_FALSE( overlap_cid.has_error() );
+
+            crdt::GlobalDB::SetColdUploadStateHookForTest(
+                [overlap_cid]( const sgns::CID &cid ) -> std::optional<crdt::ColdUploadState> {
+                    if ( cid == overlap_cid.value() )
+                    {
+                        return crdt::ColdUploadState::NoRecord;
+                    }
+                    return std::nullopt;
+                } );
+            DetachT2Chain();
+            // GC passes: the flip says NoRecord - not Durable - no
+            // disposal (under-eviction). Bounded pass-count wait: the
+            // pre-mark hook fires once per real pass attempt (never a
+            // fixed sleep).
+            std::atomic<int> pass_fires{ 0 };
+            db_->SetGcPreMarkProcessHookForTest( [&pass_fires] { ++pass_fires; } );
+            ASSERT_TRUE( PollUntil( [&] { return pass_fires.load() >= 2; },
+                                    std::chrono::milliseconds( 20000 ) ) )
+                << "the GC thread never ran its passes";
+            db_->SetGcPreMarkProcessHookForTest( nullptr );
+            EXPECT_FALSE( db_->IsColdDisposed( overlap_cid.value() ) ) << "flip-before-reads: GC must skip";
+            // The erase: guard 5 reads NoRecord -> COLD_NOT_DURABLE defer.
+            const auto erase_result = db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() );
+            EXPECT_TRUE( erase_result.has_error() );
+            crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+            // LAST COPY: the value row and the block bytes both survive.
+            auto syncer = syncerOf( *db_ );
+            EXPECT_TRUE( db_->Get( { inv.overlap_tx_path } ).has_value() );
+            EXPECT_TRUE( syncer->HasRawBlockBytes( overlap_cid.value() ).value() );
+            TeardownStack();
+        }
+
+        // Variant (b): the flip lands AFTER the GC disposed but BEFORE
+        // the erase's guard (the S3a/S3b posture - disposal real, hook
+        // then NoRecord): the erase defers/strands, the value survives,
+        // and the remote still holds the bytes.
+        {
+            BuildStack( /*retention_age_ms=*/1 );
+            MatrixInventory inv;
+            SeedMatrixFixture( /*include_overlap=*/true, inv );
+            auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+            ASSERT_FALSE( overlap_cid.has_error() );
+            DetachT2Chain();
+            DriveGcToQuiescence( inv, /*include_overlap=*/true );
+            fake_s3_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unavailable );
+            const auto erase_result = db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() );
+            EXPECT_TRUE( erase_result.has_error() ) << "the disposed journal must defer the erase";
+            fake_s3_->ClearFaults();
+            EXPECT_TRUE( db_->Get( { inv.overlap_tx_path } ).has_value() ) << "the last local copy survives";
+            TeardownStack();
+        }
+
+        // Variant (c): the flip lands BETWEEN the erase's guard read and
+        // its commit (parked at the observer): the erase COMMITS (its
+        // guards passed on Durable evidence) - and the last copy still
+        // survives: the remote holds the bytes (asserted through the
+        // library's remote read over the fake), the marker records the
+        // disposal's evidence, and the seal is intact.
+        {
+            BuildStack( /*retention_age_ms=*/1 );
+            MatrixInventory inv;
+            SeedMatrixFixture( /*include_overlap=*/true, inv );
+            auto overlap_cid = sgns::CID::fromString( inv.overlap_cid );
+            ASSERT_FALSE( overlap_cid.has_error() );
+
+            auto        gc_gate = std::make_shared<WindowGate>();
+            std::thread gc_park_watcher;
+            db_->SetGcPreMarkProcessHookForTest( [gc_gate] { gc_gate->Enter(); } );
+            ASSERT_TRUE( gc_gate->WaitInside( std::chrono::milliseconds( 20000 ) ) );
+            DetachT2Chain();
+
+            WindowGate erase_window;
+            crdt::GlobalDB::SetEraseWindowObserverForTest( [&erase_window] { erase_window.Enter(); } );
+            outcome::result<void> erase_result = outcome::failure( std::errc::operation_canceled );
+            std::thread          erase_thread(
+                 [&] { erase_result = db_->EraseEntry( inv.overlap_tx_path, overlap_cid.value() ); } );
+            ASSERT_TRUE( erase_window.WaitInside( std::chrono::milliseconds( 10000 ) ) );
+
+            // The flip lands while the erase sits between guard and
+            // commit (its Durable belief is already fixed) - the GC
+            // passes see NoRecord and skip (under-eviction).
+            crdt::GlobalDB::SetColdUploadStateHookForTest(
+                [overlap_cid]( const sgns::CID &cid ) -> std::optional<crdt::ColdUploadState> {
+                    if ( cid == overlap_cid.value() )
+                    {
+                        return crdt::ColdUploadState::NoRecord;
+                    }
+                    return std::nullopt;
+                } );
+
+            gc_gate->Release();
+            db_->SetGcPreMarkProcessHookForTest( nullptr );
+            erase_window.Release();
+            erase_thread.join();
+            crdt::GlobalDB::SetEraseWindowObserverForTest( nullptr );
+            crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+
+            EXPECT_TRUE( erase_result.has_value() ) << "the guarded erase commits (its belief predates the flip)";
+
+            // LAST COPY survives: the block's bytes remain in the
+            // remote (the never-deleted S3 tier) - read through the
+            // library's remote store over the fake.
+            {
+                auto opened_remote = sgns::blockstore::S3BlockStore::Open( fake_s3_ );
+                ASSERT_TRUE( opened_remote.has_value() );
+                auto remote = std::shared_ptr<sgns::blockstore::S3BlockStore>( std::move( opened_remote.value() ) );
+                auto bytes  = remote->Get( overlap_cid.value() );
+                ASSERT_TRUE( bytes.has_value() ) << "the remote last copy must survive every flip ordering";
+                EXPECT_FALSE( bytes.value().bytes.empty() );
+            }
+            auto syncer = syncerOf( *db_ );
+            EXPECT_TRUE( syncer->isResolved( overlap_cid.value() ).value() ) << "the seal survives every flip ordering";
+        }
     }
 } // namespace
