@@ -511,6 +511,47 @@ endif()
 
 set_tests_properties(cold_prune_live_smoke_test PROPERTIES LABELS "Tier3")
 endif()
+
+# Dev-gated live SC3 leg (D-11b, v1.2 Phase 16 plan 16-02 Task 3,
+# COMP-03): a real MinIO wire + a REAL GC disposal strands a real
+# TxPruner cycle with the disposed block still fetchable from the
+# remote. Env-gated opt-in via SGNS_BLOCKSTORE_TEST_MINIO_BIN (community
+# build; loud labelled skip without it) — NEVER in the Tier-1 CI lane:
+# registered LABELS "Tier3" (the cold_prune_live_smoke convention; Pitfall
+# 6 label parity holds).
+if(SGNS_COLD_STORAGE)
+addtest(cold_compose_live_smoke_test
+    cold_compose_live_smoke_test.cpp
+)
+
+target_include_directories(cold_compose_live_smoke_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_compose_live_smoke_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+)
+
+if(MSVC)
+    target_link_options(cold_compose_live_smoke_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_compose_live_smoke_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_compose_live_smoke_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_compose_live_smoke_test PROPERTIES LABELS "Tier3")
+endif()
 # s3d-unavailable soak: outage-then-recovery iteration soak + D-09
 # teardown legs + peer cold-fetch budget (TEST-02 SC3, v1.1 Phase 12
 # plan 12-02). Registered ONLY under SGNS_COLD_STORAGE: hermetic fakes
