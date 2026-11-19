@@ -472,6 +472,49 @@ endif()
 set_tests_properties(cold_compose_matrix_test PROPERTIES LABELS "Tier1")
 endif()
 
+# GC walk-gap evidence exemption counter-test (D-01/D-03, v1.2 Phase 18
+# plan 18-01): RED-FIRST Tier-1 suite proving the poisoned-GC-triangle is
+# defused — LEG-1 (evidence + hot gone + cold present) and LEG-2 (cold
+# deleted both tiers via the fake's test-side deletion) must complete the
+# walk through the exemption while the NoEvidence / Malformed controls
+# keep today's fail-closed abort. Registered ONLY under SGNS_COLD_STORAGE;
+# same link set as cold_compose_matrix_test (the genius_node_test
+# whole-archive keeps the PruneEligibility sanctioned key builder
+# linkable for the evidence-seeding helper).
+if(SGNS_COLD_STORAGE)
+addtest(cold_gc_walk_gap_exempt_test
+    cold_gc_walk_gap_exempt_test.cpp
+)
+
+target_include_directories(cold_gc_walk_gap_exempt_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_gc_walk_gap_exempt_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+)
+
+if(MSVC)
+    target_link_options(cold_gc_walk_gap_exempt_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_gc_walk_gap_exempt_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_gc_walk_gap_exempt_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_gc_walk_gap_exempt_test PROPERTIES LABELS "Tier1")
+endif()
+
 # Dev-gated live-stack smoke (D-08c, v1.2 Phase 14 plan 14-03): the REAL
 # MinIO wire (production S3 client + real drainer transitions) passes the
 # cold-durability gate. Env-gated opt-in via SGNS_BLOCKSTORE_TEST_MINIO_BIN
