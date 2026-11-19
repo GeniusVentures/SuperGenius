@@ -111,6 +111,7 @@ namespace
     constexpr const char *kFidelityHotRoot  = "test-data/cold-seal-growth/fidelity-hot";
     constexpr const char *kFidelityTwinRoot = "test-data/cold-seal-growth/fidelity-twin";
     constexpr const char *kFidelityKeyRoot  = "test-data/cold-seal-growth/fidelity-keypair";
+    constexpr const char *kDensityRoot      = "test-data/cold-seal-growth/density";
 
     /// Seals to seed in the floor leg (D-08 knob; bounded for Tier-1).
     uint64_t EnvOr( const char *name, uint64_t fallback )
@@ -516,10 +517,10 @@ groups:
         double   per_row_bytes     = 0.0;
     };
 
-    EnumPass RunEnumerationPass( const MinimalSealStack &stack )
+    EnumPass RunEnumerationPass( const std::shared_ptr<rocksdb> &hot )
     {
         EnumPass pass;
-        auto    db_handle = stack.hot->getDB();
+        auto    db_handle = hot->getDB();
         std::unique_ptr<ROCKSDB_NAMESPACE::Iterator> it(
             db_handle->NewIterator( ROCKSDB_NAMESPACE::ReadOptions() ) );
         const auto t0 = std::chrono::steady_clock::now();
@@ -746,7 +747,7 @@ groups:
         double                rows_per_sec_sum = 0.0;
         for ( uint64_t r = 0; r < repeats; ++r )
         {
-            EnumPass pass = RunEnumerationPass( stack );
+            EnumPass pass = RunEnumerationPass( stack.hot );
             std::cout << "[seal-growth] enum pass " << ( r + 1 ) << "/" << repeats
                       << ": seals=" << pass.seals << " others=" << pass.others
                       << " wall_ms=" << std::fixed << std::setprecision( 1 ) << pass.wall_ms
@@ -1031,6 +1032,218 @@ groups:
         std::cout << "[evidence-json] " << json_text << std::endl;
         const std::filesystem::path evidence_path =
             std::filesystem::path( kFidelityHotRoot ) / "evidence-fidelity.json";
+        std::ofstream out( evidence_path );
+        ASSERT_TRUE( out.is_open() ) << "cannot open " << evidence_path.string();
+        out << json_text << std::endl;
+        out.close();
+
+        TeardownGlobalDbStack( stack );
+    }
+
+    /// A deterministic 64-hex-char tx hash for the density fixtures
+    /// (FNV-1a over seed|shape|fraction, widened to 64 chars - the
+    /// record's back-reference value, never a real transaction).
+    std::string DeterministicTxHash( uint64_t seed, const std::string &shape, uint64_t frac_num, uint64_t frac_den )
+    {
+        uint64_t h = 14695981039346656037ull ^ seed;
+        for ( const char c : shape + std::to_string( frac_num ) + std::to_string( frac_den ) )
+        {
+            h ^= static_cast<uint8_t>( c );
+            h *= 1099511628211ull;
+        }
+        std::ostringstream oss;
+        for ( int i = 0; i < 16; ++i )
+        {
+            h ^= static_cast<uint8_t>( i );
+            h *= 1099511628211ull;
+            oss << std::hex << std::setw( 4 ) << std::setfill( '0' ) << static_cast<uint16_t>( h >> 48 );
+        }
+        return oss.str();
+    }
+
+    /// A small real-topic put chain (the density store's seals + CRDT
+    /// rows); returns the delta CIDs (all sealed by the job path).
+    std::vector<sgns::CID> PutFidelityChain( const std::shared_ptr<sgns::crdt::GlobalDB> &db,
+                                             uint64_t                                    count,
+                                             uint64_t                                    seed,
+                                             const std::function<void()> &fail )
+    {
+        std::vector<sgns::CID> cids;
+        cids.reserve( count );
+        for ( uint64_t i = 0; i < count; ++i )
+        {
+            std::ostringstream key_oss;
+            key_oss << "/seal-growth/density/" << i;
+            std::ostringstream payload;
+            payload << "density chain seed=" << seed << " idx=" << i;
+            sgns::crdt::GlobalDB::Buffer buffer;
+            buffer.put( payload.str() );
+            auto put = db->Put( sgns::crdt::HierarchicalKey( key_oss.str() ), buffer, { kFidelityTopic } );
+            if ( !put.has_value() )
+            {
+                fail();
+                return cids;
+            }
+            cids.push_back( put.value() );
+        }
+        return cids;
+    }
+
+    /// The D-06 density legs: the /prune/blk back-reference spectrum
+    /// matrix (3 shapes x 3 deterministic erase fractions) through the
+    /// ONE marker home - writes via PruneEligibility::
+    /// WritePrunedBlockEntryForTest, reads via LookupPrunedBlockEntry
+    /// (never a hand-built /prune/* key) - with the exact-denominator
+    /// discipline (the generator's known ancestry, Pitfall 7) and the
+    /// shared-CF mix context row the capacity math cites.
+    TEST( Density, PruneBlockBackReferenceSpectrum )
+    {
+        const uint64_t depth   = EnvOr( "SGNS_SEAL_DEPTH", 64 );
+        const uint64_t fanout  = EnvOr( "SGNS_SEAL_FANOUT", 8 );
+        const uint64_t mix_pct = EnvOr( "SGNS_SEAL_MIX", 50 );
+        const uint64_t seed    = EnvOr( "SGNS_SEAL_SEED", 20261118 );
+
+        GlobalDbStack stack;
+        ASSERT_TRUE( BuildGlobalDbStack( kDensityRoot, stack ) ) << "GlobalDB fixture failed to build";
+        auto syncer = SyncerOf( stack.db );
+
+        // A small real put chain populates the store with production
+        // row shapes (seals + CRDT delta blocks + heads).
+        constexpr uint64_t kDensityChainLen = 8;
+        auto chain = PutFidelityChain(
+            stack.db, kDensityChainLen, seed,
+            []() { FAIL() << "density chain Put failed"; } );
+        ASSERT_EQ( chain.size(), kDensityChainLen );
+        ASSERT_TRUE( PollUntil(
+            [&]
+            {
+                for ( const auto &cid : chain )
+                {
+                    auto resolved = syncer->isResolved( cid );
+                    if ( resolved.has_error() || !resolved.value() )
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            },
+            std::chrono::milliseconds( 60000 ) ) )
+            << "DAG jobs never sealed the density chain";
+
+        const std::vector<std::string> shapes = { "deep", "wide", "mixed" };
+        std::vector<SpectrumFixture>   fixtures;
+        for ( const auto &shape : shapes )
+        {
+            fixtures.push_back( GenerateSpectrumFixture( shape, depth, fanout, mix_pct, seed ) );
+        }
+
+        FlatJsonEvidence json;
+        json.Add( "meta.harness", "cold_seal_growth_test" );
+        json.Add( "meta.phase_plan", "17-02" );
+        json.Add( "meta.host", HostTag() );
+        json.Add( "meta.os", OsTag() );
+        json.Add( "meta.build_config", BuildConfigTag() );
+        json.Add( "meta.generated_utc", GeneratedUtc() );
+        json.Add( "meta.dataset_fingerprint",
+                  "seed=" + std::to_string( seed ) + ";depth=" + std::to_string( depth )
+                      + ";fanout=" + std::to_string( fanout ) + ";mix=" + std::to_string( mix_pct ) );
+
+        struct Fraction
+        {
+            uint64_t num;
+            uint64_t den;
+        };
+        const std::vector<Fraction> fractions = { { 1, 4 }, { 1, 2 }, { 1, 1 } };
+
+        for ( const auto &fixture : fixtures )
+        {
+            for ( const auto &frac : fractions )
+            {
+                // Deterministic selection by seeded (emission) order -
+                // nearest-integer marking, no RNG beyond the seed.
+                const uint64_t total = fixture.ancestry_size;
+                const uint64_t marked = ( total * frac.num + frac.den / 2 ) / frac.den;
+                const std::string tx_hash = DeterministicTxHash( seed, fixture.shape, frac.num, frac.den );
+
+                for ( uint64_t i = 0; i < marked; ++i )
+                {
+                    auto written = sgns::PruneEligibility::WritePrunedBlockEntryForTest(
+                        *stack.db, fixture.cid_strings[i], tx_hash, fixture.node_generation[i] );
+                    ASSERT_TRUE( written.has_value() ) << "marker write failed (" << fixture.shape
+                                                       << " idx=" << i << "): " << written.error().message();
+                }
+
+                // Read back the WHOLE ancestry through the one-home
+                // tri-state reader: present-for-marked (with the exact
+                // record round-trip), absent-for-unmarked.
+                bool roundtrip_ok = true;
+                for ( uint64_t i = 0; i < total; ++i )
+                {
+                    auto lookup = sgns::PruneEligibility::LookupPrunedBlockEntry(
+                        *stack.db, fixture.cid_strings[i] );
+                    ASSERT_TRUE( lookup.has_value() )
+                        << "lookup errored (" << fixture.shape << " idx=" << i << ")";
+                    const auto &[verdict, record] = lookup.value();
+                    if ( i < marked )
+                    {
+                        EXPECT_EQ( verdict, sgns::PrunedBlockLookup::PRUNED )
+                            << fixture.shape << " idx=" << i << " must be present";
+                        if ( verdict == sgns::PrunedBlockLookup::PRUNED && record.has_value() )
+                        {
+                            if ( record->pruning_tx_hash() != tx_hash
+                                 || !record->has_erased_at_generation()
+                                 || record->erased_at_generation() != fixture.node_generation[i] )
+                            {
+                                roundtrip_ok = false;
+                            }
+                        }
+                        else
+                        {
+                            roundtrip_ok = false;
+                        }
+                    }
+                    else
+                    {
+                        EXPECT_EQ( verdict, sgns::PrunedBlockLookup::NOT_FOUND )
+                            << fixture.shape << " idx=" << i << " must be absent";
+                    }
+                }
+                EXPECT_TRUE( roundtrip_ok ) << "record round-trip broken (" << fixture.shape << ")";
+
+                // Pitfall 7: the denominator is the generator's exactly-
+                // known ancestry; density never exceeds 1 and tracks the
+                // fraction within the nearest-integer rounding slack.
+                const double density = static_cast<double>( marked ) / static_cast<double>( total );
+                const double target = static_cast<double>( frac.num ) / static_cast<double>( frac.den );
+                EXPECT_LE( density, 1.0 );
+                EXPECT_LE( std::abs( density - target ), 0.5 / static_cast<double>( total ) + 1e-12 );
+
+                const std::string prefix = "leg.density." + fixture.shape + ".frac_"
+                                         + std::to_string( frac.num ) + "_" + std::to_string( frac.den );
+                json.Add( prefix + ".marked", marked );
+                json.Add( prefix + ".total", total );
+                json.Add( prefix + ".density", density );
+                json.Add( prefix + ".roundtrip_ok", roundtrip_ok ? "true" : "false" );
+            }
+        }
+
+        // The shared-CF context row (Pitfall 1 / D-11 denominator
+        // context): one full suffix-scan pass over the populated store -
+        // seals (the chain's), non-seal others (CRDT rows + heads +
+        // every /prune/blk marker written above).
+        const EnumPass context = RunEnumerationPass( stack.db->GetDataStore() );
+        EXPECT_EQ( context.seals, kDensityChainLen );
+        EXPECT_GT( context.others, 0u );
+        json.Add( "leg.density.shared_cf.seals", context.seals );
+        json.Add( "leg.density.shared_cf.others", context.others );
+        json.Add( "leg.density.shared_cf.per_row_bytes", context.per_row_bytes );
+        std::cout << "[seal-growth] density shared-CF context: seals=" << context.seals
+                  << " others=" << context.others << std::endl;
+
+        const std::string json_text = json.ToString();
+        std::cout << "[evidence-json] " << json_text << std::endl;
+        const std::filesystem::path evidence_path =
+            std::filesystem::path( kDensityRoot ) / "evidence-density.json";
         std::ofstream out( evidence_path );
         ASSERT_TRUE( out.is_open() ) << "cannot open " << evidence_path.string();
         out << json_text << std::endl;
