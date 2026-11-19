@@ -420,11 +420,26 @@ namespace
             }
         }
 
-        // Shape assertions (A1 band; the 10^6 floor leg's measured shape).
+        // D-07 Tier-1 floors (derived 2026-11-19 from this plan's own
+        // measured 10^6 run, default knobs, host MOFU / windows /
+        // release build: warm enumeration mean 4,831,882 rows/sec over
+        // 3 passes, max deviation 0.447%; per-row bytes measured
+        // 52.000 - a 46-char CIDv0 text key plus the 6-char suffix).
+        // Hardware caveat: the measured numbers transfer only with the
+        // evidence fingerprint (meta.* in evidence-floor.json); the
+        // FLOORS transfer with a full order of magnitude of margin so
+        // slow Phase 19 runners stay green (Pitfall 3 - a generous
+        // lower bound, never a target; exact timings live only in the
+        // dev-side JSON).
         const double per_row_bytes = passes.front().per_row_bytes;
-        EXPECT_GT( passes.front().rows_per_sec, 0.0 );
+        // rows/sec floor = measured mean / 10, rounded down for margin;
+        // held by the first (coldest warm) pass AND the repeat mean.
+        EXPECT_GE( passes.front().rows_per_sec, 480000.0 );
+        EXPECT_GE( rows_per_sec_mean, 480000.0 );
+        // per-row bytes band = [mean - 8, mean + 8] = [44, 60], clamped
+        // to stay inside the A1 shape envelope [46, 90].
         EXPECT_GE( per_row_bytes, 46.0 );
-        EXPECT_LE( per_row_bytes, 90.0 );
+        EXPECT_LE( per_row_bytes, 60.0 );
 
         // ---- Evidence emission (D-09) ----
         FlatJsonEvidence json;
