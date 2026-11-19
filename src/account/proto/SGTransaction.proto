@@ -89,6 +89,26 @@ message PrunedBlockRecord
     uint64 erased_at_generation = 3;
 }
 
+// Node-local persisted record of the node's last-run role posture (v1.2
+// Phase 18, D-07): node_type + pruning_enabled + cold_storage_enabled,
+// written at EVERY startup through the node-local raw surface (key
+// "/prune/role-fingerprint" — the /prune/ family no GC hot-cleanup or
+// TxPruner path sweeps). Archive-or-Full-before -> Light+pruning-now is a
+// detected DOWNGRADE (the D-05/D-06 interlock gate consults this record).
+// NEVER a wire format: same class as PrunedTransactionRecord (D-07/A1).
+message RoleFingerprintRecord
+{
+    // The sgns::NodeType enum values (Full=0/Light=1/Archive=2) carried as
+    // int — the transaction proto home deliberately does not import the
+    // C++ enum type.
+    uint32 node_type = 1;
+    bool pruning_enabled = 2;
+    bool cold_storage_enabled = 3;
+    // Advisory write clock (crash/restart forensics only — never consulted
+    // by the downgrade predicate).
+    uint64 written_at_unix_ms = 4;
+}
+
 message UTXOCheckpointRecord
 {
     string owner_address = 1;

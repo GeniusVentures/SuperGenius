@@ -11,6 +11,7 @@
 
 #include "transaction/PruneEligibility.hpp"
 
+#include <chrono>
 #include <set>
 
 #include "account/UTXOManager.hpp"
@@ -106,6 +107,16 @@ namespace sgns
              pruning_object["settle_seconds"].GetUint64() > 0 )
         {
             config.settle_seconds = pruning_object["settle_seconds"].GetUint64();
+        }
+
+        // D-05 (v1.2 Phase 18): the downgrade ack key — per-key
+        // type-checked, absent keeps default false (consent must be
+        // EXPLICIT), ill-typed keeps default too (one key, one home — no
+        // second consent surface).
+        if ( pruning_object.HasMember( "downgrade_acknowledged" )
+             && pruning_object["downgrade_acknowledged"].IsBool() )
+        {
+            config.downgrade_acknowledged = pruning_object["downgrade_acknowledged"].GetBool();
         }
 
         if ( config.enabled && !config.finality_window.has_value() )
@@ -678,5 +689,96 @@ namespace sgns
         utxo_manager_m( utxo_manager ),
         config_m( config )
     {
+    }
+
+    outcome::result<RoleFingerprint::Verdict> RoleFingerprint::CheckAndRewrite( crdt::GlobalDB      &db,
+                                                                               const PruningConfig &config,
+                                                                               NodeType             node_type,
+                                                                               bool                 cold_storage_enabled )
+    {
+        // [D-05/D-06/D-07, v1.2 Phase 18 — downgrade interlock] The
+        // persisted role fingerprint's ONE read/compare/rewrite entry.
+        // Fail-toward-under-erase on every failure arm: the SAFE direction
+        // is disarm or no-downgrade, NEVER arm-on-unreadable-evidence.
+        // Full record: notes/18-collectibility-policy-downgrade-interlock.md
+        crdt::GlobalDB::Buffer key;
+        key.put( std::string( PruneEligibility::PRUNE_ROLE_FINGERPRINT_KEY ) );
+
+        // The current-posture rewrite (advisory-write posture, the
+        // WriteEpochWatermark discipline: a failed write is ONE warn,
+        // never an abort — the stale prior record re-detects the
+        // downgrade at next boot, the safe direction).
+        const auto write_current_posture = [&]() {
+            SGTransaction::RoleFingerprintRecord record;
+            record.set_node_type( static_cast<uint32_t>( node_type ) );
+            record.set_pruning_enabled( config.enabled );
+            record.set_cold_storage_enabled( cold_storage_enabled );
+            record.set_written_at_unix_ms( static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() ) );
+            crdt::GlobalDB::Buffer value;
+            value.put( record.SerializeAsString() );
+            auto written = db.PutRaw( key, value );
+            if ( written.has_error() )
+            {
+                MarkerLogger()->warn(
+                    "role fingerprint rewrite failed (advisory; the prior record stands and re-detects next boot)" );
+            }
+        };
+
+        auto prior = db.GetRaw( key );
+        if ( prior.has_error() )
+        {
+            if ( prior.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                // D-07/Pitfall 2: no prior record is a BIRTH-TIERED node —
+                // never a downgrade (a fresh light node's first prune
+                // cycle is not an archive conversion). Record the current
+                // posture so the NEXT boot has a prior to compare.
+                write_current_posture();
+                return RoleFingerprint::Verdict::FirstRun;
+            }
+            // Pitfall 3: an unreadable read resolves SAFE — disarm, never
+            // arm-on-read-failure. Best-effort current-posture write (the
+            // record may be absent or the read transiently failed).
+            MarkerLogger()->error(
+                "role fingerprint read failed (code {}) - failing closed to disarm",
+                prior.error().message() );
+            write_current_posture();
+            return RoleFingerprint::Verdict::UnreadableDisarm;
+        }
+
+        SGTransaction::RoleFingerprintRecord prev;
+        if ( !prev.ParseFromArray( prior.value().data(), static_cast<int>( prior.value().size() ) ) )
+        {
+            // Pitfall 3 / no-laundering: a corrupt record is an ERROR, never
+            // a silent verdict — and it is NEVER overwritten: overwriting
+            // would launder an unreadable prior role through a single
+            // reboot. The disarm persists until the operator repairs or
+            // acknowledges (T-17-0502 discipline).
+            MarkerLogger()->error(
+                "role fingerprint record is corrupt - failing closed to disarm (record preserved; no overwrite)" );
+            return RoleFingerprint::Verdict::UnreadableDisarm;
+        }
+
+        // The A2 ruling: ANY ReplicatesAllAccounts prior role (Full OR
+        // Archive) transitioning to Light-with-pruning-now is a downgrade.
+        const auto prev_type = static_cast<NodeType>( prev.node_type() );
+        const bool downgrade = sgns::ReplicatesAllAccounts( prev_type )
+                             && node_type == NodeType::Light
+                             && config.enabled;
+
+        write_current_posture();
+
+        if ( downgrade && !config.downgrade_acknowledged )
+        {
+            return RoleFingerprint::Verdict::DowngradeUnacknowledged;
+        }
+        if ( downgrade )
+        {
+            return RoleFingerprint::Verdict::DowngradeAcknowledged;
+        }
+        return RoleFingerprint::Verdict::NoDowngrade;
     }
 } // namespace sgns

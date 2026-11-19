@@ -265,6 +265,15 @@ namespace sgns
         /// and the member keeps its safe default.
         uint64_t settle_seconds = 60;
 
+        /// D-05 (v1.2 Phase 18): operator consent for a detected
+        /// archive/full -> light downgrade. Default false — a detected
+        /// downgrade DISARMS pruning until this key is explicitly set to
+        /// true in sgns_config.json's "pruning" object after completing
+        /// the operator checklist (see
+        /// notes/18-collectibility-policy-downgrade-interlock.md). One key,
+        /// one home — no second consent surface.
+        bool downgrade_acknowledged = false;
+
         /// Set when FromJSON had to fail-close an enabled request (missing
         /// finality_window); carries the operator-facing reason.
         std::optional<std::string> disabled_reason;
@@ -419,6 +428,16 @@ namespace sgns
         /// this prefix is the node-local terminal refusal evidence consulted
         /// by every cold serve surface (SC1/SC3).
         static constexpr std::string_view PRUNE_BLOCK_MARKER_PREFIX = "/prune/blk/";
+
+        /// Node-local persisted role-fingerprint key (v1.2 Phase 18, D-07;
+        /// D-C1 one-key-home): the last-run posture record (node_type +
+        /// pruning_enabled + cold_storage_enabled) read-compared-rewritten
+        /// at every startup through the direct raw face. Standalone /prune/
+        /// family key — NEVER swept by GC hot-cleanup (RunHotCleanup deletes
+        /// exactly the block's binary key + its own membership rows) or any
+        /// TxPruner path; never replicated, never broadcast (Pitfall 4 — a
+        /// swept or laundered fingerprint would arm a silent downgrade).
+        static constexpr std::string_view PRUNE_ROLE_FINGERPRINT_KEY = "/prune/role-fingerprint";
 
         /**
          * @brief       Builds the node-local marker key for @p tx_hash.
@@ -617,6 +636,71 @@ namespace sgns
         PruningConfig config_m;
 
         base::Logger logger_ = base::createLogger( "PruneEligibility" );
+    };
+
+    /**
+     * @brief       [D-05/D-06/D-07, v1.2 Phase 18 — downgrade interlock]
+     *              The persisted role fingerprint: verdict matrix + the
+     *              one CheckAndRewrite entry the startup gate consults.
+     * @details     The record lives at
+     *              PruneEligibility::PRUNE_ROLE_FINGERPRINT_KEY (the
+     *              /prune/ standalone-key family — never swept, never
+     *              broadcast). The downgrade predicate is (prior node_type
+     *              in {Full, Archive}) AND (node_type == Light) AND
+     *              config.enabled — the A2 ruling that ANY
+     *              ReplicatesAllAccounts prior role is a downgrade source,
+     *              not just Archive. Full record:
+     *              notes/18-collectibility-policy-downgrade-interlock.md
+     */
+    struct RoleFingerprint
+    {
+        /**
+         * @brief Every read arm of the fingerprint record, distinct so the
+         *        gate's WARNs and the Tier-1 verdict-matrix legs can never
+         *        mislabel one arm as another.
+         */
+        enum class Verdict
+        {
+            FirstRun,                ///< no prior record: a birth-tiered node — NEVER a downgrade (Pitfall 2)
+            NoDowngrade,             ///< prior posture is not a Full/Archive -> Light+pruning transition
+            DowngradeUnacknowledged, ///< detected downgrade WITHOUT the ack key — DISARM (D-06)
+            DowngradeAcknowledged,   ///< detected downgrade WITH config.downgrade_acknowledged — arm
+            UnreadableDisarm,        ///< unreadable/corrupt prior record — DISARM (fail toward under-erase, Pitfall 3)
+        };
+
+        /**
+         * @brief       Reads the persisted fingerprint, derives the verdict,
+         *              and rewrites the record with the CURRENT posture.
+         * @details     Read arms (the LookupPrunedEntry discipline): GetRaw
+         *              NOT_FOUND => FirstRun (the current posture is
+         *              written — every startup records what it ran as); any
+         *              other read error => UnreadableDisarm (best-effort
+         *              current-posture write); protobuf parse failure =>
+         *              UnreadableDisarm WITHOUT any write — the corrupt
+         *              record must SURVIVE (no laundering an unreadable
+         *              prior role through one reboot; the disarm persists
+         *              until operator repair). On a parsed prior: the
+         *              predicate decides Downgrade{Un,}acknowledged vs
+         *              NoDowngrade, then the current posture is rewritten.
+         * @note        Node-local record, never broadcast. Crash between
+         *              read and write is safe: the prior record survives,
+         *              so the downgrade re-detects at next boot. A failed
+         *              current-posture write is advisory-only (one warn) —
+         *              the stale prior record re-detects next boot, the
+         *              safe direction. NEVER arms on unreadable evidence.
+         * @param[in]   db The node-local raw surface (GetRaw/PutRaw).
+         * @param[in]   config The parsed pruning config (enabled + the ack
+         *              key — the consent input).
+         * @param[in]   node_type The CURRENT node role.
+         * @param[in]   cold_storage_enabled Whether cold storage resolved
+         *              enabled for this boot.
+         * @return      The verdict for the startup gate, or an error result
+         *              the caller must resolve to the SAFE (disarm) arm.
+         */
+        static outcome::result<Verdict> CheckAndRewrite( crdt::GlobalDB      &db,
+                                                         const PruningConfig &config,
+                                                         NodeType             node_type,
+                                                         bool                 cold_storage_enabled );
     };
 } // namespace sgns
 
