@@ -591,3 +591,46 @@ target_link_libraries(cold_storage_wallclock_soak
 
 set_tests_properties(cold_storage_wallclock_soak PROPERTIES LABELS "Tier3")
 endif()
+
+# Seal-growth probe harness (SEAL-01 / SC1-SC3, v1.2 Phase 17 plan
+# 17-01): the reusable measurement instrument (D-08) - minimal-stack
+# hot store, sanctioned seal seeding at knobbed scale, raw-iterator
+# suffix-filter enumeration, flat JSON evidence (D-09). The bounded
+# 10^6 floor leg runs UNGATED in the Tier-1 lane with derived floors
+# (D-07); the dev-gated big legs arriving with 17-02 stay env-gated
+# and skip loudly. Registered ONLY under SGNS_COLD_STORAGE (gating
+# parity with every cold Tier-1 suite); same link set as
+# cold_compose_matrix_test.
+if(SGNS_COLD_STORAGE)
+addtest(cold_seal_growth_test
+    cold_seal_growth_test.cpp
+)
+
+target_include_directories(cold_seal_growth_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_seal_growth_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+)
+
+if(MSVC)
+    target_link_options(cold_seal_growth_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_seal_growth_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_seal_growth_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_seal_growth_test PROPERTIES LABELS "Tier1")
+endif()
