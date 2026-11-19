@@ -69,6 +69,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -93,6 +94,7 @@
 #include <soralog/impl/configurator_from_yaml.hpp>
 
 #include <sgns-blockstore/Cid.hpp>
+#include <sgns-blockstore/LocalBlockStore.hpp>
 #include <sgns-blockstore/S3AdminClient.hpp>
 #include <sgns-blockstore/S3BlockStore.hpp>
 #include <sgns-blockstore/S3Client.hpp>
@@ -101,21 +103,63 @@
 #include <sgns-blockstore/InMemoryS3AdminClient.hpp>
 #include <sgns-blockstore/InMemoryS3Client.hpp>
 
+#include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
+#include "account/TransferTransaction.hpp"
+#include "account/UTXOManager.hpp"
+#include "account/proto/SGTransaction.pb.h"
 #include "base/logger.hpp"
+#include "blockchain/Blockchain.hpp"
 #include "crdt/crdt_options.hpp"
+#include "crdt/crdt_datastore.hpp"
 #include "crdt/globaldb/ColdStorageStack.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/hierarchical_key.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/wait_condition.hpp"
+#include "transaction/PruneEligibility.hpp"
+#include "transaction/TransactionManager.hpp"
+#include "transaction/TxPruner.hpp"
 
 using namespace sgns;
+
+namespace sgns
+{
+    /**
+     * Per-binary friend-seam definition (the tx_pruner_test shape): the
+     * TxPruner tick gate requires State::READY, which no public API
+     * reaches deterministically. This definition carries only
+     * ChangeState - the one member this binary uses (the SC3 legs'
+     * settled-cycle drive).
+     */
+    class TransactionManagerPendingLifecycleTestAccess
+    {
+    public:
+        static void ChangeState( TransactionManager &manager, TransactionManager::State state )
+        {
+            manager.ChangeState( state );
+        }
+    };
+} // namespace sgns
 
 namespace
 {
     /// The fixture's pre-seeded CRDT topic (the tx_pruner_test contract):
     /// puts on it create real blocks, heads, and seals.
     constexpr char kSeedTopic[] = "CRDT.Datastore.TEST.Channel";
+
+    /// Finality window N (the gate-test recipes' value).
+    constexpr uint64_t kWindow = 2;
+
+    /// The account-generation tag the SC3 legs stamp onto cycles (D-C4).
+    constexpr uint64_t kTestGeneration = 7;
+
+    /// Settle window: waited out through the settled-cycle helper.
+    constexpr uint64_t kSmallSettleSeconds = 1;
+
+    const sgns::TokenID kTestTokenId = sgns::TokenID::FromBytes( { 0x00 } );
 
     /// Bounded poll loop with deadline - never a fixed sleep (Tier-1 audit;
     /// the durability/resurrection suite discipline).
@@ -210,9 +254,21 @@ groups:
             // Fixture discipline: a hook armed by a failing case must never
             // leak further - clear EVERY static seam before any teardown
             // touches the stores.
+            sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
             crdt::GlobalDB::SetEraseWindowObserverForTest( nullptr );
             crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
             crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
+
+            // Teardown invariant (asio, the tx_pruner_test order): stop the
+            // blockchain FIRST so the ConsensusManager round-timer thread
+            // joins before any db-backed handle is released.
+            if ( blockchain_ )
+            {
+                (void)blockchain_->Stop();
+            }
+            tm_.reset();
+            blockchain_.reset();
+            account_.reset();
 
             if ( db_ )
             {
@@ -242,12 +298,22 @@ groups:
         /// Builds the single-node cold-enabled stack on a FRESH dir with
         /// the HEALTHY hermetic fakes and the fast cadence (drain 50 ms,
         /// flush 50/300 ms): REAL journal transitions fire fast, so
-        /// WaitDurable polls are deterministic. Retention stays 0 = the
-        /// GC never runs (the D-02 absent=off posture) - nothing but the
-        /// erase under test may touch the stores.
-        void BuildStack()
+        /// WaitDurable polls are deterministic. @p retention_age_ms > 0
+        /// ALSO arms the retention GC thread (tiny age + fast interval +
+        /// 1 ms grace = deterministic hermetic disposal) - the S3a/S3c
+        /// posture; 0 keeps the GC off (the D-02 absent=off posture, the
+        /// W legs and S3b).
+        void BuildStack( uint64_t retention_age_ms = 0 )
         {
-            const std::string hot_dir      = FreshDir( "hot" );
+            BuildStackOnDir( FreshDir( "hot" ), retention_age_ms );
+        }
+
+        /// Same as BuildStack but on an EXISTING hot dir (S3b's PHASE C
+        /// reopen: the CRDT state, tx->CID map, UTXO records, and the
+        /// MUTATED coldstore journal all survive the round trip).
+        void BuildStackOnDir( const std::string &hot_dir, uint64_t retention_age_ms = 0 )
+        {
+            last_hot_dir_ = hot_dir;
             const std::string keypair_path = FreshDir( "keypair" );
 
             // Application-work pool (the CRDTFixture contract): tests drive
@@ -289,6 +355,16 @@ groups:
             // makes Durable waits deterministic (the LEG-1 drive).
             cold.durability.flush_min_interval_ms = 50;
             cold.durability.flush_max_interval_ms = 300;
+            if ( retention_age_ms > 0 )
+            {
+                // The S3a/S3c disposal posture: retention configured arms
+                // GlobalDB's OWN GC thread (deps attached in Initialize) -
+                // tiny age + fast cadence + 1 ms grace make hermetic
+                // disposals land within a few passes (PollUntil-bounded).
+                cold.retention.retention_age_ms = retention_age_ms;
+                cold.retention.gc_interval_ms   = 50;
+                cold.retention.grace_ms         = 1;
+            }
             fake_s3_                                = std::make_shared<sgns::blockstore::InMemoryS3Client>();
             fake_admin_                             = std::make_shared<sgns::blockstore::InMemoryS3AdminClient>();
             sgns::crdt::SetColdStorageStackClientsForTesting(
@@ -315,6 +391,35 @@ groups:
             db_->AddBroadcastTopic( kSeedTopic );
             db_->Start();
             ASSERT_TRUE( db_->HasColdStorage() ) << "tier-presence signal mismatch";
+
+            // The tx_pruner_test SetUp recipe over the cold-capable db
+            // (the SC3 legs' pruner wiring).
+            sgns::GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage> {
+                    return std::make_shared<MemorySecureStorage>( identifier );
+                } );
+
+            account_ = sgns::GeniusAccount::New( kTestTokenId, boost::filesystem::path( hot_dir ) / "account" );
+            ASSERT_NE( account_, nullptr );
+
+            auto load_result = account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() );
+            ASSERT_TRUE( load_result.has_value() );
+
+            blockchain_ = sgns::Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
+            ASSERT_NE( blockchain_, nullptr );
+
+            constexpr auto kTimestampTolerance = std::chrono::milliseconds( 300000 );
+            constexpr auto kMutabilityWindow   = std::chrono::milliseconds( 600000 );
+
+            tm_ = sgns::TransactionManager::New( db_,
+                                                 io_,
+                                                 account_,
+                                                 blockchain_,
+                                                 sgns::NodeType::Light,
+                                                 0,
+                                                 kTimestampTolerance,
+                                                 kMutabilityWindow );
+            ASSERT_NE( tm_, nullptr );
         }
 
         //
@@ -381,6 +486,151 @@ groups:
             return std::static_pointer_cast<sgns::crdt::GraphsyncDAGSyncer>( db.GetBroadcaster()->GetDagSyncer() );
         }
 
+        //
+        // Tx seeding + pruner drive (the cold_prune_gate_test recipes
+        // verbatim - the SC3 legs' machinery).
+        //
+
+        /// Transfer with @p output_count outputs owned by this account.
+        std::shared_ptr<sgns::TransferTransaction> MakeTransfer( uint64_t nonce, size_t output_count )
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_type( "transfer" );
+            dag.set_source_addr( account_->GetAddress() );
+            dag.set_nonce( nonce );
+            dag.set_timestamp( static_cast<int64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() ) );
+
+            std::vector<OutputDestInfo> destinations;
+            destinations.reserve( output_count );
+            for ( size_t i = 0; i < output_count; ++i )
+            {
+                destinations.push_back( { 100 + i, account_->GetAddress(), kTestTokenId } );
+            }
+            return std::make_shared<sgns::TransferTransaction>(
+                sgns::TransferTransaction::New( {}, std::move( destinations ), std::move( dag ) ) );
+        }
+
+        /// Real-topic value Put + raw tx->CID map entry (the gate-test
+        /// StoreTransactionCID shapes).
+        void SeedTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+        {
+            const std::string tx_path = sgns::TransactionManager::GetTransactionPath( *transaction );
+
+            crdt::GlobalDB::Buffer serialized;
+            serialized.put( transaction->SerializeByteVector() );
+            auto put_result = db_->Put( { tx_path }, serialized, { kSeedTopic } );
+            ASSERT_TRUE( put_result.has_value() );
+
+            crdt::GlobalDB::Buffer key_buffer;
+            key_buffer.put( tx_path );
+            crdt::GlobalDB::Buffer value_buffer;
+            value_buffer.put( put_result.value().toString().value() );
+            ASSERT_TRUE( db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+        }
+
+        /// Plain topic Put of a raw string at @p key (driver heights).
+        void PutSeedValue( const std::string &key, const std::string &value )
+        {
+            crdt::GlobalDB::Buffer buffer;
+            buffer.put( value );
+            ASSERT_TRUE( db_->Put( { key }, buffer, { kSeedTopic } ).has_value() );
+        }
+
+        /// Tracks a candidate's produced outputs in the UTXO manager.
+        void TrackOutputs( const sgns::GeniusTransaction &transaction )
+        {
+            auto outputs = transaction.GetProducedUTXOs();
+            ASSERT_TRUE( outputs.has_value() );
+            for ( const auto &output : *outputs )
+            {
+                auto put = account_->GetUTXOManager().PutUTXO( output, output.GetOwnerAddress() );
+                ASSERT_TRUE( put.has_value() );
+                ASSERT_TRUE( put.value() );
+            }
+        }
+
+        /// Spends one output by @p spender; returns ConsumeUTXOs's verdict.
+        bool ConsumeOutput( const sgns::GeniusTransaction &transaction,
+                            uint32_t                       output_idx,
+                            const sgns::GeniusTransaction &spender )
+        {
+            auto txid = sgns::base::Hash256::fromReadableString( transaction.GetHash() );
+            EXPECT_FALSE( txid.has_error() );
+            auto consumed = account_->GetUTXOManager().ConsumeUTXOs( { { txid.value(), output_idx, {} } },
+                                                                     account_->GetAddress(),
+                                                                     sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                                                     SpenderHash( spender ) );
+            EXPECT_TRUE( consumed.has_value() );
+            return consumed.has_value() && consumed.value();
+        }
+
+        static sgns::base::Hash256 SpenderHash( const sgns::GeniusTransaction &transaction )
+        {
+            return sgns::base::Hash256::fromReadableString( transaction.GetHash() ).value();
+        }
+
+        /// The raw tx->CID map entry bytes at @p tx_path ("absent" when
+        /// gone) - the group's constituent-CID source.
+        std::string SnapshotMapEntry( const std::string &tx_path )
+        {
+            auto entry = db_->GetRaw( crdt::GlobalDB::Buffer{}.put( tx_path ) );
+            return entry.has_value() ? std::string( entry.value().toString() ) : std::string( "absent" );
+        }
+
+        /// Constructs a Light TxPruner with the suite's window and
+        /// dry_run=false.
+        std::shared_ptr<sgns::TxPruner> MakePruner( uint64_t k_budget, uint64_t settle_seconds )
+        {
+            sgns::PruningConfig config;
+            config.enabled              = true;
+            config.dry_run              = false;
+            config.finality_window      = kWindow;
+            config.max_erases_per_cycle = k_budget;
+            config.settle_seconds       = settle_seconds;
+            auto pruner                 = sgns::TxPruner::New( sgns::NodeType::Light, config );
+            EXPECT_TRUE( pruner.has_value() );
+            return pruner.has_value() ? pruner.value() : nullptr;
+        }
+
+        /// Drives the manager into the tick gate's READY state (the
+        /// friend seam).
+        void ForceManagerReady()
+        {
+            TransactionManagerPendingLifecycleTestAccess::ChangeState( *tm_,
+                                                                       sgns::TransactionManager::State::READY );
+            ASSERT_EQ( tm_->GetState(), sgns::TransactionManager::State::READY );
+        }
+
+        /// Runs cycles until one is NOT gate-skipped, delivering its
+        /// stats (the fresh-instance watermark discriminator).
+        void RunSettledCycle( sgns::TxPruner &pruner, sgns::PruneCycleStats &out_stats )
+        {
+            ForceManagerReady();
+            bool cycle_failed = false;
+            bool ran          = false;
+            ASSERT_WAIT_FOR_CONDITION(
+                [&]
+                {
+                    auto result = pruner.RunCycle( *db_, *tm_, account_->GetUTXOManager(), kTestGeneration );
+                    if ( result.has_error() )
+                    {
+                        cycle_failed = true;
+                        return true; // exit the bounded wait; EXPECT below fails loudly
+                    }
+                    out_stats = result.value();
+                    ran       = pruner.GetPruneStatus().watermark.has_value();
+                    return ran;
+                },
+                std::chrono::milliseconds( kSmallSettleSeconds * 1000 + 8000 ),
+                "tick gate settles and one prune cycle runs to completion",
+                nullptr );
+            EXPECT_FALSE( cycle_failed );
+            EXPECT_TRUE( ran );
+        }
+
         std::shared_ptr<boost::asio::io_context>                  io_;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>          pubs_;
         std::shared_ptr<libp2p::basic::SchedulerImpl>             scheduler_;
@@ -389,6 +639,13 @@ groups:
         std::shared_ptr<sgns::crdt::GlobalDB>                      db_;
         std::shared_ptr<sgns::blockstore::InMemoryS3Client>       fake_s3_;
         std::shared_ptr<sgns::blockstore::InMemoryS3AdminClient>  fake_admin_;
+        /// The hot dir of the CURRENT (or last torn-down) stack - S3b's
+        /// journal-seeding derives its coldstore path from this.
+        std::string                                                 last_hot_dir_;
+
+        std::shared_ptr<sgns::GeniusAccount>      account_;
+        std::shared_ptr<sgns::Blockchain>         blockchain_;
+        std::shared_ptr<sgns::TransactionManager> tm_;
     };
 
     /**
@@ -677,5 +934,387 @@ groups:
             << "second erase of the absent key must succeed idempotently (no-op staging, no LRU side effects)";
         EXPECT_FALSE( syncer->IsCIDInCache( entry_a.cid ) )
             << "SC1-STALE-SERVE: the second erase must not touch the LRU";
+    }
+
+    //
+    // Journal-CF seeding machinery (copied VERBATIM from
+    // cold_prune_gate_test.cpp per 16-PATTERNS Layer 2's prescription -
+    // the NAMED EXCEPTION to CLAUDE.md hard invariant 2, named in the
+    // Task-2 commit message): deterministic arbitrary-state injection
+    // against the coldstore's PUBLISHED upload_journal column family.
+    // LOCK DISCIPLINE: legal ONLY while the fixture's GlobalDB is CLOSED.
+    //
+
+    /// The journal record codec (verbatim from LocalBlockStore.cpp):
+    /// [version-byte 0x01][state-byte] with 0x00=PendingUpload,
+    /// 0x01=UploadedAccepted, 0x02=UploadedDurable.
+    const std::string kJournalDurable = std::string{ '\x01', '\x02' };
+
+    /// The journal key for a CID string: byte-identical to
+    /// LocalBlockStore's MakeKey (libp2p ContentIdentifierCodec::encode).
+    std::string JournalKeyOf( const std::string &cid_string )
+    {
+        auto cid     = sgns::CID::fromString( cid_string );
+        EXPECT_FALSE( cid.has_error() );
+        auto encoded = libp2p::multi::ContentIdentifierCodec::encode( cid.value() );
+        EXPECT_FALSE( encoded.has_error() );
+        return std::string( encoded.value().begin(), encoded.value().end() );
+    }
+
+    /**
+     * @brief  Rewrites (or deletes, when @p value_bytes is nullopt) one
+     *         CID's record in the coldstore's upload_journal CF. Asserts
+     *         the record EXISTS first (fixture hygiene) and that the
+     *         journal is non-empty. Requires the GlobalDB over @p
+     *         coldstore_dir's hot dir to be CLOSED (RocksDB dir lock).
+     * @return true on success (false + ADD_FAILURE on any RocksDB error).
+     */
+    bool SeedJournalRecord( const std::string        &coldstore_dir,
+                            const std::string        &cid_string,
+                            std::optional<std::string> value_bytes )
+    {
+        const std::string key = JournalKeyOf( cid_string );
+
+        rocksdb::Options                 list_options;
+        std::vector<std::string>         cf_names;
+        rocksdb::Status                  status = rocksdb::DB::ListColumnFamilies( list_options, coldstore_dir, &cf_names );
+        if ( !status.ok() )
+        {
+            ADD_FAILURE() << "SeedJournalRecord: ListColumnFamilies failed at " << coldstore_dir << ": "
+                          << status.ToString();
+            return false;
+        }
+        std::vector<rocksdb::ColumnFamilyDescriptor> descriptors;
+        for ( const auto &name : cf_names )
+        {
+            descriptors.emplace_back( name, rocksdb::ColumnFamilyOptions() );
+        }
+        rocksdb::DB                                 *raw_db = nullptr;
+        std::vector<rocksdb::ColumnFamilyHandle *>  handles;
+        status = rocksdb::DB::Open( rocksdb::DBOptions(), coldstore_dir, descriptors, &handles, &raw_db );
+        if ( !status.ok() )
+        {
+            ADD_FAILURE() << "SeedJournalRecord: Open failed at " << coldstore_dir << ": " << status.ToString();
+            return false;
+        }
+        std::unique_ptr<rocksdb::DB> db( raw_db );
+        rocksdb::ColumnFamilyHandle *journal = nullptr;
+        for ( auto *handle : handles )
+        {
+            if ( handle->GetName() == sgns::blockstore::kUploadJournalColumnFamilyName )
+            {
+                journal = handle;
+            }
+        }
+        if ( journal == nullptr )
+        {
+            ADD_FAILURE() << "SeedJournalRecord: upload_journal CF not found at " << coldstore_dir;
+            for ( auto *handle : handles )
+            {
+                delete handle;
+            }
+            return false;
+        }
+
+        std::string current;
+        status = db->Get( rocksdb::ReadOptions(), journal, key, &current );
+        if ( !status.ok() )
+        {
+            ADD_FAILURE() << "SeedJournalRecord: target record absent before seeding (populate bug): "
+                          << status.ToString();
+        }
+        size_t record_count = 0;
+        {
+            std::unique_ptr<rocksdb::Iterator> it( db->NewIterator( rocksdb::ReadOptions(), journal ) );
+            for ( it->SeekToFirst(); it->Valid(); it->Next() )
+            {
+                ++record_count;
+            }
+        }
+        EXPECT_GE( record_count, 1u ) << "SeedJournalRecord: empty journal (populate bug)";
+
+        if ( value_bytes.has_value() )
+        {
+            status = db->Put( rocksdb::WriteOptions(), journal, key, value_bytes.value() );
+        }
+        else
+        {
+            status = db->Delete( rocksdb::WriteOptions(), journal, key );
+        }
+        const bool ok = status.ok();
+        if ( !ok )
+        {
+            ADD_FAILURE() << "SeedJournalRecord: seed write failed: " << status.ToString();
+        }
+        for ( auto *handle : handles )
+        {
+            delete handle;
+        }
+        return ok;
+    }
+
+    /**
+     * LEG S3a (16-02 Task 2, COMP-03/D-10/D-11a - authored RED-FIRST
+     * against the consult-absent line): a REAL hermetic GC disposal
+     * (GlobalDB's own GC thread over the InMemory fakes - the genuine
+     * post-disposal state: journal record deleted, disposed marker
+     * written) strands the subsequent cycle's group behind the SPLIT
+     * counter, erases NOTHING, and the last hot copy of the value
+     * survives.
+     *
+     * Disposal mechanics (the cold_storage_gc_test recipe, live-stack
+     * variant): the group's delta block is published LAST on the topic
+     * (it IS the head), awaited to Durable, then RemoveHead detaches it -
+     * the retention target (a REAL delta with real s-rows and seal
+     * state that LOST head-reachability). The subsequent driver puts
+     * start fresh roots (no parent links), so the detached block is
+     * walk-unreachable and the tiny-age GC thread disposes it
+     * (PollUntil-bounded on IsColdDisposed - the new bridge itself).
+     */
+    TEST_F( ColdComposeMatrixTest, S3a_DisposedGroupStrandsBehindSplitCounter )
+    {
+        // Retention 1ms + interval 50ms + grace 1ms: the GC thread runs.
+        BuildStack( /*retention_age_ms=*/1 );
+        ASSERT_NE( db_, nullptr );
+
+        // The eligibility shape (the gate-test LEG-1 recipe, re-ordered so
+        // the ERASABLE group's delta is the LAST chain link before the
+        // detach): spender first, then the eligible, then the detach.
+        auto spender    = MakeTransfer( 1, 0 );
+        auto eligible_a = MakeTransfer( 2, 1 );
+
+        SeedTransaction( spender );
+        SeedTransaction( eligible_a );
+
+        TrackOutputs( *eligible_a );
+        ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+
+        const std::string cid_a = SnapshotMapEntry( sgns::TransactionManager::GetTransactionPath( *eligible_a ) );
+        ASSERT_NE( cid_a, "absent" );
+        auto cid_a_parsed = sgns::CID::fromString( cid_a );
+        ASSERT_FALSE( cid_a_parsed.has_error() );
+        const sgns::CID detached_cid = cid_a_parsed.value();
+
+        // Real transitions to Durable BEFORE the detach (the spill record
+        // + timestamp the GC's eligibility scan reads).
+        ASSERT_TRUE( WaitDurable( detached_cid ) ) << "eligible's block never reached Durable";
+
+        // Detach the head: the eligible's delta becomes walk-unreachable
+        // (the retention target - the cold_storage_gc_test RemoveHead
+        // recipe). The value row (k-namespace) and the raw tx->CID map
+        // entry survive the detach.
+        auto crdt_datastore = db_->GetCRDTDataStore();
+        ASSERT_NE( crdt_datastore, nullptr );
+        auto detached = crdt_datastore->RemoveHead( detached_cid, kSeedTopic );
+        ASSERT_TRUE( detached.has_value() ) << "RemoveHead failed";
+
+        // Fresh roots: the driver puts publish AFTER the detach (empty
+        // head set, heights restarting at 1), so nothing links back to
+        // the detached delta. FOUR puts regrow max_height past
+        // spend_height(2) + window(2) - the window arithmetic needs
+        // max_height - spend_height >= kWindow (the height restart is
+        // the price of the detach; the count is load-bearing).
+        PutSeedValue( "/seed/s3a/driver-1", "d1" );
+        PutSeedValue( "/seed/s3a/driver-2", "d2" );
+        PutSeedValue( "/seed/s3a/driver-3", "d3" );
+        PutSeedValue( "/seed/s3a/driver-4", "d4" );
+
+        // The genuine hermetic disposal: GlobalDB's OWN GC thread (deps
+        // attached at Initialize, retention armed above) marks and evicts
+        // the detached block - journal record deleted + disposed marker
+        // written + hot cleanup committed (PollUntil-bounded).
+        ASSERT_TRUE( PollUntil( [&] { return db_->IsColdDisposed( detached_cid ); },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "the GC thread never disposed the detached block (SC3-UNDIFFERENTIATED setup)";
+        ASSERT_EQ( db_->GetColdUploadState( detached_cid ), crdt::ColdUploadState::NoRecord )
+            << "disposal must leave the journal record deleted (NoRecord)";
+
+        // The remote-unreachable posture at cycle time (the stranded
+        // scenario's steady state): the evaluator's own block-gate parse
+        // read (GetLocalDeltaKeys -> GetNodeWithoutRequest) would
+        // otherwise re-hydrate the disposed block from the REACHABLE
+        // remote and re-journal it (Pending - the correct self-healing
+        // production path, which a later cycle then prunes normally).
+        // Faulting the fake's Get models the remote-unreachable node:
+        // the fetch fails, the block verdict takes the
+        // BLOCK_ALREADY_ERASED branch, and the gate reads the journal
+        // exactly as the disposal left it.
+        fake_s3_->SetFault( sgns::blockstore::S3Op::Get, sgns::blockstore::S3FaultKind::Unavailable );
+
+        auto pruner = MakePruner( 10, kSmallSettleSeconds );
+        ASSERT_NE( pruner, nullptr );
+
+        sgns::PruneCycleStats stats;
+        RunSettledCycle( *pruner, stats );
+
+        // The cycle must not have re-journaled the disposed block (the
+        // faulted fetch posture): the gate's classification input is the
+        // disposal's own NoRecord.
+        EXPECT_EQ( db_->GetColdUploadState( detached_cid ), crdt::ColdUploadState::NoRecord )
+            << "the cycle must not re-journal the disposed block under the faulted-fetch posture";
+
+        // THE COMP-03 CONTRACT: under-prune, never destruction. The
+        // disposed group strands behind the SPLIT counter and erases
+        // NOTHING; the value row (the last hot copy) survives.
+        EXPECT_EQ( stats.erased, 0u ) << "SC3-UNDIFFERENTIATED: a disposed group must never erase";
+        EXPECT_EQ( stats.cold_disposed_stranded_groups, 1u )
+            << "SC3-UNDIFFERENTIATED: the disposed group must count into the stranded counter";
+        EXPECT_EQ( stats.cold_deferred_groups, 0u )
+            << "SC3-UNDIFFERENTIATED: the disposed group must NOT count into the undifferentiated deferral";
+        const std::string tx_path = sgns::TransactionManager::GetTransactionPath( *eligible_a );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_value() ) << "the last hot copy of the value must survive";
+
+        // The disposed marker's existence is asserted ABOVE through the
+        // production consult chain itself (the PollUntil on
+        // IsColdDisposed - GlobalDB -> ColdStorageManager::IsDisposed ->
+        // LocalBlockStore::IsDisposed, the disposed-CF point lookup the
+        // GetDisposed enumeration would read). A post-teardown
+        // LocalBlockStore reopen for the full enumeration is NOT
+        // possible in the retention posture: after a GC-bearing
+        // GlobalDB shuts down, an in-process object retains the
+        // coldstore's RocksDB handle indefinitely (diagnosed: raw
+        // DB::Open fails with "LOCK ... being used by another process"
+        // past 45 s, while the identical teardown WITHOUT retention
+        // releases cleanly - S3b's direct RocksDB reopen works). The
+        // leak is recorded as a deferred hardening item in the plan
+        // SUMMARY; benign in production (the store outlives shutdown
+        // interest), load-bearing only for this belt-and-braces probe.
+    }
+
+    /**
+     * LEG S3b (16-02 Task 2) - the journal-deletion negative control: a
+     * NoRecord constituent with NO disposed marker (the never-spilled
+     * shape, kit-simulated by deleting the journal record directly)
+     * keeps TODAY'S cold_deferred_groups classification - the split's
+     * negative control, and proof the consult answers not-disposed on a
+     * marker miss.
+     */
+    TEST_F( ColdComposeMatrixTest, S3b_JournalDeletionWithoutMarkerKeepsDeferredClassification )
+    {
+        BuildStack(); // retention 0 - the GC never runs
+        ASSERT_NE( db_, nullptr );
+
+        auto spender    = MakeTransfer( 1, 0 );
+        auto eligible_a = MakeTransfer( 2, 1 );
+
+        SeedTransaction( spender );
+        SeedTransaction( eligible_a );
+        PutSeedValue( "/seed/s3b/driver", "d" );
+
+        TrackOutputs( *eligible_a );
+        ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+
+        const std::string cid_a = SnapshotMapEntry( sgns::TransactionManager::GetTransactionPath( *eligible_a ) );
+        ASSERT_NE( cid_a, "absent" );
+
+        auto pruner = MakePruner( 10, kSmallSettleSeconds );
+        ASSERT_NE( pruner, nullptr );
+
+        // PHASE A tail: real transitions to Durable for the constituent.
+        auto cid_a_parsed = sgns::CID::fromString( cid_a );
+        ASSERT_FALSE( cid_a_parsed.has_error() );
+        ASSERT_TRUE( WaitDurable( cid_a_parsed.value() ) );
+
+        // PHASE B: close the stack, delete the journal record (the
+        // kit's nullopt-deletes contract) - NoRecord with NO marker.
+        TeardownStack();
+        ASSERT_TRUE( SeedJournalRecord( last_hot_dir_ + "/coldstore", cid_a, std::nullopt ) )
+            << "journal-record deletion failed";
+
+        // PHASE C: reopen over the SAME hot dir and drive one cycle.
+        BuildStackOnDir( last_hot_dir_ );
+        ASSERT_NE( db_, nullptr );
+        ASSERT_EQ( db_->GetColdUploadState( cid_a_parsed.value() ), crdt::ColdUploadState::NoRecord )
+            << "the deleted record must read NoRecord after the reopen";
+
+        auto pruner_c = MakePruner( 10, kSmallSettleSeconds );
+        ASSERT_NE( pruner_c, nullptr );
+
+        sgns::PruneCycleStats stats;
+        RunSettledCycle( *pruner_c, stats );
+
+        // The negative control: NoRecord WITHOUT a marker keeps today's
+        // classification - deferred, never stranded, never erased.
+        EXPECT_EQ( stats.erased, 0u );
+        EXPECT_EQ( stats.cold_deferred_groups, 1u )
+            << "SC3-UNDIFFERENTIATED: marker-miss NoRecord must keep the cold_deferred classification";
+        EXPECT_EQ( stats.cold_disposed_stranded_groups, 0u );
+        const std::string tx_path = sgns::TransactionManager::GetTransactionPath( *eligible_a );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_value() ) << "the deferred group's value must survive";
+    }
+
+    /**
+     * LEG S3c (16-02 Task 2) - the Pending no-consult control: a disposed
+     * constituent (real marker present from the hermetic disposal) whose
+     * journal view the state hook overrides to Pending NEVER reaches the
+     * consult - the Pending arm defers even when a marker exists (the
+     * misclassification vector closed; the plan's accepted simplification:
+     * marker from the prior disposal, journal view overridden via the
+     * Phase-14 D-07 injector).
+     */
+    TEST_F( ColdComposeMatrixTest, S3c_PendingArmNeverConsultsEvenWithMarker )
+    {
+        BuildStack( /*retention_age_ms=*/1 );
+        ASSERT_NE( db_, nullptr );
+
+        auto spender    = MakeTransfer( 1, 0 );
+        auto eligible_a = MakeTransfer( 2, 1 );
+
+        SeedTransaction( spender );
+        SeedTransaction( eligible_a );
+
+        TrackOutputs( *eligible_a );
+        ASSERT_TRUE( ConsumeOutput( *eligible_a, 0, *spender ) );
+
+        const std::string cid_a = SnapshotMapEntry( sgns::TransactionManager::GetTransactionPath( *eligible_a ) );
+        ASSERT_NE( cid_a, "absent" );
+        auto cid_a_parsed = sgns::CID::fromString( cid_a );
+        ASSERT_FALSE( cid_a_parsed.has_error() );
+        const sgns::CID detached_cid = cid_a_parsed.value();
+
+        ASSERT_TRUE( WaitDurable( detached_cid ) );
+
+        auto crdt_datastore = db_->GetCRDTDataStore();
+        ASSERT_NE( crdt_datastore, nullptr );
+        ASSERT_TRUE( crdt_datastore->RemoveHead( detached_cid, kSeedTopic ).has_value() );
+
+        PutSeedValue( "/seed/s3c/driver-1", "d1" );
+        PutSeedValue( "/seed/s3c/driver-2", "d2" );
+        PutSeedValue( "/seed/s3c/driver-3", "d3" );
+        PutSeedValue( "/seed/s3c/driver-4", "d4" );
+
+        // The real disposal: the marker EXISTS after this poll.
+        ASSERT_TRUE( PollUntil( [&] { return db_->IsColdDisposed( detached_cid ); },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "the GC thread never disposed the detached block";
+
+        // The journal view override: the state hook answers Pending for
+        // the disposed CID - the gate must take the Pending arm (defer)
+        // and NEVER consult the marker (Phase-14 D-07 injector, the
+        // plan's accepted simplification).
+        crdt::GlobalDB::SetColdUploadStateHookForTest(
+            [detached_cid]( const sgns::CID &cid ) -> std::optional<crdt::ColdUploadState> {
+                if ( cid == detached_cid )
+                {
+                    return crdt::ColdUploadState::Pending;
+                }
+                return std::nullopt;
+            } );
+
+        auto pruner = MakePruner( 10, kSmallSettleSeconds );
+        ASSERT_NE( pruner, nullptr );
+
+        sgns::PruneCycleStats stats;
+        RunSettledCycle( *pruner, stats );
+
+        crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+
+        // Pending never consults: deferred, never stranded, never erased.
+        EXPECT_EQ( stats.erased, 0u );
+        EXPECT_EQ( stats.cold_deferred_groups, 1u )
+            << "SC3-UNDIFFERENTIATED: the Pending arm must defer without consulting the marker";
+        EXPECT_EQ( stats.cold_disposed_stranded_groups, 0u );
+        const std::string tx_path = sgns::TransactionManager::GetTransactionPath( *eligible_a );
+        EXPECT_TRUE( db_->Get( { tx_path } ).has_value() );
     }
 } // namespace
