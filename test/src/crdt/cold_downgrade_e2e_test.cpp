@@ -834,12 +834,13 @@ groups:
      *     HISTORY_PRUNED_LOCALLY (SC4 + the D-10 failover signal), and
      *     every t0 fake-S3 object is still present (remote unchurned).
      */
-    TEST_F( ColdDowngradeE2ETest, TimelineT0ThroughT2 )
+    TEST_F( ColdDowngradeE2ETest, TimelineT0ThroughT3 )
     {
         timeline_hot_dir_ = FreshDir( "timeline" );
 
-        // The linked spend topology's CIDs (captured t0, asserted t1/t2).
+        // The linked spend topology's CIDs (captured t0, asserted t1/t2/t3).
         std::string           victim_cid_string;
+        std::string           spender_cid_string;
         std::vector<std::string> t0_object_keys;
 
         //
@@ -871,6 +872,15 @@ groups:
             ASSERT_TRUE( entry.has_value() );
             victim_cid_string = std::string( entry.value().toString() );
             ASSERT_FALSE( victim_cid_string.empty() );
+        }
+        // The spender's CID (the non-pruned below-link block - t3's
+        // eviction + remote-backed-serving target).
+        {
+            const std::string spender_path = TransactionManager::GetTransactionPath( *spender );
+            auto              entry        = db_->GetRaw( crdt::GlobalDB::Buffer{}.put( spender_path ) );
+            ASSERT_TRUE( entry.has_value() );
+            spender_cid_string = std::string( entry.value().toString() );
+            ASSERT_FALSE( spender_cid_string.empty() );
         }
 
         // All-Durable: journal records Durable + the remote objects exist.
@@ -1006,6 +1016,75 @@ groups:
 
         // SC2: the remote tier is unchurned - every t0 object still
         // present (structurally: no successful Put since t0).
+        EXPECT_EQ( fake_s3_->ObjectKeys(), t0_object_keys );
+
+        TeardownStack();
+
+        //
+        // T3 - STEADY STATE (D-12). The GC runs on this stage's stack
+        // (retention 1ms - every t0 spill timestamp is provably old; a
+        // 50 ms cadence + 1 ms grace), so the admin fault CLEARS (the
+        // staging gate needs a healthy admin) while the Put fault STAYS:
+        // unchurned remains structural, and with every journal record
+        // already Durable no drain Put can even be attempted.
+        //
+        BuildTimelineStack( NodeType::Light,
+                            /*drain_interval_ms=*/60000,
+                            /*retention_age_ms=*/1,
+                            /*gc_interval_ms=*/50,
+                            /*grace_ms=*/1,
+                            /*fault_put=*/true,
+                            /*fault_admin=*/false );
+
+        const auto victim_cid  = sgns::CID::fromString( victim_cid_string );
+        const auto spender_cid = sgns::CID::fromString( spender_cid_string );
+        ASSERT_FALSE( victim_cid.has_error() );
+        ASSERT_FALSE( spender_cid.has_error() );
+
+        // The 18-01 exemption carrying a REAL post-downgrade graph
+        // in-band: the pruned victim link is an evidenced gap; the walk
+        // completes and the exempted observable is live.
+        ASSERT_TRUE( PollUntil(
+            [&] { return db_->GetColdStorageStatus().gc_last_pass_exempted > 0; },
+            std::chrono::milliseconds( 20000 ) ) )
+            << "the GC pass never survived the evidenced gap (exemption not carrying the walk)";
+
+        // The below-link spender block became walk-unreachable the
+        // moment the victim turned into an exempted leaf - retention
+        // evicts its LOCAL cold copy through the real GC path.
+        ASSERT_TRUE( PollUntil( [&] { return db_->IsColdDisposed( spender_cid.value() ); },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "the below-link non-pruned block was never retention-evicted";
+
+        // Remote-backed serving for NON-pruned cold data: the spender's
+        // hot + local copies are gone (the eviction's two halves); the
+        // persistent fake (Get unfaulted) serves the object and the read
+        // rehydrates - the steady-state serving posture.
+        {
+            auto syncer = syncerOf( *db_ );
+            ASSERT_TRUE( PollUntil(
+                [&] { return syncer->GetNodeWithoutRequest( spender_cid.value() ).has_value(); },
+                std::chrono::milliseconds( 20000 ) ) )
+                << "remote-backed serving of the evicted non-pruned block never recovered";
+        }
+
+        // The refusal persists into the steady state.
+        {
+            auto syncer   = syncerOf( *db_ );
+            auto resolved = syncer->GetNodeWithoutRequest( victim_cid.value() );
+            ASSERT_TRUE( resolved.has_error() );
+            EXPECT_EQ( resolved.error(), sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY );
+        }
+
+        // Seals untouched by the pass (governing invariant 3).
+        {
+            auto syncer = syncerOf( *db_ );
+            EXPECT_TRUE( syncer->isResolved( victim_cid.value() ).value() );
+            EXPECT_TRUE( syncer->isResolved( spender_cid.value() ).value() );
+        }
+
+        // Cold is permanent this milestone: every t0 remote object
+        // remains (the pruned victim's bytes included - nothing deleted).
         EXPECT_EQ( fake_s3_->ObjectKeys(), t0_object_keys );
 
         TeardownStack();
