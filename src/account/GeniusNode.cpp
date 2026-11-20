@@ -701,6 +701,19 @@ namespace sgns
         {
             node_logger_->info( "crdt_config.json: cold storage blockstore enabled: {}",
                                 cold_storage_config_.LogSummary() );
+            // [A4, v1.2 Phase 18 — tiered-light posture line] The
+            // ARCHITECTURE §2 WARN/INFO surface: a Light node with cold
+            // storage enabled runs the tiered-light posture (cold chain
+            // serves; local pruning may erase node-locally). INFO - posture
+            // visibility, not a fault. Policy record:
+            // notes/18-collectibility-policy-downgrade-interlock.md
+            if ( node_type_ == NodeType::Light )
+            {
+                node_logger_->info(
+                    "cold storage enabled on Light node - tiered-light posture: cold chain serves, "
+                    "local pruning may erase node-locally (policy: "
+                    "notes/18-collectibility-policy-downgrade-interlock.md)" );
+            }
         }
         // GC-01 (v1.1 Phase 11) retention-inert WARN: a retention section
         // while gate (e) leaves cold storage disabled is NEVER a silent
@@ -5193,6 +5206,44 @@ namespace sgns
 
     void GeniusNode::StartPruneTimerIfConfigured()
     {
+        // [D-05/D-06/D-07, v1.2 Phase 18 — downgrade interlock] The
+        // persisted role fingerprint: read-compare-rewrite BEFORE anything
+        // else in this wiring — deliberately ABOVE the pruning-enabled
+        // early return, because an archive-era node typically runs with
+        // pruning DISABLED and a posture write gated on pruning-enabled
+        // would leave every later archive/full -> light downgrade blind
+        // (the prior record must exist before the role can change). The
+        // verdict is computed ONCE per process and the disarm LATCHES:
+        // StateTransition reaches this wiring once per account generation,
+        // and a later generation re-checking against the record the first
+        // check just rewrote would read NoDowngrade and ARM — laundering a
+        // detected downgrade within one process lifetime. Consent requires
+        // a RESTART by design (the WARN's own contract: "and restart to arm
+        // pruning"). Full record:
+        // notes/18-collectibility-policy-downgrade-interlock.md
+        if ( !role_fingerprint_checked_ && tx_globaldb_ )
+        {
+            role_fingerprint_checked_ = true;
+            auto checked = RoleFingerprint::CheckAndRewrite( *tx_globaldb_,
+                                                             pruning_config_,
+                                                             node_type_,
+                                                             cold_storage_config_.enabled );
+            if ( checked.has_error() )
+            {
+                // An errored helper result resolves to the SAFE arm —
+                // never arm-on-error (Pitfall 3).
+                role_fingerprint_unreadable_disarm_ = true;
+            }
+            else if ( checked.value() == RoleFingerprint::Verdict::DowngradeUnacknowledged )
+            {
+                role_fingerprint_downgrade_disarm_ = true;
+            }
+            else if ( checked.value() == RoleFingerprint::Verdict::UnreadableDisarm )
+            {
+                role_fingerprint_unreadable_disarm_ = true;
+            }
+        }
+
         // SC-5 default-off consent gate: an absent/disabled pruning config must
         // reach nothing below this line — no timer, no evaluator, no log cycle.
         if ( !pruning_config_.enabled )
@@ -5207,6 +5258,39 @@ namespace sgns
             node_logger_->warn( "Pruning enabled but node_type={} is not Light — pruning is light-only; "
                                 "prune cycle not started",
                                 node_type_ );
+            return;
+        }
+        // [D-05/D-06, v1.2 Phase 18 — the disarm gate] D-06 fire behavior:
+        // on an unacknowledged detected downgrade the node STARTS NORMALLY
+        // — everything above this gate (serving, cold chain, sync) is
+        // already live — and the pruner stays DISARMED behind one loud
+        // WARN naming the ack key and the operator checklist path.
+        // Fail-toward-under-erase: a misconfigured node degrades to
+        // "keeps everything", never to "stops working" or "erases
+        // unacknowledged". One-shot at startup (the WARN carries the full
+        // instruction; the latch returns silently on later generations).
+        if ( role_fingerprint_downgrade_disarm_ )
+        {
+            if ( !role_fingerprint_warned_ )
+            {
+                role_fingerprint_warned_ = true;
+                node_logger_->warn(
+                    "ROLE DOWNGRADE DETECTED (archive/full -> light+pruning) - pruning DISARMED. "
+                    "Set \"downgrade_acknowledged\": true in sgns_config.json's pruning object after "
+                    "completing the operator checklist (see "
+                    "notes/18-collectibility-policy-downgrade-interlock.md) and restart to arm pruning." );
+            }
+            return;
+        }
+        if ( role_fingerprint_unreadable_disarm_ )
+        {
+            if ( !role_fingerprint_warned_ )
+            {
+                role_fingerprint_warned_ = true;
+                node_logger_->warn(
+                    "role fingerprint unreadable - pruning DISARMED (fail-toward-under-erase); "
+                    "repair or acknowledge per notes/18-collectibility-policy-downgrade-interlock.md" );
+            }
             return;
         }
         // 18-04 real-cycle arm (the former dry_run=false WARN-return): the

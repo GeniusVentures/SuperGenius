@@ -1220,6 +1220,18 @@ namespace sgns
         NodeType                 node_type_ = NodeType::Light;   ///< Role from sgns_config.json (default Light).
         PruningConfig
             pruning_config_; ///< Pruning policy from sgns_config.json (default disabled — GATE-06 consent gate).
+        /// [D-05/D-06/D-07, v1.2 Phase 18 — downgrade interlock] The
+        /// fingerprint verdict is computed ONCE per process and the disarm
+        /// LATCHES until restart: StartPruneTimerIfConfigured is reached
+        /// once per account generation, and a later generation re-checking
+        /// against the record the first check just rewrote would read
+        /// NoDowngrade and ARM — laundering a detected downgrade within
+        /// one process lifetime. The WARN is one-shot (D-06: loud, not
+        /// cadenced - the text carries the full operator instruction).
+        bool role_fingerprint_checked_          = false;
+        bool role_fingerprint_downgrade_disarm_ = false;
+        bool role_fingerprint_unreadable_disarm_ = false;
+        bool role_fingerprint_warned_           = false;
         bool   force_bootstrap_walk_       = false; ///< Opt-in recovery from sgns_config.json (default disabled).
         size_t bootstrap_walk_max_blocks_  = 10000; ///< Maximum distinct blocks per recovery walk.
         size_t bootstrap_walk_max_retries_ = 8;     ///< Maximum retries of non-empty incomplete walks.

@@ -515,6 +515,49 @@ endif()
 set_tests_properties(cold_gc_walk_gap_exempt_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Downgrade interlock verdict matrix (D-05/D-06/D-07, v1.2 Phase 18 plan
+# 18-02): the persisted role fingerprint + ack key + disarm gate pinned leg
+# by leg on a REAL GlobalDB raw surface — FP-FirstRun/FP-DowngradeFire/
+# FP-AckArms/FP-FullFires/FP-UnreadableDisarm/FP-SamePosture + the
+# CFG-AckParse unit. Registered ONLY under SGNS_COLD_STORAGE; same link
+# set as cold_evidence_matrix_test (the genius_node_test whole-archive
+# keeps the PruneEligibility helpers + TransactionManager fixture
+# linkable). The 18-03 t0->t3 timeline legs extend this same file.
+if(SGNS_COLD_STORAGE)
+addtest(cold_downgrade_e2e_test
+    cold_downgrade_e2e_test.cpp
+)
+
+target_include_directories(cold_downgrade_e2e_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_downgrade_e2e_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+    ipfs-lite-cpp::ipfs_datastore_in_memory
+)
+
+if(MSVC)
+    target_link_options(cold_downgrade_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_downgrade_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_downgrade_e2e_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_downgrade_e2e_test PROPERTIES LABELS "Tier1")
+endif()
+
 # Dev-gated live-stack smoke (D-08c, v1.2 Phase 14 plan 14-03): the REAL
 # MinIO wire (production S3 client + real drainer transitions) passes the
 # cold-durability gate. Env-gated opt-in via SGNS_BLOCKSTORE_TEST_MINIO_BIN
