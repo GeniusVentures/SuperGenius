@@ -674,14 +674,21 @@ namespace sgns
          * @details     Read arms (the LookupPrunedEntry discipline): GetRaw
          *              NOT_FOUND => FirstRun (the current posture is
          *              written — every startup records what it ran as); any
-         *              other read error => UnreadableDisarm (best-effort
-         *              current-posture write); protobuf parse failure =>
-         *              UnreadableDisarm WITHOUT any write — the corrupt
-         *              record must SURVIVE (no laundering an unreadable
-         *              prior role through one reboot; the disarm persists
-         *              until operator repair). On a parsed prior: the
-         *              predicate decides Downgrade{Un,}acknowledged vs
-         *              NoDowngrade, then the current posture is rewritten.
+         *              other read error => UnreadableDisarm (NO write —
+         *              overwriting what could not be read is laundering);
+         *              protobuf parse failure => UnreadableDisarm WITHOUT
+         *              any write — the corrupt record must SURVIVE (no
+         *              laundering an unreadable prior role through one
+         *              reboot; the disarm persists until operator repair).
+         *              On a parsed prior: the predicate decides
+         *              Downgrade{Un,}acknowledged vs NoDowngrade. The
+         *              acknowledged-downgrade and same-posture arms rewrite
+         *              the current posture; the UNACKNOWLEDGED arm
+         *              PRESERVES the prior record — rewriting it to the
+         *              light posture would let a second unacknowledged boot
+         *              read NoDowngrade and arm silently, so the interlock
+         *              holds across ANY number of restarts until the ack
+         *              key is set.
          * @note        Node-local record, never broadcast. Crash between
          *              read and write is safe: the prior record survives,
          *              so the downgrade re-detects at next boot. A failed

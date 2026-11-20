@@ -710,11 +710,13 @@ groups:
         //
         BuildLiveStack( hot_dir, NodeType::Light, /*retention=*/1, /*gc_interval=*/100 );
         {
-            // The armed posture (ack present; prev = the light posture
-            // the t1 check rewrote).
+            // The armed posture: the t1 unacknowledged check PRESERVED the
+            // archive-era record, so the ack config detects the downgrade
+            // AND acknowledges it in one verdict.
             auto verdict
                 = sgns::RoleFingerprint::CheckAndRewrite( *db_, PruningOn( /*ack=*/true ), NodeType::Light, true );
             ASSERT_TRUE( verdict.has_value() );
+            EXPECT_EQ( verdict.value(), sgns::RoleFingerprint::Verdict::DowngradeAcknowledged );
         }
 
         sgns::PruneCycleStats stats;

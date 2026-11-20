@@ -532,6 +532,10 @@ target_include_directories(cold_downgrade_e2e_test PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
 )
 
+target_compile_definitions(cold_downgrade_e2e_test PRIVATE
+    SUPERGNUS_DOWNGRADE_GATE_SRC="${PROJECT_ROOT}/src"
+)
+
 target_link_libraries(cold_downgrade_e2e_test
     sgns-blockstore::sgns-blockstore
     crdt_globaldb

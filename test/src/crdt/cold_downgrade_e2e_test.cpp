@@ -35,10 +35,12 @@
 #include <atomic>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -648,6 +650,106 @@ groups:
         std::string                                                     timeline_hot_dir_;
     };
 
+    /**
+     * LEG FP-UnackedPersists (the 18-REVIEW F-1 regression pin): the
+     * interlock holds across ANY number of unacknowledged restarts. The
+     * unacknowledged arm PRESERVES the archive-era record (no rewrite),
+     * so a second unacknowledged check fires DowngradeUnacknowledged
+     * AGAIN - a supervisor crash-loop is not consent - and the record
+     * still parses as Archive until the ack key is set.
+     */
+    TEST_F( ColdDowngradeE2ETest, UnacknowledgedDowngradePersistsAcrossRestarts )
+    {
+        BuildStack();
+
+        auto seed = sgns::RoleFingerprint::CheckAndRewrite( *db_, PruningOn(), NodeType::Archive, /*cold=*/true );
+        ASSERT_TRUE( seed.has_value() );
+
+        auto first = sgns::RoleFingerprint::CheckAndRewrite( *db_, PruningOn(), NodeType::Light, /*cold=*/true );
+        ASSERT_TRUE( first.has_value() );
+        EXPECT_EQ( first.value(), sgns::RoleFingerprint::Verdict::DowngradeUnacknowledged );
+
+        // The restart-without-ack shape: the verdict must fire AGAIN.
+        auto second = sgns::RoleFingerprint::CheckAndRewrite( *db_, PruningOn(), NodeType::Light, /*cold=*/true );
+        ASSERT_TRUE( second.has_value() );
+        EXPECT_EQ( second.value(), sgns::RoleFingerprint::Verdict::DowngradeUnacknowledged )
+            << "an unacknowledged downgrade must NOT arm on the second boot "
+               "(the prior record was rewritten - the F-1 laundering hazard)";
+
+        // And the record still carries the archive prior.
+        auto recorded = db_->GetRaw( FingerprintKey() );
+        ASSERT_TRUE( recorded.has_value() );
+        SGTransaction::RoleFingerprintRecord record;
+        ASSERT_TRUE( record.ParseFromArray( recorded.value().data(),
+                                            static_cast<int>( recorded.value().size() ) ) );
+        EXPECT_EQ( static_cast<sgns::NodeType>( record.node_type() ), NodeType::Archive );
+    }
+
+    //
+    // The GeniusNode wiring source gate (18-REVIEW F-3): the interlock's
+    // gate ordering and WARN texts are production behavior - deleting the
+    // block must fail a test, not just a Select-String. The
+    // EraseSurfaceGateTest source-scan precedent.
+    //
+
+    /// Reads the whole source file (the crdt_erase_test readWholeFile shape).
+    std::string ReadWholeSourceFile( const std::filesystem::path &path )
+    {
+        std::ifstream      in( path, std::ios::binary );
+        std::ostringstream ss;
+        ss << in.rdbuf();
+        return ss.str();
+    }
+
+    /**
+     * LEG WIRE-GATE (18-REVIEW F-3): pins StartPruneTimerIfConfigured's
+     * interlock wiring in GeniusNode.cpp - the CheckAndRewrite call ABOVE
+     * the pruning-enabled early return, the two disarm WARNs between the
+     * Light check and the TxPruner::New arm (naming the ack key + the
+     * notes/18 checklist path), and the tiered-light posture INFO line.
+     */
+    TEST( ColdDowngradeWiringGate, InterlockGateWiringPinnedInGeniusNode )
+    {
+#ifdef SUPERGNUS_DOWNGRADE_GATE_SRC
+        const std::filesystem::path node_src = std::filesystem::path( SUPERGNUS_DOWNGRADE_GATE_SRC )
+                                                   / "account" / "GeniusNode.cpp";
+        ASSERT_TRUE( std::filesystem::exists( node_src ) ) << "GeniusNode.cpp missing at " << node_src;
+        const std::string text = ReadWholeSourceFile( node_src );
+        ASSERT_FALSE( text.empty() );
+
+        const auto consult_pos      = text.find( "RoleFingerprint::CheckAndRewrite" );
+        const auto enabled_gate_pos = text.find( "!pruning_config_.enabled" );
+        const auto light_check_pos  = text.find( "is not Light" );
+        const auto downgrade_warn   = text.find( "ROLE DOWNGRADE DETECTED" );
+        const auto unreadable_warn  = text.find( "role fingerprint unreadable" );
+        const auto txpruner_arm     = text.find( "TxPruner::New" );
+        const auto posture_line     = text.find( "tiered-light posture" );
+
+        ASSERT_NE( consult_pos, std::string::npos ) << "the fingerprint consult call is missing";
+        ASSERT_NE( enabled_gate_pos, std::string::npos );
+        ASSERT_NE( light_check_pos, std::string::npos );
+        ASSERT_NE( downgrade_warn, std::string::npos ) << "the downgrade WARN literal is missing";
+        ASSERT_NE( unreadable_warn, std::string::npos ) << "the unreadable WARN literal is missing";
+        ASSERT_NE( txpruner_arm, std::string::npos );
+        ASSERT_NE( posture_line, std::string::npos ) << "the tiered-light posture INFO line is missing";
+
+        // Ordering: the consult runs ABOVE the pruning-enabled early
+        // return (an archive-era node runs pruning-disabled; a write gated
+        // on pruning-enabled would leave every later downgrade blind).
+        EXPECT_LT( consult_pos, enabled_gate_pos )
+            << "the fingerprint check must run before the pruning-enabled early return";
+        // The disarm WARNs sit between the Light check and the arm.
+        EXPECT_LT( light_check_pos, downgrade_warn );
+        EXPECT_LT( downgrade_warn, txpruner_arm );
+        // The downgrade WARN carries the ack-key instruction and the
+        // checklist path citation.
+        EXPECT_NE( text.find( "downgrade_acknowledged" ), std::string::npos );
+        EXPECT_NE( text.find( "notes/18-collectibility-policy-downgrade-interlock.md" ), std::string::npos );
+#else
+        ADD_FAILURE() << "SUPERGNUS_DOWNGRADE_GATE_SRC is not defined - the wiring gate cannot run";
+#endif
+    }
+
     //
     // The verdict matrix (SC4's mechanical half). Each leg drives the
     // PRODUCTION helper over a REAL GlobalDB raw surface.
@@ -938,12 +1040,11 @@ groups:
         }
         EXPECT_EQ( fake_s3_->ObjectKeys(), t0_object_keys ) << "the remote tier is intact across the re-open";
 
-        // The ack leg: re-establish the archive-era record (the legal
-        // seed - the unack check above just rewrote it to the light
-        // posture), then the ack config returns DowngradeAcknowledged.
+        // The ack leg: the unacknowledged check above PRESERVED the
+        // archive-era record (no rewrite on the unack'd arm), so the ack
+        // config reads the same archive prior and returns
+        // DowngradeAcknowledged directly.
         {
-            auto seed = sgns::RoleFingerprint::CheckAndRewrite( *db_, PruningOn(), NodeType::Archive, true );
-            ASSERT_TRUE( seed.has_value() );
             auto acked
                 = sgns::RoleFingerprint::CheckAndRewrite( *db_, PruningOn( /*ack=*/true ), NodeType::Light, true );
             ASSERT_TRUE( acked.has_value() );

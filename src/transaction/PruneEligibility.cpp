@@ -740,12 +740,14 @@ namespace sgns
                 return RoleFingerprint::Verdict::FirstRun;
             }
             // Pitfall 3: an unreadable read resolves SAFE — disarm, never
-            // arm-on-read-failure. Best-effort current-posture write (the
-            // record may be absent or the read transiently failed).
+            // arm-on-read-failure. NO write on this arm: a read error says
+            // nothing about what the record contains, and overwriting what
+            // could not be read is exactly the laundering the parse-failure
+            // arm below forbids (an unreadable archive-era record must be
+            // able to survive a transient read failure untouched).
             MarkerLogger()->error(
                 "role fingerprint read failed (code {}) - failing closed to disarm",
                 prior.error().message() );
-            write_current_posture();
             return RoleFingerprint::Verdict::UnreadableDisarm;
         }
 
@@ -769,12 +771,23 @@ namespace sgns
                              && node_type == NodeType::Light
                              && config.enabled;
 
-        write_current_posture();
-
         if ( downgrade && !config.downgrade_acknowledged )
         {
+            // The record is PRESERVED on the unacknowledged arm: rewriting
+            // it to the current light posture would let a SECOND unacknow-
+            // edged boot read NoDowngrade and arm silently - the interlock
+            // must hold until the ack key is set, across ANY number of
+            // restarts (a supervisor crash-loop is not consent). Mirrors
+            // the corrupt-record arm's no-overwrite posture.
             return RoleFingerprint::Verdict::DowngradeUnacknowledged;
         }
+
+        // The acknowledged-downgrade and same-posture arms rewrite the
+        // current posture (fresh record, no stale-downgrade ghost after a
+        // role change back; crash between read and write is safe - the
+        // prior record survives and re-detects next boot).
+        write_current_posture();
+
         if ( downgrade )
         {
             return RoleFingerprint::Verdict::DowngradeAcknowledged;
