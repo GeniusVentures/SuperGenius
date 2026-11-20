@@ -3266,3 +3266,92 @@ TEST_F( ConsensusPendingLifecycleTest, PendingTtlExpiryDoesNotWipeSiblingSlotSta
 
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
+
+TEST_F( ConsensusPendingLifecycleTest, RejectedCertificateVerdictRetiresWorkAndWakesPendingDependency )
+{
+    /**
+     * The transaction handler classifies a permanently undeliverable
+     * certificate (staging 2026-11-19: the double-spent payout's certificate)
+     * with the success value Check::Reject. ProcessCommittedCertificate must
+     * retire the journal work on that verdict — no retry loop, no 60s backoff
+     * spam — and wake proposals that Pend on the certificate of the subject
+     * hash, which is what unblocks every subsequent certification.
+     */
+    using PendingDependencyKey = sgns::ConsensusManager::PendingDependencyKey;
+
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    const std::string tx_hash = "0xrejected-verdict-retires";
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject( { account->GetAddress() },
+                                                                      73,
+                                                                      tx_hash,
+                                                                      sgns::EmbeddedTransaction{},
+                                                                      MakeTestCommitment(),
+                                                                      MakeTestWitness() );
+    ASSERT_TRUE( subject_result.has_value() );
+    auto proposal_result = manager->CreateProposal(
+        subject_result.value(), { account->GetAddress() }, registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal_result.has_value() );
+    auto vote_result = manager->CreateVote(
+        proposal_result.value().proposal_id(),
+        { account->GetAddress() },
+        true,
+        [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+    ASSERT_TRUE( vote_result.has_value() );
+    auto certificate_result = manager->CreateCertificate( proposal_result.value(), { vote_result.value() } );
+    ASSERT_TRUE( certificate_result.has_value() );
+    const auto &certificate = certificate_result.value();
+
+    auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( certificate.proposal().subject() );
+    ASSERT_TRUE( subject_hash.has_value() );
+
+    std::atomic<int> handler_calls{ 0 };
+    ASSERT_TRUE( manager->RegisterSubjectHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject & )
+        { return sgns::ConsensusManager::ValidationResult::Approve(); } ) );
+    ASSERT_TRUE( manager->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&handler_calls]( const std::string &, const sgns::ConsensusManager::Certificate & )
+        {
+            ++handler_calls;
+            return outcome::success( sgns::ConsensusManager::Check::Reject );
+        } ) );
+
+    // A dependent proposal waits on this certificate — the shape every new
+    // transaction proposal takes while it Pends on Certificate(previous_hash).
+    const PendingDependencyKey dependency = PendingDependencyKey::Certificate( subject_hash.value() );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        certificate.proposal(),
+        subject_hash.value(),
+        sgns::ConsensusManager::ValidationResult::Pending( { dependency }, std::chrono::seconds( 2 ) ) ) );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 1U );
+
+    sgns::ConsensusPendingLifecycleTestAccess::WriteLiveCertificate( manager, certificate );
+    const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate );
+    ASSERT_FALSE( key.empty() );
+    std::string serialized;
+    ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
+    sgns::base::Buffer buffer;
+    buffer.put( serialized );
+    sgns::ConsensusPendingLifecycleTestAccess::CertificateReceived(
+        manager, sgns::crdt::CRDTCallbackManager::NewDataPair{ key, std::move( buffer ) } );
+    // CertificateReceived only journals the work; recovery is the retry loop
+    // entry that dispatches journaled entries at their lease.
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( manager );
+
+    ASSERT_EQ( handler_calls.load(), 1 );
+    // Reject is a success value: the journal retires the work (MarkDone)
+    // instead of retrying with capped exponential backoff, and the dependent
+    // pending proposals are woken.
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( manager, key ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasStalledCertificateWork( manager, key ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 0U );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
