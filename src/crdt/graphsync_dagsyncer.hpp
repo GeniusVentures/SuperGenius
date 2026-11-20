@@ -5,6 +5,7 @@
 #include <chrono>
 #include <atomic>
 #include <optional>
+#include <functional>
 #include <limits>
 #include <cstdint>
 
@@ -292,6 +293,52 @@ namespace sgns::crdt
          */
         static void SetBlacklistBackoffTimeoutForTest( uint64_t override_ms );
 
+        // [v1.2 Phase 19, X1/X2/X9] Test-only interrupt seam for the
+        // evidence-aware cold serve path (the TxPruner.hpp kInterrupt*
+        // family shape; the only genuinely new surface of the cross-
+        // feature fault-race matrix). All steps run on the FetchNodeFrom-
+        // ColdStorage / GetNodeWithRouteBudget serve path, OUTSIDE
+        // dagMutex_ by construction - a hook must never park inside a
+        // lock the publish path takes (the TimingS3Client Pitfall-7 rule).
+        /// Interrupt seam step: after the LookupPruneEvidence consult at
+        /// the top of FetchNodeFromColdStorage, BEFORE the cold Get (X1:
+        /// the consult-to-Get gap an erase-commit race probes).
+        static constexpr int kInterruptAfterEvidenceConsult = 1;
+        /// Interrupt seam step: after the cold Get returns bytes, BEFORE
+        /// Rehydrate (X2: the Get-to-Rehydrate gap).
+        static constexpr int kInterruptBeforeRehydrate = 2;
+        /// Interrupt seam step: after the cold fetch resolves in
+        /// GetNodeWithRouteBudget, BEFORE the SERVE-04 terminality check
+        /// (X9: the never-fall-through-to-peers point).
+        static constexpr int kInterruptAfterColdFetch = 3;
+
+        /**
+         * @brief       Test-only interruption seam for the cold serve path.
+         * @param[in]   hook invoked at the seam steps above -
+         *              kInterruptAfterEvidenceConsult (after the top
+         *              consult, before the cold Get),
+         *              kInterruptBeforeRehydrate (after the cold Get
+         *              returns bytes, before Rehydrate), and
+         *              kInterruptAfterColdFetch (after the cold fetch
+         *              resolves, before the SERVE-04 terminality check
+         *              in GetNodeWithRouteBudget). A @c true return
+         *              ABORTS the serve at that point: step 1 returns the
+         *              hot-miss result unchanged (no cold I/O); step 2
+         *              discards the fetched bytes (never rehydrated) and
+         *              returns the hot-miss result; step 3 drops a
+         *              resolved node (CID_NOT_FOUND) or propagates the
+         *              fetch error without terminality classification.
+         * @note        No production caller may invoke this method. The
+         *              hook is nullptr in production (zero cost - one
+         *              null comparison per step). Fixture discipline: a
+         *              hook armed by a failing case must never leak -
+         *              clear it in the fixture destructor, and arm/clear
+         *              only while no serve is in flight (the storage is a
+         *              plain std::function, not synchronized - the
+         *              TxPruner.cpp SetCycleInterruptHookForTest posture).
+         */
+        static void SetColdServeInterruptForTest( std::function<bool( int step )> hook );
+
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
@@ -391,6 +438,16 @@ namespace sgns::crdt
 
         /// Test-only flat override (milliseconds) for getBackoffTimeout; 0 == production formula.
         static std::atomic<uint64_t> blacklist_backoff_override_ms_for_test_;
+
+        /// [v1.2 Phase 19] Test-only cold-serve interrupt hook (see
+        /// SetColdServeInterruptForTest); nullptr in production. Plain
+        /// storage, not synchronized - armed/cleared by test fixtures
+        /// while no serve is in flight.
+        static std::function<bool( int )> cold_serve_interrupt_hook_for_test_;
+
+        /// [v1.2 Phase 19] TEST-ONLY seam dispatcher (the TxPruner
+        /// InterruptRequested shape): false when no hook is armed.
+        bool ColdServeInterruptRequested( int step ) const;
 
         /// record successful connections
         void RecordSuccessfulConnection( const PeerId &peer ) const;

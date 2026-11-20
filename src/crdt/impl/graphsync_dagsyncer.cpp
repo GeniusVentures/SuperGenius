@@ -175,6 +175,29 @@ namespace sgns::crdt
     // Default-initialized to 0 so an unconfigured process keeps production durations.
     std::atomic<uint64_t> GraphsyncDAGSyncer::blacklist_backoff_override_ms_for_test_{ 0 };
 
+    // [v1.2 Phase 19] Test-only cold-serve interrupt hook: nullptr in
+    // production (zero cost); armed/cleared only by test fixtures while no
+    // serve is in flight (plain storage, not synchronized - the TxPruner
+    // cycle_interrupt_hook_for_test_ posture).
+    std::function<bool( int )> GraphsyncDAGSyncer::cold_serve_interrupt_hook_for_test_;
+
+    void GraphsyncDAGSyncer::SetColdServeInterruptForTest( std::function<bool( int step )> hook )
+    {
+        // TEST-ONLY seam (see header): inert (nullptr) in production; a
+        // fixture must clear it in its destructor so a hook armed by a
+        // failing case never leaks further.
+        cold_serve_interrupt_hook_for_test_ = std::move( hook );
+    }
+
+    bool GraphsyncDAGSyncer::ColdServeInterruptRequested( int step ) const
+    {
+        if ( cold_serve_interrupt_hook_for_test_ == nullptr )
+        {
+            return false;
+        }
+        return cold_serve_interrupt_hook_for_test_( step );
+    }
+
     GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> block_datastore,
                                             std::shared_ptr<Graphsync>     graphsync,
                                             std::shared_ptr<libp2p::Host>  host,
@@ -409,6 +432,22 @@ namespace sgns::crdt
         ColdReadStatus cold_classification{};
         bool           cold_classified = false;
         node = FetchNodeFromColdStorage( cid, node, &cold_classified, &cold_classification );
+
+        if ( ColdServeInterruptRequested( kInterruptAfterColdFetch ) )
+        {
+            // Observation seam (v1.2 Phase 19, X9): fires after the cold
+            // fetch resolved (either outcome), BEFORE the success return
+            // and the SERVE-04 terminality check - the point where the
+            // refusal vocabulary must stay distinct from not-found and
+            // never fall through to peers. true = abort (the seam
+            // contract): a resolved node is dropped (CID_NOT_FOUND), an
+            // error propagates as-is without terminality classification.
+            if ( node.has_error() )
+            {
+                return node.as_failure();
+            }
+            return outcome::failure( Error::CID_NOT_FOUND );
+        }
 
         if ( !node.has_error() )
         {
@@ -879,10 +918,30 @@ namespace sgns::crdt
                 break; // SC2: the existing v1.1 serve path, unchanged
         }
 
+        if ( ColdServeInterruptRequested( kInterruptAfterEvidenceConsult ) )
+        {
+            // Observation seam (v1.2 Phase 19, X1): fires after the top
+            // consult admitted this CID (NoEvidence), BEFORE the cold
+            // Get - the consult-to-Get gap an erase-commit race probes.
+            // true = abort (the seam contract): no cold I/O, the hot-miss
+            // result passes through unchanged.
+            return hot_miss_result;
+        }
+
         common::Buffer   bytes;
         const ColdReadStatus status = cold_read_hook_->Get( cid, bytes );
         if ( !bytes.empty() )
         {
+            if ( ColdServeInterruptRequested( kInterruptBeforeRehydrate ) )
+            {
+                // Observation seam (v1.2 Phase 19, X2): fires after the
+                // cold Get returned bytes, BEFORE Rehydrate - the
+                // Get-to-Rehydrate gap. true = abort (the seam contract):
+                // the fetched bytes are discarded, never rehydrated, the
+                // hot-miss result passes through unchanged.
+                return hot_miss_result;
+            }
+
             // D-04: re-cache through the dedicated rehydrate path BEFORE
             // returning (bytes only - SC4; the decorator set() journals +
             // writes hot, local disk only).

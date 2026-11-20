@@ -304,6 +304,52 @@ endif()
 set_tests_properties(cold_storage_resurrection_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Cross-feature fault-race matrix (TEST-02, v1.2 Phase 19 plan 19-01):
+# the erase x serve x recovery boundaries no single phase's suite owns.
+# D-02 SIBLING SUITE: the v1.1 cold_storage_fault_race_test.cpp 13-case
+# matrix stays byte-frozen - this target re-declares the kit in-file and
+# hosts the X1..X11 cross-feature cases (X1/X2 in 19-01; X3/X5/X8 in
+# 19-02; X4/X6/X7/X9 in 19-03; X10/X11 in 19-04). Registered ONLY under
+# SGNS_COLD_STORAGE with the RESURRECTION link set copied verbatim
+# (including crdt_mirror_broadcaster.cpp as the second source - the
+# full-wire X11 leg needs that link fidelity; the hermetic legs are
+# unaffected by it). Joins the Tier1 label set (D-11 membership
+# contract; NO new label name).
+if(SGNS_COLD_STORAGE)
+addtest(cold_cross_feature_fault_race_test
+    cold_cross_feature_fault_race_test.cpp
+    crdt_mirror_broadcaster.cpp
+)
+
+target_include_directories(cold_cross_feature_fault_race_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_cross_feature_fault_race_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+)
+
+if(MSVC)
+    target_link_options(cold_cross_feature_fault_race_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_cross_feature_fault_race_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_cross_feature_fault_race_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_cross_feature_fault_race_test PROPERTIES LABELS "Tier1")
+endif()
+
 # Cold-durability prune admission gate (PRUNE-01/PRUNE-03, v1.2 Phase 14
 # plan 14-01): TxPruner::RunCycle's group filter admits an erase only on
 # evidence-Durable cold state; everything else defers the whole group as a
