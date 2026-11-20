@@ -4,15 +4,15 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 20
 status: executing
-stopped_at: Phase 20 context gathered
-last_updated: "2026-10-24T16:18:53.681Z"
+stopped_at: Phase 21.1 context gathered
+last_updated: "2026-11-20T20:31:07.804Z"
 last_activity: 2026-10-24 -- Phase 20 planning complete
 progress:
-  total_phases: 25
+  total_phases: 26
   completed_phases: 4
   total_plans: 29
   completed_plans: 24
-  percent: 16
+  percent: 15
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-24T13:48:12.510Z
-**Stopped At:** Phase 20 context gathered
-**Resume File:** .planning/phases/20-reclamation-proof-e2e-hardening/20-CONTEXT.md
+**Last session:** 2026-11-20T20:31:07.792Z
+**Stopped At:** Phase 21.1 context gathered
+**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-CONTEXT.md
 
 ## Accumulated Context
 
@@ -100,6 +100,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 14 added: Account-generation publication and retired-manager lifecycle safety
 - Milestone v1.2 roadmap created: Phases 16-20 (erasure primitives → dry-run policy/gating → first real prune → survival hardening → reclamation proof)
 - Milestone v1.3 roadmap created on develop (Phases 21-29, security remediation) in parallel with v1.2 execution on this branch — both milestones accommodated in one planning root
+- Phase 21.1 inserted after Phase 21: Escrow Payout Slot Identity & Double-Payout Prevention; v1.3 P0 consensus-safety insertion; next preparation: $gsd-discuss-phase 21.1; preserve current v1.2 position (URGENT)
 
 ### v1.0 History
 
