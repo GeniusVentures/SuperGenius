@@ -78,9 +78,10 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Milestone Goal:** Close all 25 findings from the October 2026 external security assessment (`.planning/notes/security-assessment-2026-10-response.md`) so the network is safe to expose publicly — every fix proven by an adversarial regression suite (VER-01) that names the attacker authority required, the expected rejection, and the actual behavior, paired with a compatibility twin proving the legitimate pre-upgrade path survives.
 
-**Execution order:** strictly 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 (numeric order = execution order; no planned overlap). Hard ordering constraints encoded: REL-02 (artifact verification) is satisfied in-phase at Phase 22 — its digest-verification CI step lands as an early plan, with or before that phase's first fork-riding change, because fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts; the per-phase adversarial+compat test-pair discipline applies to every security-fix phase even though the first-class apparatus (VER-01) and release gating (REL-01) arrive at Phase 25 — Phases 21-24's fixes carry their own adversarial tests in-phase per their criteria; Phase 26 is the dependency sink — GRID-03 consumes GRID-01/02/04 and MINT-01 in-phase plus authenticated transport (23) and mint identities (21); Phase 27 carries the complete-relay-vs-topology-contract decision gate; Phase 29 (return leg) is strictly last — RET-01 requires TRUST-01 (Phase 21) and BRIDGE-01/02 (Phase 24) closed and proven first.
+**Execution order:** strictly 21 → 21.1 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 (numeric order = execution order; no planned overlap). Hard ordering constraints encoded: REL-02 (artifact verification) is satisfied in-phase at Phase 22 — its digest-verification CI step lands as an early plan, with or before that phase's first fork-riding change, because fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts; the per-phase adversarial+compat test-pair discipline applies to every security-fix phase even though the first-class apparatus (VER-01) and release gating (REL-01) arrive at Phase 25 — Phases 21-24's fixes carry their own adversarial tests in-phase per their criteria; Phase 26 is the dependency sink — GRID-03 consumes GRID-01/02/04 and MINT-01 in-phase plus authenticated transport (23) and mint identities (21); Phase 27 carries the complete-relay-vs-topology-contract decision gate; Phase 29 (return leg) is strictly last — RET-01 requires TRUST-01 (Phase 21) and BRIDGE-01/02 (Phase 24) closed and proven first.
 
 - [ ] **Phase 21: Consensus Trust & Mint Authorization** - Registry-CID authorization chain with a grandfather rule that keeps history re-validating; admission/equivocation audit; fail-closed chain-ids; legacy-v1 admission cutover; receipt-to-mint output binding (TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04)
+- [ ] **Phase 21.1: Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED)** - Mint-style canonical payout Slot ID: different peers paying the same job escrow share one slot and use existing arbitration, exact certificate binding, and duplicate handling (PAYSAFE-01..05)
 - [ ] **Phase 22: Wire & Ingestion Hardening (Fork)** - Length and nesting caps before allocation across the three fork readers; error-result hash parsing with fuzz coverage; thirdparty/zkLLVM digest verification + SHA-pinned actions landing with or before the first fork-riding change; first FORK-DELTA manifest + mixed-version interop-matrix run (WIRE-01, WIRE-02, REL-02)
 - [ ] **Phase 23: Gossip & DHT Authentication (Fork)** - Verify-before-forward on public topics with signing-key↔from binding and per-topic policy as data; DHT record validation with admission limits and request-bound nonces; before/after throughput benchmark (GOSSIP-01, GOSSIP-02)
 - [ ] **Phase 24: Bridge Ingestion Safety** - Per-chain confirmation depth/finality as a restart-durable state machine proven under anvil reorg; content-corroborated multi-operator RPC quorum (BRIDGE-01, BRIDGE-02)
@@ -248,9 +249,28 @@ Plans:
 
 *Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
 
+### Phase 21.1: Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED)
+
+**Goal:** Different peers attempting to pay the same job escrow derive the same Slot ID using the existing Mint-style transaction-specific identity mechanism, so the existing consensus arbitration, certificate binding, and duplicate handling recognize them as competitors and allow only the certified payout to apply.
+**Priority:** P0 consensus-safety concern; actual duplicate payment on staging remains unproven. Blocks release of real-value escrow settlement until the adversarial and compatibility gates pass.
+**Requirements**: PAYSAFE-01, PAYSAFE-02, PAYSAFE-03, PAYSAFE-04, PAYSAFE-05
+**Depends on:** Phase 21
+**Success Criteria** (what must be TRUE):
+  1. Two peers with different source addresses, nonces, signatures, and transaction hashes proposing payout for the same job escrow obtain the same GetSlotID(); payouts for different escrows obtain different slots, following Mint's existing identity pattern (PAYSAFE-01).
+  2. The payout slot is reconstructed consistently from serialized/embedded transactions and reaches existing proposal arbitration, durable voting, and canonical certificate storage/lookup; Mint and ordinary-transfer slot rules remain unchanged (PAYSAFE-02).
+  3. Shared-slot payouts retain exact certificate-to-transaction binding: the winning transaction can confirm and the other peer's contender cannot borrow that certificate. Any processor may submit the complete validated payout; existing subtask locking and payout contents remain unchanged (PAYSAFE-03).
+  4. Existing generic duplicate transaction/certificate handling recognizes same-job payout competitors across different peers, including minimal integration fixes where sender/nonce assumptions bypass the canonical slot; no new settlement registry, quarantine policy, or general input-lock/recovery protocol is required (PAYSAFE-04).
+  5. Escrow regressions mirror MintSlotIgnoresProposalEnvelope and SharedMintSlotConfirmsOnlyTheCertifiedTransaction, plus a different-escrow negative control and replay/restart/sync checks showing one payout effect. Existing Mint and ordinary-transfer regressions stay green; incident scenarios A-E remain relevant validation inputs (PAYSAFE-05).
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 21.1 to break down)
+
+**Evidence and planning input:** `.planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-CONTEXT.md` captures the user's explicit Mint-style Slot ID scope clarification. The adjacent `21.1-BUG-BRIEF.md` preserves the preliminary assessment against `f2910281031a6cd2b4ebc3d264d44480f113b07e` and the unverified staging outcome; its broader candidate mechanisms are not all phase deliverables. Read `src/account/MintTransactionV2.cpp`, `src/transaction/TransactionConsensusHandler.cpp`, and the existing Mint slot/certificate-binding regressions. Use a coordinated validator upgrade. Validator-weight policy, broader Phase 26 authorization work, and the later voter stall remain separate.
+
 ### Phase 22: Wire & Ingestion Hardening (Fork)
 **Goal**: The remote-crash class is closed at the fork parse boundaries — every network-provided length prefix is capped before allocation, nesting depth is bounded, and transaction ingestion returns errors instead of crashing on malformed hashes — shipped as the first fork delta under the divergence discipline with proven old/new-peer interop, riding a release pipeline whose artifacts are verified: the REL-02 digest-verification step lands as an early plan in this phase, with or before the first fork-riding change.
-**Depends on**: Phase 21 (execution order; no hard technical dependency beyond sequencing)
+**Depends on**: Phase 21.1 (execution order; no hard technical dependency beyond sequencing)
 **Requirements**: WIRE-01, WIRE-02, REL-02
 **Success Criteria** (what must be TRUE):
   1. Oversized length prefixes at all three fork readers (uvarint, big-endian, Kademlia) are rejected before allocation with oversized-vs-malformed distinguished as named errors, and nesting depth is capped — adversarial tests exercise each boundary (WIRE-01)
@@ -344,7 +364,7 @@ Plans:
 
 ## Progress
 
-**Execution Order (v1.3):** Phases 21 → 29 in strict numeric order (numeric order = execution order; no planned overlap).
+**Execution Order (v1.3):** 21 → 21.1 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 (numeric order = execution order; no planned overlap).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -365,6 +385,7 @@ Plans:
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
+| 21.1. Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED) | v1.3 | 0/? | Not planned — P0 | — |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |

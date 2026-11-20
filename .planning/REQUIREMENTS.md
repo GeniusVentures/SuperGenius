@@ -27,6 +27,18 @@
 - [ ] **MINT-03**: Legacy-v1 mint reception is disabled or mint authority enforced via admission gating — never deserialization gating, so boot/sync/history spends keep working (#4)
 - [ ] **MINT-04**: A burn receipt's token ID, burned amount, and destination are bound to the mint's outputs — even fully honest RPC endpoints cannot authorize a mismatched mint (#5)
 
+### Escrow Payout Consensus Safety (urgent insertion, 2026-11-20)
+
+Source: `phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-BUG-BRIEF.md`. Additional incident scope beyond the original 25-finding assessment; staging duplicate ledger credit remains unverified.
+
+- [ ] **PAYSAFE-01**: Two different peers proposing payout for the same job escrow derive the same transaction Slot ID, independent of sender, nonce, signatures, or transaction hash, using the transaction-specific identity pattern already used by Mint; different escrows remain distinct.
+- [ ] **PAYSAFE-02**: Escrow payout identity survives serialization/embedded reconstruction and reaches the existing consensus slot handler, arbitration, active-vote, and canonical certificate paths consistently; ordinary transfers and Mint retain their existing identity rules.
+- [ ] **PAYSAFE-03**: Same-slot competing escrow payouts use existing exact certificate-to-transaction binding: only the transaction actually certified may confirm, and another peer's competing transaction cannot reuse its certificate merely because the slot matches. Any processor may submit the complete validated payout; existing payout contents and subtask-locking behavior remain unchanged.
+- [ ] **PAYSAFE-04**: Same-job payout competitors use the existing generic duplicate transaction/certificate handling, including necessary integration fixes for sender/nonce assumptions; duplicate arrival, replay, and restart cannot produce a second payout effect. No separate settlement registry, quarantine policy, or new general input-lock/recovery protocol is required by this phase.
+- [ ] **PAYSAFE-05**: Regressions mirror MintSlotIgnoresProposalEnvelope and SharedMintSlotConfirmsOnlyTheCertifiedTransaction for escrow payouts: different peers/nonces/hashes for one escrow share transaction/consensus/certificate slots, different escrows do not collide, and the existing winner/duplicate path pays at most once across replay/restart/sync. Retain Mint and ordinary-transfer regressions and use incident scenarios A-E as relevant validation inputs; weight-policy and broader authorization work remain separate.
+
+**Scope clarification (2026-11-20):** The user explicitly requested a Mint-style Slot ID fix, not the preliminary report's broader four-part redesign. The discussion context supersedes those candidate mechanisms; MINT-01/GRID work retains its existing Phase 26 mapping.
+
 ### Bridge Ingestion Safety
 
 - [ ] **BRIDGE-01**: Irreversible native issuance requires source-chain confirmation depth/finality, proven reorg-safe under an anvil reorg test (#10)
@@ -104,6 +116,11 @@ Which phases cover which requirements. Filled by roadmap creation (2026-10-19). 
 | MINT-02 | Phase 21 | Pending |
 | MINT-03 | Phase 21 | Pending |
 | MINT-04 | Phase 21 | Pending |
+| PAYSAFE-01 | Phase 21.1 | Pending |
+| PAYSAFE-02 | Phase 21.1 | Pending |
+| PAYSAFE-03 | Phase 21.1 | Pending |
+| PAYSAFE-04 | Phase 21.1 | Pending |
+| PAYSAFE-05 | Phase 21.1 | Pending |
 | WIRE-01 | Phase 22 | Pending |
 | WIRE-02 | Phase 22 | Pending |
 | REL-02 | Phase 22 | Pending |
@@ -128,8 +145,8 @@ Which phases cover which requirements. Filled by roadmap creation (2026-10-19). 
 | RET-01 | Phase 29 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 27 total *(corrected 2026-10-19 during roadmap creation — the previously stated count of 26 undercounted by one; the REQ-ID list above contains 27)*
-- Mapped to phases: 27/27 ✓
+- v1.3 requirements: 32 total (27 original assessment requirements + 5 PAYSAFE requirements inserted 2026-11-20)
+- Mapped to phases: 32/32 ✓
 - Unmapped: 0
 - Phase mapping notes: REL-02 rides Phase 22 so its digest-verification CI step lands with or before that phase's first fork-riding change (fork changes ride the 4-stage release pipeline that today consumes unverified thirdparty/zkLLVM artifacts); EVM-01 and SDK-01 ride Phase 25 as dependency-free tracks (no hard dependency on other phases — may be pulled forward ad hoc if desired); MINT-01 is mapped to Phase 26 with the grid cluster because GRID-03 (independent result verification before payout) consumes the certified-result entitlement — Phase 21 planning research may validate an earlier minimal binding, but the requirement's completion gate stays in Phase 26.
 

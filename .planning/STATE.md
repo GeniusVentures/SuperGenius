@@ -5,7 +5,7 @@ milestone_name: Light-node transaction pruning
 current_phase: 20
 status: executing
 stopped_at: Phase 21.1 context gathered
-last_updated: "2026-11-20T20:31:07.804Z"
+last_updated: "2026-11-20T20:44:48.561Z"
 last_activity: 2026-10-24 -- Phase 20 planning complete
 progress:
   total_phases: 26
@@ -101,6 +101,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Milestone v1.2 roadmap created: Phases 16-20 (erasure primitives → dry-run policy/gating → first real prune → survival hardening → reclamation proof)
 - Milestone v1.3 roadmap created on develop (Phases 21-29, security remediation) in parallel with v1.2 execution on this branch — both milestones accommodated in one planning root
 - Phase 21.1 inserted after Phase 21: Escrow Payout Slot Identity & Double-Payout Prevention; v1.3 P0 consensus-safety insertion; next preparation: $gsd-discuss-phase 21.1; preserve current v1.2 position (URGENT)
+- Phase 21.1 edited: User clarified a focused Mint-style escrow payout Slot ID fix: same job escrow across different peers shares one canonical slot; reuse existing transaction duplicate handling; remove assistant-added protocol redesign requirements.
 
 ### v1.0 History
 
