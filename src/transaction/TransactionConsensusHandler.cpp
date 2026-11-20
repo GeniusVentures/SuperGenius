@@ -29,6 +29,61 @@ namespace sgns
         using utxo_merkle::HashLeaf;
         using utxo_merkle::OutPointKey;
         using utxo_merkle::SerializeUTXOLeafPayload;
+
+        /**
+         * @brief Classifies a failed CONFIRMED transition and demotes the
+         *        transaction when the failure is permanent.
+         * @details invalid_argument on the CONFIRMED path is always a semantic
+         *          reject from inside ChangeTransactionState (no parser for the
+         *          payload, double-spend rejection, malformed data_hash,
+         *          unknown transaction type): retrying the certificate can
+         *          never change the answer. The entry is demoted to FAILED and
+         *          the verdict is Check::Reject — a success value, which the
+         *          certificate work journal retires (MarkDone) and uses to wake
+         *          dependent pending proposals, instead of an error that
+         *          ProcessCommittedCertificate retries with capped exponential
+         *          backoff forever (the 2026-11-19 staging halt). Any other
+         *          error (storage failure, bad state) stays retryable.
+         * @param owner transaction manager owning the tracked entry.
+         * @param tx the transaction the failed certificate certifies.
+         * @param error the error ChangeTransactionState returned.
+         * @param logger handler logger for the quarantine report.
+         * @param tx_hash hash of the certified transaction.
+         * @return Check::Reject when the failure is permanent (the caller
+         *         returns it verbatim), std::nullopt when the caller must
+         *         return the error and let the certificate be retried.
+         */
+        std::optional<ConsensusManager::Check> DemotePermanentlyRejectedCertificate(
+            TransactionManager                       &owner,
+            const std::shared_ptr<GeniusTransaction> &tx,
+            const std::error_code                    &error,
+            const base::Logger                       &logger,
+            const std::string                        &tx_hash )
+        {
+            if ( error != std::errc::invalid_argument )
+            {
+                return std::nullopt;
+            }
+
+            logger->error( "{}: Certificate for hash {} is permanently undeliverable ({}): quarantining the "
+                           "transaction as FAILED and rejecting the certificate so the pipeline moves on",
+                           __func__,
+                           tx_hash,
+                           error.message() );
+
+            auto demote_result = owner.ChangeTransactionState( tx, TransactionStatus::FAILED );
+            if ( demote_result.has_error() )
+            {
+                // The verdict stands even when the demotion races a concurrent
+                // state change; the certificate stays retired either way.
+                logger->error( "{}: Failed to demote quarantined transaction {} to FAILED: {}",
+                               __func__,
+                               tx_hash,
+                               demote_result.error().message() );
+            }
+
+            return ConsensusManager::Check::Reject;
+        }
     }
 
     void TransactionConsensusHandler::RegisterSlotKeyHandler()
@@ -158,6 +213,11 @@ namespace sgns
                                 tx_hash,
                                 result.error().message() );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
+                if ( auto verdict = DemotePermanentlyRejectedCertificate( owner_, tx, result.error(), logger_, tx_hash );
+                     verdict.has_value() )
+                {
+                    return verdict.value();
+                }
                 return outcome::failure( result.error() );
             }
 
@@ -188,6 +248,12 @@ namespace sgns
                                     __func__,
                                     tx_hash,
                                     result.error().message() );
+                    if ( auto verdict =
+                             DemotePermanentlyRejectedCertificate( owner_, tx, result.error(), logger_, tx_hash );
+                         verdict.has_value() )
+                    {
+                        return verdict.value();
+                    }
                     return outcome::failure( result.error() );
                 }
             }
