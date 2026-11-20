@@ -119,7 +119,7 @@ namespace sgns
         ConsensusManager::ValidationResult ValidateTransactionForConsensus( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
-        bool                               CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
+        ConsensusManager::ValidationResult CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
 
         TransactionManager &owner_;
         base::Logger        logger_;

@@ -131,6 +131,15 @@ namespace sgns
                                    || chosen == IInputValidator::Get( "supergenius_chain" );
             return is_genius || is_registry;
         }
+
+        /// Drives the real proposal-subject ingress path (the same entry the
+        /// consensus manager's HandleProposal uses) synchronously.
+        static outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
+            TransactionManager              &manager,
+            const ConsensusManager::Subject &subject )
+        {
+            return manager.consensus_m_->HandleNonceConsensusSubject( subject );
+        }
     };
 } // namespace sgns
 
@@ -852,6 +861,37 @@ namespace
             return false;
         }
     };
+
+    /// Validator whose parameter verdict is controllable, registered for a
+    /// dedicated chain id so the type-rules leg can be reached deterministically:
+    /// the witness leg always approves (kValid, no consensus UTXO data required)
+    /// and ONLY the UTXO-parameter verdict can fail the subject.
+    class ControllableParametersValidator final : public sgns::IInputValidator
+    {
+    public:
+        bool parameters_valid_ = true;
+
+        bool ValidateUTXOParameters( const sgns::UTXOTxParameters &,
+                                     const std::string &,
+                                     const sgns::UTXOManager & ) const override
+        {
+            return parameters_valid_;
+        }
+
+        sgns::IInputValidator::WitnessVerdict ValidateWitness(
+            const sgns::ConsensusSubject &,
+            const sgns::GeniusTransaction &,
+            const sgns::UTXOTxParameters &,
+            const sgns::Blockchain & ) const override
+        {
+            return sgns::IInputValidator::WitnessVerdict::kValid;
+        }
+
+        bool RequiresConsensusUTXOData() const override
+        {
+            return false;
+        }
+    };
 } // namespace
 
 TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInvalid )
@@ -901,6 +941,74 @@ TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInval
     }
 
     sgns::IInputValidator::UnregisterIf( "witness-pending-chain", &validator );
+}
+
+TEST_F( TransactionManagerPreviousHashTest, UnknownInputTypeRulesPendingNotRejected )
+{
+    /**
+     * Cross-delta arrival order is unordered: an escrow payout proposal can
+     * arrive while the certificate of the escrow hold it spends has not been
+     * applied locally, so its input outpoints are absent from the in-memory
+     * UTXO index (the producer record may even have synced — only the local
+     * UTXO application lags). The type-rules leg treated that "not synced yet"
+     * state as invalid and hard-rejected (live staging incident 2026-11-19:
+     * payout rejected with "Type rules failed", then certified by the network
+     * anyway and accepted on certificate arrival 69 s later). It must return
+     * Pending instead — the same retry policy the witness leg already applies
+     * to kNotSynced — so consensus retries once the hold's certificate lands.
+     *
+     * The probe validator approves the witness leg (so the flow reaches the
+     * type-rules leg) and fails the UTXO-parameter leg (so with the gate in
+     * place, ONLY the missing-input gate can produce Pending — a Reject here
+     * would mean the gate is absent, a parameter-false Approve would mean the
+     * gate short-circuits wrongly).
+     */
+    static ControllableParametersValidator validator;
+    validator.parameters_valid_ = false;
+    ASSERT_TRUE( sgns::IInputValidator::Register( "type-rules-pending-chain", &validator ) );
+
+    // Replay protection (checked before type rules) needs a resolvable,
+    // certified predecessor for the reserved nonce, so chain onto a stored one.
+    auto previous_transaction = MakeTransaction( 0 );
+    StoreCertificate( previous_transaction );
+    StoreTransaction( previous_transaction );
+
+    // A spend whose input outpoint is unknown to the local UTXO index —
+    // exactly the early-payout shape.
+    const auto unknown_producer = sgns::base::Hash256::fromReadableString( std::string( 64, '9' ) ).value();
+    auto transaction = std::make_shared<sgns::MintTransactionV2>( sgns::MintTransactionV2::New(
+        1,
+        "type-rules-pending-chain",
+        kTokenId,
+        MakeDAG( account_->ReserveNextNonce(), previous_transaction->GetHash() ),
+        { { unknown_producer, 0, {} } },
+        account_->GetAddress() ) );
+    transaction->MakeSignature( *account_ );
+    ASSERT_TRUE( transaction );
+
+    auto commitment = manager_->BuildUTXOTransitionCommitment( *transaction );
+    ASSERT_TRUE( commitment.has_value() );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                               transaction->GetNonce(),
+                                                               transaction->GetHash(),
+                                                               transaction->SerializeToEmbeddedTransaction(),
+                                                               commitment,
+                                                               std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+
+    const auto result = sgns::TransactionManagerPendingLifecycleTestAccess::HandleNonceConsensusSubject(
+        *manager_,
+        subject.value() );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value().check, sgns::ConsensusManager::Check::Pending );
+
+    // The subject must stay retryable, not be marked locally FAILED.
+    const auto tracked = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                                           transaction->GetHash() );
+    ASSERT_TRUE( tracked.has_value() );
+    EXPECT_NE( tracked->status, sgns::TransactionManager::TransactionStatus::FAILED );
+
+    sgns::IInputValidator::UnregisterIf( "type-rules-pending-chain", &validator );
 }
 
 TEST_F( TransactionDeletionRecoveryTest, ConflictingSpendOfConsumedInputIsRejected )

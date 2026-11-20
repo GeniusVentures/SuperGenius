@@ -564,10 +564,16 @@ namespace sgns
             return replay_result.validation;
         }
         //TODO - Deal with checking the Mint
-        if ( !CheckTransactionTypeRules( tx ) )
+        const auto type_rules = CheckTransactionTypeRules( tx );
+        if ( type_rules.check == ConsensusManager::Check::Reject )
         {
             logger_->error( "{}: Type rules failed tx={}", __func__, tx.GetHash() );
-            return ConsensusManager::ValidationResult::Reject();
+            return type_rules;
+        }
+        if ( type_rules.check == ConsensusManager::Check::Pending )
+        {
+            logger_->warn( "{}: Type rules pending tx={}", __func__, tx.GetHash() );
+            return type_rules;
         }
 
         logger_->debug( "{}: Transaction valid tx={}", __func__, tx.GetHash() );
@@ -819,7 +825,8 @@ namespace sgns
         return { ConsensusManager::ValidationResult::Approve() };
     }
 
-    bool TransactionConsensusHandler::CheckTransactionTypeRules( const GeniusTransaction &tx ) const
+    ConsensusManager::ValidationResult TransactionConsensusHandler::CheckTransactionTypeRules(
+        const GeniusTransaction &tx ) const
     {
         logger_->debug( "{}: Checking type rules", __func__ );
         if ( tx.HasUTXOParameters() )
@@ -828,15 +835,30 @@ namespace sgns
             if ( !params_opt.has_value() )
             {
                 logger_->error( "{}: Missing UTXO parameters for tx={}", __func__, tx.GetHash() );
-                return false;
+                return ConsensusManager::ValidationResult::Reject();
             }
             const auto &[_, validator] = owner_.SelectInputValidator( tx );
-            return validator.ValidateUTXOParameters( params_opt.value(),
-                                                     tx.GetSrcAddress(),
-                                                     owner_.account_m->GetUTXOManager() );
+            if ( validator.ValidateUTXOParameters( params_opt.value(),
+                                                   tx.GetSrcAddress(),
+                                                   owner_.account_m->GetUTXOManager() ) )
+            {
+                return ConsensusManager::ValidationResult::Approve();
+            }
+            // The payout proposal can arrive before the escrow-hold certificate
+            // that created its inputs is applied locally, so the UTXO index does
+            // not know the outpoints yet. Rejecting here fails a payout the
+            // network is about to certify anyway; pending (the same policy the
+            // unsynced-witness leg applies for kNotSynced) lets the proposal
+            // re-enter once the inputs land.
+            if ( !owner_.account_m->GetUTXOManager().HasAllInputs( params_opt.value() ) )
+            {
+                logger_->warn( "{}: Inputs not in local UTXO index yet, pending tx={}", __func__, tx.GetHash() );
+                return ConsensusManager::ValidationResult::Pending();
+            }
+            return ConsensusManager::ValidationResult::Reject();
         }
 
-        return true;
+        return ConsensusManager::ValidationResult::Approve();
     }
 
     TransactionConsensusHandler::WitnessValidationResult TransactionConsensusHandler::ValidateWitnessForConsensus(

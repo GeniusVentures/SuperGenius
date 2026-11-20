@@ -821,29 +821,29 @@ namespace sgns
         {
             if ( !verify_signature_( address, input.signature_, input.SerializeForSigning() ) )
             {
-                logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
+                logger_->error( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
                 return false;
             }
 
             const OutPoint outpoint{ input.txid_hash_, input.output_idx_ };
             if ( !seen_inputs.insert( outpoint ).second )
             {
-                logger_->warn( "Duplicate input outpoint detected for {}", input.txid_hash_.toReadableString() );
+                logger_->error( "Duplicate input outpoint detected for {}", input.txid_hash_.toReadableString() );
                 return false;
             }
 
             auto utxo_it = utxo_outpoints_.find( outpoint );
             if ( utxo_it == utxo_outpoints_.end() )
             {
-                logger_->warn( "Unknown outpoint {}:{}", input.txid_hash_.toReadableString(), input.output_idx_ );
+                logger_->error( "Unknown outpoint {}:{}", input.txid_hash_.toReadableString(), input.output_idx_ );
                 return false;
             }
 
             if ( utxo_it->second.state != UTXOState::UTXO_READY && utxo_it->second.state != UTXOState::UTXO_RESERVED )
             {
-                logger_->warn( "Outpoint {}:{} is not spendable",
-                               input.txid_hash_.toReadableString(),
-                               input.output_idx_ );
+                logger_->error( "Outpoint {}:{} is not spendable",
+                                input.txid_hash_.toReadableString(),
+                                input.output_idx_ );
                 return false;
             }
 
@@ -853,7 +853,7 @@ namespace sgns
 
             if ( owner_address != address && !delegated_escrow_spend )
             {
-                logger_->warn( "Outpoint {}:{} does not belong to {}",
+                logger_->error( "Outpoint {}:{} does not belong to {}",
                                input.txid_hash_.toReadableString(),
                                input.output_idx_,
                                address );
@@ -879,6 +879,21 @@ namespace sgns
                                                 { return o.encrypted_amount + s; } );
 
         return real_amount == expected_amount && seen_inputs.size() == params.first.size();
+    }
+
+    bool UTXOManager::HasAllInputs( const UTXOTxParameters &params ) const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+
+        for ( const auto &input : params.first )
+        {
+            const OutPoint outpoint{ input.txid_hash_, input.output_idx_ };
+            if ( utxo_outpoints_.find( outpoint ) == utxo_outpoints_.end() )
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     std::optional<UTXOManager::UTXOState> UTXOManager::GetOutPointState( const base::Hash256 &utxo_id,

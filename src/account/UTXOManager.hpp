@@ -406,6 +406,16 @@ namespace sgns
         bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
 
         /**
+         * @brief       Checks whether every input outpoint of a transaction is present in the local UTXO index.
+         * @param[in]   params The transaction parameters whose inputs are looked up
+         * @return      true if every input outpoint is tracked locally, false if any of them is unknown;
+         *              a false here means parameter verification would fail on knowledge the node simply
+         *              does not have yet (e.g. a payout proposal racing the escrow-hold certificate), not
+         *              on an actually invalid input
+         */
+        bool HasAllInputs( const UTXOTxParameters &params ) const;
+
+        /**
          * @brief       Returns the tracked state of a specific outpoint when present.
          * @param[in]   utxo_id The transaction hash that created the UTXO
          * @param[in]   output_idx The output index of the UTXO within the transaction
