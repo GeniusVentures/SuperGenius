@@ -558,6 +558,49 @@ endif()
 set_tests_properties(cold_downgrade_e2e_test PROPERTIES LABELS "Tier1")
 endif()
 
+# Dev-gated live downgrade smoke (D-03/D-11, v1.2 Phase 18 plan 18-03):
+# the compact downgrade timeline on a REAL MinIO community server through
+# the PRODUCTION S3 client — archive seed, light re-open interlock,
+# ack-armed prune cycle, one post-prune GC pass surviving via the 18-01
+# exemption. Env-gated opt-in via SGNS_BLOCKSTORE_TEST_MINIO_BIN
+# (community build; loud labelled skip without it) — NEVER in the Tier-1
+# CI lane: registered LABELS "Tier3" (the cold_storage_wallclock_soak
+# env-gated convention; Pitfall 6 label parity holds).
+if(SGNS_COLD_STORAGE)
+addtest(cold_downgrade_live_smoke_test
+    cold_downgrade_live_smoke_test.cpp
+)
+
+target_include_directories(cold_downgrade_live_smoke_test PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
+target_link_libraries(cold_downgrade_live_smoke_test
+    sgns-blockstore::sgns-blockstore
+    crdt_globaldb
+    crdt_datastore
+    rocksdb
+    genius_node_test
+    p2p::p2p_logger
+    logger
+    ipfs-lite-cpp::ipfs_datastore_in_memory
+)
+
+if(MSVC)
+    target_link_options(cold_downgrade_live_smoke_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(cold_downgrade_live_smoke_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(cold_downgrade_live_smoke_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+set_tests_properties(cold_downgrade_live_smoke_test PROPERTIES LABELS "Tier3")
+endif()
+
 # Dev-gated live-stack smoke (D-08c, v1.2 Phase 14 plan 14-03): the REAL
 # MinIO wire (production S3 client + real drainer transitions) passes the
 # cold-durability gate. Env-gated opt-in via SGNS_BLOCKSTORE_TEST_MINIO_BIN
