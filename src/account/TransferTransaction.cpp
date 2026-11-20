@@ -29,6 +29,20 @@ namespace sgns
         return instance;
     }
 
+    std::string TransferTransaction::GetSlotID() const
+    {
+        // Competing spends of the same output must exclude each other through
+        // the slot ID no matter who signs (MintTransactionV2 keys its slot on
+        // content for the same reason): two processors' payouts of one escrow
+        // then land in one arbitration slot and only one can reach quorum.
+        if ( input_tx_.empty() )
+        {
+            return GeniusTransaction::GetSlotID();
+        }
+        const auto &input = input_tx_.front();
+        return "transfer:" + input.txid_hash_.toReadableString() + ":" + std::to_string( input.output_idx_ );
+    }
+
     std::vector<uint8_t> TransferTransaction::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::TransferTx tx_struct;

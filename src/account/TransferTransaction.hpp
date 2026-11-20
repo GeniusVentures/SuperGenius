@@ -48,6 +48,16 @@ namespace sgns
         std::vector<InputUTXOInfo>  GetInputInfos() const;
 
         /**
+         * @brief      Returns the consensus slot ID. For a transfer that spends
+         *             UTXO outputs this is the first spent outpoint
+         *             (txid:index), so competing spends of one output — two
+         *             processors' payouts of the same escrow — share one
+         *             arbitration slot whoever signs them. An inputless
+         *             transfer keeps the legacy src:nonce key.
+         */
+        std::string GetSlotID() const override;
+
+        /**
          * @brief       Returns if transaction supports UTXOs
          * @return      True if supported, false otherwise
          */

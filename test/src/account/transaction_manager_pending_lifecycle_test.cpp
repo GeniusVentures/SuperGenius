@@ -1263,6 +1263,59 @@ TEST_F( TransactionDeletionRecoveryTest, ConflictingEscrowPayoutsAreArbitratedAt
         << "conflicting payout must fail at vote time instead of reaching quorum too";
 }
 
+TEST_F( TransactionDeletionRecoveryTest, PayoutSlotKeyIsTheSpentOutpointWhoeverSigns )
+{
+    /**
+     * F13 (stress2-20261120 B1): the payout of an escrow is a plain
+     * TransferTransaction, so its slot key was src:nonce of whoever signed it.
+     * Two processors' payouts of one escrow outpoint therefore sat in
+     * DIFFERENT slots, slot arbitration never compared them, and different
+     * voter subsets certified different payouts (gate job 1, 2026-11-20
+     * 07:13 UTC — chain split). MintTransactionV2 already keys its slot on
+     * content including its first input txid; a spend must exclude its
+     * competitors through the slot ID the same way: the slot of a transfer
+     * that spends UTXO outputs is the first spent outpoint (txid:index),
+     * whoever signs it, on whatever nonce chain.
+     */
+    auto outpoint =
+        sgns::base::Hash256::fromReadableString( "5f4d0d8b1e2c3a4b5f4d0d8b1e2c3a4b5f4d0d8b1e2c3a4b5f4d0d8b1e2c3a4b" );
+    ASSERT_TRUE( outpoint.has_value() );
+    auto other_outpoint =
+        sgns::base::Hash256::fromReadableString( "6e5d0d8b1e2c3a4b6e5d0d8b1e2c3a4b6e5d0d8b1e2c3a4b6e5d0d8b1e2c3a4b" );
+    ASSERT_TRUE( other_outpoint.has_value() );
+
+    const std::string dest_a = "0x" + std::string( 64, 'a' );
+    const std::string dest_b = "0x" + std::string( 64, 'b' );
+    // Two different processors fire payouts for the same escrow outpoint, each
+    // on its own nonce chain — the exact gate-job-1 race.
+    auto processor_b = sgns::GeniusAccount::New( kTokenId, base_path / "slot_processor_b" );
+    ASSERT_TRUE( processor_b );
+    auto payout_a = MakePayout( *account_, outpoint.value(), 0, account_->ReserveNextNonce(), "prev-a", dest_a );
+    auto payout_b = MakePayout( *processor_b, outpoint.value(), 0, 0, "", dest_b );
+
+    ASSERT_NE( payout_a->GetSrcAddress(), payout_b->GetSrcAddress() );
+    EXPECT_EQ( payout_a->GetSlotID(), payout_b->GetSlotID() )
+        << "payouts spending the same outpoint must share one arbitration slot whoever signs them";
+    EXPECT_NE( payout_a->GetSlotID().find( outpoint.value().toReadableString() ), std::string::npos )
+        << "the shared slot key must be derived from the spent outpoint";
+    EXPECT_NE( payout_a->GetSlotID().find( ":0" ), std::string::npos )
+        << "the shared slot key must include the spent output index";
+
+    // A different outpoint is a different competition: its slot must not merge.
+    auto payout_c = MakePayout( *account_, other_outpoint.value(), 0, account_->ReserveNextNonce(), "prev-c", dest_b );
+    EXPECT_NE( payout_a->GetSlotID(), payout_c->GetSlotID() )
+        << "spends of different outpoints must not be forced into one slot";
+
+    // Nonce competition within one account keeps its legacy slot when nothing
+    // is spent (a tx without UTXO inputs falls back to src:nonce).
+    auto dag   = MakeDAG( account_->ReserveNextNonce(), "prev-d" );
+    auto plain = std::make_shared<sgns::TransferTransaction>(
+        sgns::TransferTransaction::New( {}, { sgns::OutputDestInfo{ 1, dest_a, kTokenId } }, std::move( dag ) ) );
+    plain->MakeSignature( *account_ );
+    EXPECT_EQ( plain->GetSlotID(), plain->GetSrcAddress() + ":" + std::to_string( plain->GetNonce() ) )
+        << "an inputless transfer keeps the legacy src:nonce slot key";
+}
+
 TEST_F( TransactionDeletionRecoveryTest, LoserPayoutCertificateIsQuarantinedNotRetriedForever )
 {
     /**
