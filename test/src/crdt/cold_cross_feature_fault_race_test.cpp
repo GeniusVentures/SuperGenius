@@ -91,7 +91,7 @@
  * BEFORE .value()/.error(). CID landmine: sgns::CID has NO implicit
  * ctor from the blockstore Cid - wrap explicitly (CID cid_key( cid ));
  * the reverse direction slices implicitly. Waits only via PollUntil
- * bounded predicates (the ONLY sleep_for in this file lives in the
+ * bounded predicates (the only sleeping wait in this file lives in the
  * re-declared PollUntil body); barriers are WindowGate cv-latches;
  * fresh fixture dir per case (distinct paths - Windows LOCK contenti-
  * on, Pitfall 4).
@@ -196,8 +196,8 @@ namespace
     }
 
     /// Bounded poll loop with deadline - never a fixed sleep, so the suite
-    /// stays stable on loaded Windows CI-equivalent machines. The ONLY
-    /// sleep_for in this file lives in this body (suite-header contract).
+    /// stays stable on loaded Windows CI-equivalent machines. The only
+    /// sleeping wait in this file lives in this body (suite-header contract).
     bool PollUntil( const std::function<bool()> &predicate,
                     std::chrono::milliseconds       deadline,
                     std::chrono::milliseconds       step = std::chrono::milliseconds( 10 ) )
@@ -222,7 +222,7 @@ namespace
      *        pass straight through, so a failing leg can never hang
      *        teardown (the v1.1 round-8 leak-proofing shape).
      *
-     * cv-wait based throughout - no sleep_for.
+     * cv-wait based throughout - no timed sleeps.
      */
     class WindowGate
     {
@@ -275,7 +275,7 @@ namespace
      * timing tables; the on-op hook fires and the delay elapses AFTER
      * the config mutex is released and OUTSIDE the inner fake's lock,
      * so a parked barrier never serializes unrelated ops. Delays are cv
-     * wait_for (interruptible at destruction) - never sleep_for.
+     * wait_for (interruptible at destruction) - never a timed sleep.
      */
     class TimingS3Client final : public S3Client
     {
@@ -832,6 +832,88 @@ namespace
             return marker.has_value() && !marker.value().empty();
         }
 
+        /// Flags captured by the barrier choreography (no gtest macros
+        /// off the main thread - the caller ASSERTs with an instrumented
+        /// dump on any failure).
+        struct BarrierRun
+        {
+            bool inside_window = false; ///< the serve reached + parked in the S3-tier Get
+            bool writer_wrote  = false; ///< the evidence row committed while parked
+            bool serve_ran     = false; ///< the serve thread completed getNode
+            bool serve_refusal = false; ///< outcome == HISTORY_PRUNED_LOCALLY (no torn serve)
+        };
+
+        /**
+         * @brief      The D-03 layer-two choreography: a REAL serve thread
+         *             runs getNode end-to-end while a REAL evidence-writer
+         *             thread commits the /prune/blk marker inside the
+         *             in-flight cold read.
+         *
+         * The TimingS3Client op-barrier (SetOnOp on the S3-tier Get)
+         * parks the serve thread inside the window; the WindowGate
+         * choreographs the collision (the evidence write provably lands
+         * before the Get returns); the optional seeded jitter stretches
+         * the release-to-return sub-window (reproducible via
+         * SGNS_CROSS_RACE_JITTER_SEED/_ITERS). The caller evicts the
+         * local cold copy first so the cold read MUST go through the S3
+         * tier where the barrier engages.
+         *
+         * Parked-Get lock discipline (Pitfall 7): the park sits inside
+         * ColdReadService's remote tier under remote_store_mutex_, which
+         * the evidence writer never touches (it writes the hot RocksDB
+         * evidence row) and nothing else holds in these legs (the drainer
+         * is idle post-Durable) - no deadlock window.
+         *
+         * @param[in] cid the cold-resident (S3-only) CID being served
+         * @param[in] jitter_base_ms/jitter_spread_ms seeded in-flight
+         *            stretch armed on the S3 Get (0/0 = none)
+         * @param[in] iter_seed the per-iteration seed (effective_seed_+i)
+         */
+        BarrierRun RunServeVsEvidenceWriterBarrier( const CID &cid,
+                                                    uint32_t    jitter_base_ms  = 0,
+                                                    uint32_t    jitter_spread_ms = 0,
+                                                    uint64_t    iter_seed       = 0 )
+        {
+            BarrierRun      run;
+            WindowGate      gate;
+            std::atomic<bool> writer_done{ false };
+
+            timing_->SetOnOp( S3Op::Get, [ &gate ] { gate.Enter(); } );
+            if ( jitter_base_ms > 0 || jitter_spread_ms > 0 )
+            {
+                timing_->SetSeededJitter( S3Op::Get, jitter_base_ms, jitter_spread_ms,
+                                          iter_seed );
+            }
+
+            std::thread serve_thread( [ this, cid, &run ] {
+                auto served       = dagsyncer_->getNode( cid );
+                run.serve_ran     = true;
+                run.serve_refusal = served.has_error()
+                                    && served.error()
+                                           == sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY;
+            } );
+
+            run.inside_window = gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+            if ( run.inside_window )
+            {
+                std::thread writer_thread( [ this, cid, &writer_done ] {
+                    writer_done.store( SeedPruneEvidenceQuiet( cid ) );
+                } );
+                const bool writer_seen = PollUntil( [ &writer_done ] { return writer_done.load(); },
+                                                    std::chrono::milliseconds( 5000 ) );
+                run.writer_wrote = writer_seen && writer_done.load();
+                gate.Release();
+                writer_thread.join();
+            }
+            else
+            {
+                gate.Release(); // leak-proof destructor backstop
+            }
+            serve_thread.join();
+            timing_->ClearTimings();
+            return run;
+        }
+
         // Knobs (read once per fixture; printed by LogKnobs).
         bool     red_arms_enabled_  = false;
         bool     fullwire_enabled_  = false;
@@ -1006,3 +1088,262 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseCommitVsServe_EvidenceLandsMid
         manager_ = nullptr;
     }
 }
+
+// ---------------------------------------------------------------------------
+// X2 (plan 19-01 Task 2): cold Get in flight x evidence before Rehydrate.
+// ---------------------------------------------------------------------------
+
+/**
+ * @given a published, Durable, cold-resident CID whose hot copy is
+ *        removed (the serve must go through the cold chain), with NO
+ *        evidence row at the consult's start
+ * @when  the cold Get has ALREADY returned bytes (the step-2 seam:
+ *        kInterruptBeforeRehydrate) and the erase cycle's /prune/blk
+ *        marker commits at that exact point (evidence landing inside
+ *        the in-flight window), then the serve continues
+ * @then  the CID is NOT rehydrated (no hot re-add of an evidenced CID):
+ *        the bytes are discarded and the refusal surfaces as
+ *        HISTORY_PRUNED_LOCALLY - the strongest observable. The
+ *        NoEvidence control (identical drive, no evidence write)
+ *        rehydrates normally (the CID hot again, the v1.1 serve path).
+ *
+ * PRIMARY HAZARD (D-04): RESURRECTION.
+ *
+ * RED-FIRST NOTE (Discretion 4 + the Task-2 escape clause): X2's window
+ * (Get-to-Rehydrate) was closed by the SAME fix(19-01) pre-Rehydrate
+ * re-check the X1 find forced - the seam leg below proves it at this
+ * boundary exactly. The fault arm (knob-gated) blinds the re-check's
+ * input so the evidenced CID rehydrates and this case's audit FAILS
+ * against it - the teeth.
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseCommitVsServe_InflightColdGetNoRehydrateAfterEvidence )
+{
+    LogKnobs( "X2" );
+    const bool red_arms = red_arms_enabled_;
+
+    // ---- CONTROL (must stay green): identical drive without the
+    // evidence write - rehydrate proceeds, the CID is hot again.
+    {
+        const CID control_cid = PublishElement( "x2/control/key", "control-value" );
+        auto      manager     = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( control_cid ) } );
+        RemoveHotCopy( control_cid );
+
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [control_cid]( int step ) {
+                (void)step; // no evidence written at any boundary
+                return false;
+            } );
+        auto served = dagsyncer_->getNode( control_cid );
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        EXPECT_TRUE( served.has_value() )
+            << "NoEvidence control: rehydrate proceeds (the v1.1 serve path)";
+        EXPECT_TRUE( dagsyncer_->IsCIDInCache( control_cid ) )
+            << "NoEvidence control: the CID is hot again";
+
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- SEAM LEG: evidence lands after the cold Get returned bytes,
+    // before Rehydrate (the step-2 boundary).
+    {
+        const CID cid = PublishElement( "x2/seam/key", "seam-value" );
+        auto      manager = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( cid ) } );
+        RemoveHotCopy( cid );
+
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [this, cid]( int step ) {
+                if ( step == GraphsyncDAGSyncer::kInterruptBeforeRehydrate )
+                {
+                    // The erase-side marker commit lands INSIDE the
+                    // Get-to-Rehydrate gap: cold bytes already fetched,
+                    // Rehydrate not yet run.
+                    SeedPruneEvidence( cid );
+                }
+                return false;
+            } );
+        auto served = dagsyncer_->getNode( cid );
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+
+        EXPECT_TRUE( served.has_error() )
+            << "X2 seam leg: evidence landing before Rehydrate must refuse the serve";
+        if ( served.has_error() )
+        {
+            EXPECT_EQ( served.error(),
+                       sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY )
+                << "the fetched bytes are discarded - the terminal refusal";
+        }
+        EXPECT_FALSE( dagsyncer_->IsCIDInCache( cid ) )
+            << "no LRU re-add of an evidenced CID";
+        EXPECT_FALSE( HotBytesPresent( cid ) ) << "no hot re-add of an evidenced CID";
+        EXPECT_TRUE( EvidenceInStore( cid ) )
+            << "the evidence row really landed at the boundary (sanctioned key)";
+
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- FAULT ARM (red-by-design, RED-ARMS knob only): the pre-
+    // Rehydrate re-check's input is blinded - the evidenced CID
+    // rehydrates and the audit below FAILS (teeth).
+    if ( red_arms )
+    {
+        const CID cid = PublishElement( "x2/fault/key", "fault-value" );
+        auto      manager = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( cid ) } );
+        RemoveHotCopy( cid );
+
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [this, cid]( int step ) {
+                if ( step == GraphsyncDAGSyncer::kInterruptBeforeRehydrate )
+                {
+                    SeedPruneEvidence( cid );
+                    evidence_suppressed_.store( true, std::memory_order_release );
+                }
+                return false;
+            } );
+        auto served = dagsyncer_->getNode( cid );
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        evidence_suppressed_.store( false, std::memory_order_release );
+
+        EXPECT_TRUE( EvidenceInStore( cid ) )
+            << "fault arm precondition: the evidence row is really in the store";
+        EXPECT_FALSE( served.has_value() )
+            << "RED-BY-DESIGN (fault arm): with the re-check's input blinded "
+               "the serve rehydrates - the induced resurrection this arm "
+               "must catch (teeth)";
+        EXPECT_FALSE( dagsyncer_->IsCIDInCache( cid ) )
+            << "RED-BY-DESIGN (fault arm): evidenced CID in LRU - the "
+               "resurrection detector must fail loudly here";
+        EXPECT_FALSE( HotBytesPresent( cid ) )
+            << "RED-BY-DESIGN (fault arm): evidenced CID hot - the "
+               "resurrection detector must fail loudly here";
+
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// X1/X2 real-thread barrier legs (D-03 layer two - true concurrency).
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief X1 layer two (D-03): the erase marker commit racing a REAL
+ *        serve thread through the in-flight cold read (WindowGate +
+ *        TimingS3Client op-barrier; no interrupt seam armed).
+ *
+ * @given a Durable CID whose hot AND local-cold copies are removed
+ *        (the cold read must cross the S3 tier where the barrier parks)
+ * @when  a real serve thread runs getNode while a real writer thread
+ *        commits the evidence row inside the parked window (the gate
+ *        forces the collision ordering - the evidence provably lands
+ *        before the Get returns, whichever sub-window timing occurs)
+ * @then  the end-state invariant holds under real racing: the serve
+ *        refuses (HISTORY_PRUNED_LOCALLY - never a torn outcome), and
+ *        the evidenced CID is never present hot (neither LRU nor raw
+ *        bytes). Deadline-exhaustion dumps the barrier flags + S3 op
+ *        counts in the failure message (instrument, don't bump).
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseCommitVsServe_EvidenceLandsMidConsult_RealThreadBarrier )
+{
+    LogKnobs( "X1-BARRIER" );
+
+    const CID cid = PublishElement( "x1/barrier/key", "barrier-value" );
+    auto      manager = MakeManager();
+    manager->Start();
+    WaitAllDurable( { Cid( cid ) } );
+    RemoveHotCopy( cid );
+    auto evicted = shared_local_->EvictLocal( Cid( cid ) );
+    ASSERT_TRUE( evicted.has_value() ) << "local cold copy evicted - the read must cross the S3 tier";
+
+    const auto run = RunServeVsEvidenceWriterBarrier( cid );
+
+    ASSERT_TRUE( run.inside_window )
+        << "X1 barrier: the serve never parked inside the S3-tier Get "
+           "(s3_get_count=" << timing_->OpCount( S3Op::Get ) << ")";
+    ASSERT_TRUE( run.writer_wrote )
+        << "X1 barrier: the evidence writer did not complete inside the window";
+    ASSERT_TRUE( run.serve_ran ) << "X1 barrier: the serve thread never completed";
+    EXPECT_TRUE( run.serve_refusal )
+        << "X1 barrier: no torn serve - the only legal outcome is the "
+           "terminal refusal (HISTORY_PRUNED_LOCALLY), never a peer "
+           "fall-through shape";
+    EXPECT_TRUE( EvidenceInStore( cid ) ) << "the evidence row is in the store";
+    EXPECT_FALSE( dagsyncer_->IsCIDInCache( cid ) )
+        << "barrier invariant: no evidenced CID ever present hot (LRU)";
+    EXPECT_FALSE( HotBytesPresent( cid ) )
+        << "barrier invariant: no evidenced CID ever present hot (raw bytes)";
+    EXPECT_GE( timing_->OpCount( S3Op::Get ), 1u )
+        << "the cold read really crossed the S3 tier";
+
+    manager_->Stop();
+    manager_ = nullptr;
+}
+
+/**
+ * @brief X2 layer two (D-03): the same real-thread collision, iterated
+ *        under seeded jitter so the evidence write lands at sampled
+ *        points inside the stretched in-flight window (the release-to-
+ *        return sub-window varies per iteration; reproducible via
+ *        SGNS_CROSS_RACE_JITTER_SEED/_ITERS, effective seed printed by
+ *        LogKnobs).
+ *
+ * @given one Durable, S3-only CID per iteration (hot + local-cold
+ *        copies removed)
+ * @when  each iteration races the real serve against the real writer
+ *        through the parked window with a per-iteration seeded Get
+ *        jitter
+ * @then  EVERY iteration holds the invariant: refusal outcome, no hot
+ *        re-add, evidence in store - and the S3 tier was really crossed.
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseCommitVsServe_InflightColdGetNoRehydrateAfterEvidence_RealThreadBarrier )
+{
+    LogKnobs( "X2-BARRIER" );
+
+    auto manager = MakeManager();
+    manager->Start();
+
+    for ( uint64_t iter = 0; iter < jitter_iters_; ++iter )
+    {
+        const CID cid = PublishElement( "x2/barrier/key/" + std::to_string( iter ),
+                                       "barrier-value-" + std::to_string( iter ) );
+        WaitAllDurable( { Cid( cid ) } );
+        RemoveHotCopy( cid );
+        auto evicted = shared_local_->EvictLocal( Cid( cid ) );
+        ASSERT_TRUE( evicted.has_value() ) << "iter " << iter << ": local cold copy evicted";
+
+        const auto run = RunServeVsEvidenceWriterBarrier( cid,
+                                                          /* jitter_base_ms  */ 25,
+                                                          /* jitter_spread_ms */ 15,
+                                                          /* iter_seed       */ effective_seed_ + iter );
+
+        ASSERT_TRUE( run.inside_window )
+            << "X2 barrier iter " << iter << ": the serve never parked inside the "
+               "S3-tier Get (s3_get_count=" << timing_->OpCount( S3Op::Get ) << ")";
+        ASSERT_TRUE( run.writer_wrote )
+            << "X2 barrier iter " << iter << ": the evidence writer did not complete";
+        ASSERT_TRUE( run.serve_ran )
+            << "X2 barrier iter " << iter << ": the serve thread never completed";
+        EXPECT_TRUE( run.serve_refusal )
+            << "X2 barrier iter " << iter << ": no torn serve - the only legal "
+               "outcome is the terminal refusal";
+        EXPECT_TRUE( EvidenceInStore( cid ) )
+            << "X2 barrier iter " << iter << ": the evidence row is in the store";
+        EXPECT_FALSE( dagsyncer_->IsCIDInCache( cid ) )
+            << "X2 barrier iter " << iter << ": no evidenced CID ever present hot (LRU)";
+        EXPECT_FALSE( HotBytesPresent( cid ) )
+            << "X2 barrier iter " << iter << ": no evidenced CID ever present hot (raw bytes)";
+        EXPECT_GE( timing_->OpCount( S3Op::Get ), 1u )
+            << "X2 barrier iter " << iter << ": the cold read really crossed the S3 tier";
+    }
+
+    manager_->Stop();
+    manager_ = nullptr;
+}
+
