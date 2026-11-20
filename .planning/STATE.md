@@ -5,7 +5,7 @@ milestone_name: Light-node transaction pruning
 current_phase: 20
 status: executing
 stopped_at: Phase 21.1 context gathered
-last_updated: "2026-11-20T21:07:20.860Z"
+last_updated: "2026-11-20T21:20:30.455Z"
 last_activity: 2026-10-24 -- Phase 20 planning complete
 progress:
   total_phases: 26
@@ -103,6 +103,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 21.1 inserted after Phase 21: Escrow Payout Slot Identity & Double-Payout Prevention; v1.3 P0 consensus-safety insertion; next preparation: $gsd-discuss-phase 21.1; preserve current v1.2 position (URGENT)
 - Phase 21.1 edited: User clarified a focused Mint-style escrow payout Slot ID fix: same job escrow across different peers shares one canonical slot; reuse existing transaction duplicate handling; remove assistant-added protocol redesign requirements.
 - Phase 21.1 edited: User selected a dedicated EscrowReleaseTransaction with Mint-style slot identity; replace payout-as-transfer and its generic escrow ownership exception; complete existing release wire scaffolding and plan legacy replay/cutover.
+- Phase 21.1 edited: User clarified legacy release scaffolding was payout-status checking; implement EscrowReleaseTransactionV2 as the funds-moving escrow payout with Mint-style canonical slot identity and distinct versioned dispatch.
 
 ### v1.0 History
 
