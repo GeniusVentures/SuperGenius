@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <chrono>
 #include <functional>
+#include <initializer_list>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -1099,6 +1100,20 @@ namespace sgns
                                                       TransactionStatus new_status );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
 
+        /**
+         * @brief Finds a tracked transaction that spends an output @p candidate_tx
+         *        also spends while neither is finalized (CREATED, SENDING or
+         *        VERIFYING).
+         * @details Vote-time arbitration input: a transaction's consensus slot key
+         *          is src:nonce, so conflicting spends from different signers sit
+         *          in different slots and slot arbitration never compares them.
+         *          The caller tie-breaks the pair with ShouldReplaceTransaction
+         *          (Blockchain::BestHash) so at most one certificate can form.
+         * @return The competing transaction, or std::nullopt when none is tracked.
+         */
+        std::optional<std::shared_ptr<GeniusTransaction>> FindInFlightInputConflict(
+            const GeniusTransaction &candidate_tx ) const;
+
         bool KeyExistsInDB( const std::string &key ) const;
 
         /**
@@ -1175,6 +1190,17 @@ namespace sgns
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
+
+        /**
+         * @brief The one tracked-map outpoint-overlap scan behind both conflict
+         *        lookups (HasConfirmedInputConflict / FindInFlightInputConflict).
+         * @return The first tracked transaction whose status is one of @p statuses
+         *         and that spends an output @p candidate_tx also spends (itself
+         *         excluded), or std::nullopt when none is tracked.
+         */
+        std::optional<std::shared_ptr<GeniusTransaction>> FindInputConflict(
+            const GeniusTransaction                &candidate_tx,
+            std::initializer_list<TransactionStatus> statuses ) const;
 
         /**
          * @brief The ONE resolve→erase→cleanup sequence behind both erase

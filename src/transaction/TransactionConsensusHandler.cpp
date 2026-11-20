@@ -491,6 +491,38 @@ namespace sgns
             return reject_and_maybe_fail_local( "input outpoint already finalized by another transaction" );
         }
 
+        if ( auto in_flight_conflict = owner_.FindInFlightInputConflict( *tx ); in_flight_conflict.has_value() )
+        {
+            auto conflicting_tx = *in_flight_conflict;
+            if ( !owner_.ShouldReplaceTransaction( *conflicting_tx, *tx ) )
+            {
+                logger_->error( "{}: Outpoint conflict against in-flight transaction {} for hash {}",
+                                __func__,
+                                conflicting_tx->GetHash(),
+                                tx_hash );
+                return reject_and_maybe_fail_local( "input outpoint already spent by an in-flight transaction" );
+            }
+
+            // Newcomer outranks the in-flight spend on the same deterministic
+            // BestHash tie-break slot arbitration uses: demote the loser so at
+            // most one of the two can ever reach quorum.
+            logger_->error( "{}: Outpoint conflict with in-flight transaction {} for hash {}: BestHash prefers the "
+                            "newcomer, failing the conflict",
+                            __func__,
+                            conflicting_tx->GetHash(),
+                            tx_hash );
+            auto demote_result = owner_.ChangeTransactionState( conflicting_tx, TransactionStatus::FAILED );
+            if ( demote_result.has_error() )
+            {
+                logger_->error( "{}: Failed to change in-flight conflicting transaction state to FAILED for hash "
+                                "{}: {}",
+                                __func__,
+                                conflicting_tx->GetHash(),
+                                demote_result.error().message() );
+                return reject_and_maybe_fail_local( "in-flight conflicting transaction demotion failed" );
+            }
+        }
+
         const auto witness_validation = ValidateWitnessForConsensus( subject, *tx );
         if ( witness_validation == WitnessValidationResult::INVALID )
         {

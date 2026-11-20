@@ -5098,17 +5098,19 @@ namespace sgns
         return Blockchain::BestHash( existing_tx.GetHash(), new_tx.GetHash() ) == new_tx.GetHash();
     }
 
-    bool TransactionManager::HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const
+    std::optional<std::shared_ptr<GeniusTransaction>> TransactionManager::FindInputConflict(
+        const GeniusTransaction                &candidate_tx,
+        std::initializer_list<TransactionStatus> statuses ) const
     {
         if ( !candidate_tx.HasUTXOParameters() )
         {
-            return false;
+            return std::nullopt;
         }
 
         auto candidate_params = candidate_tx.GetUTXOParametersOpt();
         if ( !candidate_params.has_value() )
         {
-            return false;
+            return std::nullopt;
         }
 
         std::unordered_set<std::string> candidate_inputs;
@@ -5121,8 +5123,11 @@ namespace sgns
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
         for ( const auto &[_, tracked] : tx_processed_m )
         {
-            if ( !tracked.tx || tracked.status != TransactionStatus::CONFIRMED ||
-                 tracked.tx->GetHash() == candidate_tx.GetHash() || !tracked.tx->HasUTXOParameters() )
+            if ( !tracked.tx || tracked.tx->GetHash() == candidate_tx.GetHash() || !tracked.tx->HasUTXOParameters() )
+            {
+                continue;
+            }
+            if ( std::find( statuses.begin(), statuses.end(), tracked.status ) == statuses.end() )
             {
                 continue;
             }
@@ -5138,11 +5143,25 @@ namespace sgns
                 if ( candidate_inputs.find( OutPointKey( other_input.txid_hash_, other_input.output_idx_ ) ) !=
                      candidate_inputs.end() )
                 {
-                    return true;
+                    return tracked.tx;
                 }
             }
         }
-        return false;
+        return std::nullopt;
+    }
+
+    bool TransactionManager::HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const
+    {
+        return FindInputConflict( candidate_tx, { TransactionStatus::CONFIRMED } ).has_value();
+    }
+
+    std::optional<std::shared_ptr<GeniusTransaction>> TransactionManager::FindInFlightInputConflict(
+        const GeniusTransaction &candidate_tx ) const
+    {
+        return FindInputConflict( candidate_tx,
+                                  { TransactionStatus::CREATED,
+                                    TransactionStatus::SENDING,
+                                    TransactionStatus::VERIFYING } );
     }
 
     bool TransactionManager::CheckTransactionAuthorization( const GeniusTransaction &tx ) const
