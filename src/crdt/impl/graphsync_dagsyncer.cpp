@@ -928,6 +928,29 @@ namespace sgns::crdt
             return hot_miss_result;
         }
 
+        // X1 re-check (v1.2 Phase 19, red-first find fix-forward): the
+        // top consult and the cold Get are not one atomic step - erase
+        // evidence can commit inside the gap (observed RED by the X1
+        // seam leg on the single-consult line). ONE re-consult before
+        // the Get honors a mid-gap verdict with the SAME terminal
+        // semantics as the top consult - the mirror of TxPruner's
+        // guard-5 in-compose re-check (Phase 16 D-03: repair the half,
+        // keep the design). Pruned stays TERMINAL: no cold I/O, no
+        // Rehydrate, no peer fall-through (SERVE-04).
+        switch ( cold_read_hook_->LookupPruneEvidence( cid ) )
+        {
+            case PruneEvidenceClass::Pruned:
+                logger_->debug( "cold read: CID {} refused - evidence landed between consult and cold Get",
+                                cid.toString().value() );
+                return outcome::failure( Error::HISTORY_PRUNED_LOCALLY );
+            case PruneEvidenceClass::Malformed:
+                logger_->error( "cold read: CID {} prune evidence corrupt at the pre-Get re-check - failing closed",
+                                cid.toString().value() );
+                return outcome::failure( Error::PRUNE_EVIDENCE_CORRUPT );
+            case PruneEvidenceClass::NoEvidence:
+                break;
+        }
+
         common::Buffer   bytes;
         const ColdReadStatus status = cold_read_hook_->Get( cid, bytes );
         if ( !bytes.empty() )
@@ -940,6 +963,26 @@ namespace sgns::crdt
                 // the fetched bytes are discarded, never rehydrated, the
                 // hot-miss result passes through unchanged.
                 return hot_miss_result;
+            }
+
+            // X2 re-check (v1.2 Phase 19, red-first find fix-forward):
+            // evidence can also commit WHILE the cold Get was in flight
+            // (the in-flight window the X2 seam leg drives). ONE
+            // re-consult before Rehydrate so an evidenced CID is never
+            // rehydrated - the fetched bytes are discarded, the refusal
+            // is terminal (SERVE-04; never a peer fall-through).
+            switch ( cold_read_hook_->LookupPruneEvidence( cid ) )
+            {
+                case PruneEvidenceClass::Pruned:
+                    logger_->debug( "cold read: CID {} fetched cold but evidence landed mid-Get - discarding bytes, refusing",
+                                    cid.toString().value() );
+                    return outcome::failure( Error::HISTORY_PRUNED_LOCALLY );
+                case PruneEvidenceClass::Malformed:
+                    logger_->error( "cold read: CID {} prune evidence corrupt at the pre-Rehydrate re-check - failing closed",
+                                    cid.toString().value() );
+                    return outcome::failure( Error::PRUNE_EVIDENCE_CORRUPT );
+                case PruneEvidenceClass::NoEvidence:
+                    break;
             }
 
             // D-04: re-cache through the dedicated rehydrate path BEFORE
