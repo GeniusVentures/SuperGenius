@@ -4,13 +4,13 @@ milestone: v1.2
 milestone_name: Light-node transaction pruning
 current_phase: 20
 status: executing
-stopped_at: Phase 21.1 context gathered
-last_updated: "2026-11-20T21:20:30.455Z"
-last_activity: 2026-10-24 -- Phase 20 planning complete
+stopped_at: Phase 21.1 planning complete; execute only after verified Phase 21
+last_updated: "2026-11-20T23:12:08.733Z"
+last_activity: 2026-11-20 -- Phase 21.1 planning complete
 progress:
   total_phases: 26
   completed_phases: 4
-  total_plans: 29
+  total_plans: 37
   completed_plans: 24
   percent: 15
 ---
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-10-24 -- Phase 20 planning complete
+Last activity: 2026-11-20 -- Phase 21.1 planning complete
 
 Progress: [██████████] 100%
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-11-20T20:31:07.792Z
-**Stopped At:** Phase 21.1 context gathered
-**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-CONTEXT.md
+**Last session:** 2026-11-20T23:12:08.728Z
+**Stopped At:** Phase 21.1 planning complete; execute only after verified Phase 21
+**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-01-PLAN.md
 
 ## Accumulated Context
 
@@ -104,6 +104,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - Phase 21.1 edited: User clarified a focused Mint-style escrow payout Slot ID fix: same job escrow across different peers shares one canonical slot; reuse existing transaction duplicate handling; remove assistant-added protocol redesign requirements.
 - Phase 21.1 edited: User selected a dedicated EscrowReleaseTransaction with Mint-style slot identity; replace payout-as-transfer and its generic escrow ownership exception; complete existing release wire scaffolding and plan legacy replay/cutover.
 - Phase 21.1 edited: User clarified legacy release scaffolding was payout-status checking; implement EscrowReleaseTransactionV2 as the funds-moving escrow payout with Mint-style canonical slot identity and distinct versioned dispatch.
+- Phase 21.1 edited: Planning verified: 8 plans, 21 tasks, 7 waves; PAYSAFE-01..05 and D-01..18 covered. Execution requires verified Phase 21; final activation remains subject to blocking historical-finality/pending-escrow checkpoint 08-2.
 
 ### v1.0 History
 
