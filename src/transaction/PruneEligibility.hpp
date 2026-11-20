@@ -152,6 +152,15 @@ namespace sgns
         /// Diagnostic: the MOST-RECENT spend height (max spender priority over
         /// outputs); nullopt when no binding spend height could be computed.
         std::optional<uint64_t> spend_height;
+
+        /// Size of the stored value in bytes, carried from the enumeration
+        /// read that produced this candidate (research A5). Input to the
+        /// TxPruner's cumulative erased-bytes THRESHOLD ESTIMATE only --
+        /// a +-20% drift is immaterial against the compaction threshold,
+        /// and this is NEVER a measured reclamation number (the measured
+        /// number is the compaction-time disk-usage delta). Deletes never
+        /// read values back, so the size must ride evaluation.
+        uint64_t value_bytes = 0;
     };
 
     /**
@@ -181,6 +190,23 @@ namespace sgns
 
         /// Every failed per-key check (deduplicated); empty iff erasable.
         std::vector<PruneReason> reasons;
+
+        /// Total size of the KEYS the block carries (elements AND
+        /// tombstones), carried from the block parse the gate already
+        /// performed (research A5). Input to the TxPruner's per-tx
+        /// block-share THRESHOLD ESTIMATE (block_bytes divided by
+        /// sharing_tx_count) -- never a measured reclamation number.
+        /// Element VALUES are carried per-candidate as
+        /// PruneCandidateResult::value_bytes and are deliberately not
+        /// double-counted here. Zero when the block's bytes are already
+        /// absent (BLOCK_ALREADY_ERASED).
+        uint64_t block_bytes = 0;
+
+        /// Eligible candidates sharing this block (the share divisor).
+        /// When a whole group erases, the summed integer shares cover the
+        /// block's carried-key bytes; a deferred (held) group erases
+        /// nothing and contributes nothing.
+        uint64_t sharing_tx_count = 0;
     };
 
     /**
@@ -246,6 +272,15 @@ namespace sgns
         /// and the member keeps its safe default.
         uint64_t settle_seconds = 60;
 
+        /// Megabytes of cumulative erased bytes that must accumulate before
+        /// a post-cycle storage compaction fires (D-01). Default
+        /// 16. A degenerate 0 would compact after every cycle -- a
+        /// write-amplification denial of service on self (V5) -- so it is
+        /// rejected at read time and the member keeps its safe default.
+        /// Megabytes is the single config representation: the threshold
+        /// comparison derives bytes at its own site.
+        uint64_t compact_threshold_mb = 16;
+
         /// Set when FromJSON had to fail-close an enabled request (missing
         /// finality_window); carries the operator-facing reason.
         std::optional<std::string> disabled_reason;
@@ -265,7 +300,12 @@ namespace sgns
          *              and rejected at read time (a 0-K cycle can never drain,
          *              a settle-less cycle can fire during initial sync), so
          *              the members keep their safe defaults; ill-typed members
-         *              keep defaults too.
+         *              keep defaults too. compact_threshold_mb (default 16)
+         *              follows the identical discipline: an explicit positive
+         *              value parses; a degenerate 0 (compact after every
+         *              cycle -- a write-amp denial of service on self) is
+         *              rejected at read time and the member keeps its safe
+         *              default.
          * @param[in]   pruning_object The "pruning" member of sgns_config.json.
          * @return      The validated configuration.
          */

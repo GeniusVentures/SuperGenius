@@ -159,7 +159,7 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 ### Gating & Safety
 
 - [ ] **GATE-01**: Pruning runs only on `NodeType::Light` (fail-closed gate on the enum) and only within the `/bc-<netid>/tx/` prefix allowlist
-- [ ] **GATE-02**: Non-transaction data is provably untouched — certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers are byte-identical across a prune run (ctest)
+- [x] **GATE-02**: Non-transaction data is provably untouched — certificates, SecureCRDT policy values, processing results, DAG heads, and seal markers are byte-identical across a prune run (ctest)
 - [x] **GATE-03**: Seal markers (`<cid>sealed`) are never erased — they are the traversal terminator that prevents re-fetch of pruned chains
 - [ ] **GATE-04**: Outgoing `previous_hash` resolution survives pruning of the node's own frontier transaction (cert-slot based resolution; certificates are never pruned) — must land before the first real prune
 - [x] **GATE-05**: Boot-time UTXO assembly/checkpoint rebuild treats a missing pruned transaction as not relevant — skips it and completes boot without failure, and never resurrects spent outputs
@@ -173,8 +173,8 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 
 ### Reclamation & Observability
 
-- [ ] **RECL-01**: Deleted bytes actually leave the disk — periodic light-node-only `CompactRange` (`bottommost_level_compaction = kForce`) scheduled off the hot path
-- [ ] **RECL-02**: CI gate proves real reclamation — measured SST/`du` bytes before-vs-after a prune+compaction cycle (not key counts)
+- [x] **RECL-01**: Deleted bytes actually leave the disk — periodic light-node-only `CompactRange` (`bottommost_level_compaction = kForce`) scheduled off the hot path
+- [x] **RECL-02**: CI gate proves real reclamation — measured SST/`du` bytes before-vs-after a prune+compaction cycle (not key counts)
 - [x] **RECL-03**: Per-cycle observability log — txs examined/erased, bytes reclaimed, watermark advance
 - [x] **RECL-04**: Prune status is queryable — watermark and last-cycle stats
 
@@ -211,7 +211,7 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | PRUNE-04 | Phase 18 | Complete |
 | PRUNE-05 | Phase 18 | Complete |
 | GATE-01 | Phase 17 | Pending |
-| GATE-02 | Phase 20 | Pending |
+| GATE-02 | Phase 20 | Complete |
 | GATE-03 | Phase 16 | Complete |
 | GATE-04 | Phase 17 | Pending |
 | GATE-05 | Phase 19 | Complete |
@@ -219,8 +219,8 @@ v1.2 runs on its own branch (`gsd/phase-16-erasure-primitives-bookkeeping-harden
 | SURV-01 | Phase 19 | Complete |
 | SURV-02 | Phase 19 | Complete |
 | SURV-03 | Phase 19 | Complete |
-| RECL-01 | Phase 20 | Pending |
-| RECL-02 | Phase 20 | Pending |
+| RECL-01 | Phase 20 | Complete |
+| RECL-02 | Phase 20 | Complete |
 | RECL-03 | Phase 18 | Complete |
 | RECL-04 | Phase 18 | Complete |
 

@@ -2,39 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Light-node transaction pruning
-current_phase: 20
-status: executing
-stopped_at: Phase 20 context gathered
-last_updated: "2026-10-24T16:18:53.681Z"
-last_activity: 2026-10-24 -- Phase 20 planning complete
+current_phase: 21
+status: Awaiting next milestone
+stopped_at: "Completed 20-05-PLAN.md (phase 20 complete: 5/5 plans)"
+last_updated: "2026-10-26T11:50:08.174Z"
+last_activity: 2026-10-26 — Milestone v1.2 completed and archived
 progress:
   total_phases: 25
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 29
-  completed_plans: 24
-  percent: 16
+  completed_plans: 29
+  percent: 20
 ---
 
 # State: SuperGenius — Light-node Transaction Pruning
 
 **Last updated:** 2026-10-15
 **Milestone:** v1.2 — Light-node transaction pruning
-**Current Phase:** 20
+**Current Phase:** 21
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-10-15)
 **Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 20 — reclamation proof & e2e hardening
+**Current focus:** Phase 21 — consensus trust & mint authorization
 
 ## Current Position
 
-Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-24 -- Phase 20 planning complete
-
-Progress: [██████████] 100%
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-26 — Milestone v1.2 completed and archived
 
 ## Roadmap Snapshot
 
@@ -73,7 +71,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Operator Next Steps
 
-- Plan the first phase: /gsd:plan-phase 16
+- Start the next milestone with /gsd-new-milestone
 
 ### Quick Tasks Completed
 
@@ -84,9 +82,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-10-24T13:48:12.510Z
-**Stopped At:** Phase 20 context gathered
-**Resume File:** .planning/phases/20-reclamation-proof-e2e-hardening/20-CONTEXT.md
+**Last session:** 2026-10-24T19:21:49.555Z
+**Stopped At:** Completed 20-05-PLAN.md (phase 20 complete: 5/5 plans)
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -149,6 +147,11 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P07 | 82min | 2 tasks | 1 files |
 | Phase 19 P05 | 105min | 3 tasks tasks | 7 files files |
 | Phase 19 P06 | 34min | 2 tasks | 1 files |
+| Phase 20 P01 | 24min | 2 tasks | 7 files |
+| Phase 20 P02 | 23min | 3 tasks | 6 files |
+| Phase 20 P03 | 16min | 2 tasks | 2 files |
+| Phase 20 P04 | 20min | 3 tasks | 1 files |
+| Phase 20 P05 | 35min | 2 tasks | 1 files |
 
 ## Decisions
 
@@ -235,20 +238,28 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 19]: (19-07): A directly-fetched block silences the broadcast intake for that CID (HasBlock skip, delta never merges) -- discard the LRU copy (DeleteCIDBlock, the RetryDueFailedRoots idiom) between proof phases
 - [Phase 19]: (19-05): Tri-state lookup result carries the invariant violation on the verdict (VALUE_PRESENT_INVARIANT_VIOLATION + found tx) so the loud case is observable on the result, not only in logs; a present value always outranks a marker
 - [Phase 19]: (19-05): TransactionLookupResult uses an opaque PrunedLookup forward declaration (not a PruneEligibility.hpp include) -- the include leaks rapidjson into every TM.hpp consumer and broke the migration build; the single construction site always sets verdict
+- [Phase 20]: GlobalDB is the one home of the whole-DB compaction recipe (CompactStorage: bottommost force flag, no write stall, canceled passthrough) and the whole-DB size measurement (GetApproximateDiskUsageBytes: 0xFF sentinel range, files+memtables) — callers never touch getDB(); post-shutdown fail-closes GLOBALDB_NOT_STARTED, pre-set cancel returns operation_canceled (clean skip)
+- [Phase 20]: pruning.compact_threshold_mb defaults 16MB, rejects degenerate 0 at read time (write-amp DoS on self, V5/WR-03); MB is the single config representation — threshold bytes derive at the TxPruner comparison site
+- [Phase 20]: TxPruner post-cycle compaction gate (D-01): erased>=1 AND !canceled AND cumulative erased-bytes watermark >= compact_threshold_mb; the watermark is the evaluation-carried estimate, kept on cancel/failure as the natural retry, reset only on success — never fails the completed cycle
+- [Phase 20]: PruneStatus.bytes_reclaimed is the MEASURED baseline-at-last-compaction delta, stamped only at compaction success under the status mutex (nullopt until the first compaction since restart); the erase-time RECL-03 INFO stays counts-only and the compaction emits its own before/after/delta INFO (D-02 honest split)
+- [Phase 20]: The compaction cancel atomic is a TxPruner MEMBER (the engine's compaction iterator reads it asynchronously; a stack local dangles) and GeniusNode's stop path sets it before tx_pruner_.reset() — the io-pool drain is the join, the atomic only shortens any not-yet-started compaction's window
+- [Phase 20]: The reclamation gate's sanity ceiling is calibrated to the MEASURED storage envelope (erased*20+2MB), not the payload multiplier — the CRDT stack stores each value under four key families + delta block + UTXO records, so an erase legitimately reclaims ~15x the payload (measured 1492%, stable across runs); payload-only denominators stay valid for floors only
+- [Phase 20]: SC-4 mesh peers are GlobalDB-only nodes on the 19-07 EraseNodeCollection recipe as TxPrunerTest fixture members — subscribed to the seed topic BEFORE the one-direction dial (Case-2 announce-at-connect), fixture-owned before any wait that can fail, torn down first via sgns::test::stopGlobalDBNode (ShutdownNow -> pubsub Stop -> db reset) ahead of the fixture's own chain
+- [Phase 20]: Mesh retention round 2 uses UNION baselines with an explicit cumulative-retention pin: every round-1 value/block byte-identical inside the round-2 baseline, proving round-1 history survives a SECOND erase+compaction pair (~1.9s incremental on this fixture, so the cycles-plural criterion is evidenced, not argued)
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
+Items acknowledged and deferred at milestone close on 2026-10-26 (v1.2):
 
 | Category | Item | Status |
 |----------|------|--------|
-| todo | 2026-08-10-secure-trusted-peer-genesis-configuration | Superseded — Phase 13 delivered the BOOT-01..04 scope (durable confirmed trust-state, ceremony, policy authority); kept for reference |
-| todo | bridge-race-not-all-11-mint-within-window (P1) | Open — Track A bridge scope (evmrelay_integration track), not v1.1 |
-| todo | bridge-startup-wiring-mock-rpc (P1) | Open — Track A Phase 5 scope (PR #298 findings), not v1.1 |
+| uat | 16-HUMAN-UAT.md | Resolved — both items passed with evidence (stale frontmatter label) |
+| uat | 17-HUMAN-UAT.md | Resolved — live staging validation, 2/2 passed |
+| uat | 18-HUMAN-UAT.md | Resolved — live grow-then-prune demo + CR-01 sign-off |
+| uat | 19-HUMAN-UAT.md | Resolved — staging spot-check confirmed by owner |
 | quick_task | 11 June-2026 TokenId/InputValidator records (260602-*) | Stale — artifacts no longer on disk |
-| uat | 14-UAT.md (4 open scenarios) | Discarded — phase 14 execution discarded by owner 2026-08; scope unshipped |
-| uat | 15-HUMAN-UAT.md | Resolved 2026-10-02 (status label predates resolve state) |
-| verification | 11-VERIFICATION.md (conditional) | Documented — multi_account instability later green; see v1.1-MILESTONE-AUDIT.md |
-| verification | 13-VERIFICATION.md (29/32) | Documented — residuals map to discarded phase-14 scope; see v1.1-MILESTONE-AUDIT.md |
-| gap | ELM-01..08 | Dropped from v1.1 — cross-repo SGProcessingManager scope; see v1.1-MILESTONE-AUDIT.md |
-| gap | MIG-05 wiring | Partial — behavior-neutral revert d1f2a14ca; re-apply or amend records |
+| todo | bridge-race-not-all-11-mint-within-window (P1) | Open — Track-A bridge scope, not v1.2 |
+| todo | bridge-startup-wiring-mock-rpc (P1) | Open — Track-A scope (PR #298 findings) |
+| todo | nodeconsensustest-registry-catchup-flake (P2) | Open — proven pre-existing (develop A/B); budget-raise or dual-proposer fix documented |
+| todo | 2026-08-10-secure-trusted-peer-genesis-configuration | Superseded — Phase 13 delivered the scope |
+| debug | ci-nodeconsensustest-registry-timeout-pr398 | Closed — verdict NOT OURS (develop A/B proof); ticket filed |

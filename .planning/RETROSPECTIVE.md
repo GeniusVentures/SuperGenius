@@ -82,6 +82,40 @@
 - ~1211 commits in the milestone range (includes Track-A/rebase traffic); 424 files, +63.7k/−8.5k lines
 - Phase 13 consumed four gap-closure waves — the cost of exacting security gates, accepted
 
+
+## Milestone: v1.2 — Light-node transaction pruning
+
+**Shipped:** 2026-10-26
+**Phases:** 5 | **Plans:** 29
+
+### What Was Built
+The full sliding-window disk-reclamation pipeline: two-level physical erasure (substrate → evaluator → pruner → survival → measured proof), the net-scoped dev-mint policy, and the incident-driven hardening (GATE-05, TM-SYNCING, the rebuild guard).
+
+### What Worked
+- Owner-challenge loops: three design corrections came from the owner questioning the plan (spend-recency window redesign, runtime-net-check clarification, seal-based dedup insight) — each cheaper than the wrong implementation would have been
+- Reconciliation-first fixes: the MintFunds leak plan proved two of three candidate causes wrong before writing the fix; the checker-mandated belt induction exposed a structurally vacuous crosscheck and forced the honest durable-record redesign
+- Goal-backward verification with self-run binaries (every verifier rebuilt and re-ran the suites rather than trusting SUMMARYs) — caught a pre-built-binary staleness class
+- Live staging validation as the phase-18 gate: the full delivery chain (merge → CI artifacts → SDK → validator redeploy → demo) surfaced real deployment facts the fixtures couldn't
+
+### What Was Inefficient
+- The parallel-milestone branch topology: the v1.2/v1.3 rebase dropped planning docs (recovered by follow-up commits), scattered REQUIREMENTS bookkeeping across two files, and cost a careful 14-conflict consolidation merge
+- Two subagent stalls required stop-and-resume salvage (the transcript-size signal proved meaningless — a 150-byte transcript coexisted with completed work)
+- One inverted ours/theirs merge resolution shipped broken and was caught by the immediate build gate — the cost of resolving 14 rebase conflicts in one pass
+
+### Patterns Established
+- "Durable state is authoritative; network waits are bounded; unresolvable ⇒ not-relevant with a loud log" — applied three times (boot, send-side SYNCING, rebuild)
+- Evidence-first audit guards: one isResolved/PRUNED check per consumer, never re-proving the already-landed broadcast intake
+- Honest measurement split: counts at erase, measured bytes at compaction — never stamp a number before it's true
+- Bounded-range CI assertions calibrated to measured envelopes (the 24.9x floor margin; the ceiling recalibrated with the four-key-families rationale)
+
+### Key Lessons
+- A single dead `return` below a TODO can wedge a production node forever — the GATE-05 root cause was dead code, not a race
+- Plan-time verify commands need checker execution against the real tree: three consecutive phases produced gate commands that failed correct code (wrong target names, vacuous greps, premature test filters)
+- The containment gates (sanctioned-caller sets, source-scans, tick-gate pins) made the security audits mechanical — the audits verified 139 threats mostly by locating what the gates already pinned
+
+### Cost Observations
+- Sessions: ~10 | Notable: executors averaged 20-80 min/plan; the researcher/verifier stall-salvage pattern recovered two agents without work loss
+
 ## Cross-Milestone Trends
 
 *(First milestone — trends will accumulate as v1.1+ ship.)*
