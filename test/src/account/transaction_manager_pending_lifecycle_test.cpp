@@ -140,6 +140,16 @@ namespace sgns
         {
             return manager.consensus_m_->HandleNonceConsensusSubject( subject );
         }
+
+        /// Drives the real certificate-delivery path (the same entry the
+        /// consensus manager's ProcessCommittedCertificate invokes) synchronously.
+        static outcome::result<ConsensusManager::Check> OnConsensusCertificate(
+            TransactionManager                        &manager,
+            const std::string                         &tx_hash,
+            const ConsensusManager::Certificate       &certificate )
+        {
+            return manager.consensus_m_->OnConsensusCertificate( tx_hash, certificate );
+        }
     };
 } // namespace sgns
 
@@ -280,31 +290,33 @@ namespace
                              .has_value() );
         }
 
-        void StoreCertificate( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+        sgns::ConsensusManager::Certificate MakeCertificate(
+            sgns::GeniusAccount                            &signer,
+            const std::shared_ptr<sgns::GeniusTransaction> &transaction )
         {
-            auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+            auto subject = sgns::ConsensusManager::CreateNonceSubject( transaction->GetSrcAddress(),
                                                                        transaction->GetNonce(),
                                                                        transaction->GetHash(),
                                                                        transaction->SerializeToEmbeddedTransaction(),
                                                                        std::nullopt,
                                                                        std::nullopt );
-            ASSERT_TRUE( subject.has_value() );
+            EXPECT_TRUE( subject.has_value() );
 
             auto proposal = sgns::ConsensusManager::CreateProposal( subject.value(),
-                                                                    account_->GetAddress(),
+                                                                    signer.GetAddress(),
                                                                     registry_->GetRegistryCid(),
                                                                     registry_->GetRegistryEpoch(),
-                                                                    [this]( std::vector<uint8_t> payload )
-                                                                    { return account_->Sign( payload ); } );
-            ASSERT_TRUE( proposal.has_value() );
+                                                                    [&signer]( std::vector<uint8_t> payload )
+                                                                    { return signer.Sign( payload ); } );
+            EXPECT_TRUE( proposal.has_value() );
 
             sgns::ConsensusManager::Vote vote;
             vote.set_proposal_id( proposal.value().proposal_id() );
-            vote.set_voter_id( account_->GetAddress() );
+            vote.set_voter_id( signer.GetAddress() );
             vote.set_approve( true );
             vote.set_timestamp( proposal.value().timestamp() );
             auto vote_bytes = sgns::VoteSigningBytes( vote );
-            ASSERT_TRUE( vote_bytes.has_value() );
+            EXPECT_TRUE( vote_bytes.has_value() );
             const auto vote_signature = account_->Sign( std::move( vote_bytes.value() ) );
             vote.set_signature( vote_signature.data(), vote_signature.size() );
 
@@ -317,6 +329,38 @@ namespace
             certificate.set_timestamp( vote.timestamp() );
             *certificate.add_votes()        = vote;
             *certificate.mutable_proposal() = proposal.value();
+            return certificate;
+        }
+
+        /// Builds a delegated escrow payout: any signer may spend output idx 0 of
+        /// an escrow-lock outpoint (UTXOManager::VerifyParameters delegated branch),
+        /// which is exactly the authorization shape of the 2026-11-19 staging
+        /// double-spend incident. The payout chains onto the SIGNER's own nonce
+        /// chain (previous_hash), never onto the escrow hold.
+        std::shared_ptr<sgns::TransferTransaction> MakePayout( sgns::GeniusAccount         &signer,
+                                                               const sgns::base::Hash256  &outpoint_txid,
+                                                               uint64_t                    outpoint_idx,
+                                                               uint64_t                    nonce,
+                                                               const std::string          &previous_hash,
+                                                               const std::string          &destination )
+        {
+            sgns::InputUTXOInfo input;
+            input.txid_hash_  = outpoint_txid;
+            input.output_idx_ = outpoint_idx;
+            input.signature_  = signer.Sign( input.SerializeForSigning() );
+            auto dag          = MakeDAG( nonce, previous_hash );
+            dag.set_source_addr( signer.GetAddress() );
+            auto payout       = std::make_shared<sgns::TransferTransaction>( sgns::TransferTransaction::New(
+                std::vector{ std::move( input ) },
+                { sgns::OutputDestInfo{ 1, destination, kTokenId } },
+                std::move( dag ) ) );
+            payout->MakeSignature( signer );
+            return payout;
+        }
+
+        void StoreCertificate( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+        {
+            const auto certificate = MakeCertificate( *account_, transaction );
 
             sgns::crdt::GlobalDB::Buffer certificate_data;
             certificate_data.put( certificate.SerializeAsString() );
@@ -892,6 +936,46 @@ namespace
             return false;
         }
     };
+
+    /// Swaps a probe validator in for a production chain id and restores the
+    /// original registration on scope exit (the registry is insert-only, and
+    /// the production genius validator registers itself at static init).
+    class ScopedValidatorSwap
+    {
+    public:
+        ScopedValidatorSwap( const char *chain_id, sgns::IInputValidator *probe ) :
+            chain_id_( chain_id ), probe_( probe )
+        {
+            original_ = sgns::IInputValidator::Get( chain_id_ );
+            if ( original_ != nullptr )
+            {
+                sgns::IInputValidator::UnregisterIf( chain_id_, original_ );
+            }
+            registered_ = sgns::IInputValidator::Register( chain_id_, probe_ );
+            EXPECT_TRUE( registered_ ) << "probe validator registration failed for " << chain_id_;
+        }
+
+        ~ScopedValidatorSwap()
+        {
+            if ( registered_ )
+            {
+                sgns::IInputValidator::UnregisterIf( chain_id_, probe_ );
+            }
+            if ( original_ != nullptr )
+            {
+                EXPECT_TRUE( sgns::IInputValidator::Register( chain_id_, original_ ) );
+            }
+        }
+
+        ScopedValidatorSwap( const ScopedValidatorSwap & )            = delete;
+        ScopedValidatorSwap &operator=( const ScopedValidatorSwap & ) = delete;
+
+    private:
+        const char                    *chain_id_   = nullptr;
+        sgns::IInputValidator         *probe_      = nullptr;
+        sgns::IInputValidator::ValidatorPtr original_ = nullptr;
+        bool                           registered_ = false;
+    };
 } // namespace
 
 TEST_F( TransactionManagerRecoveryTest, UnsyncedProducerWitnessIsPendingNotInvalid )
@@ -1060,6 +1144,237 @@ TEST_F( TransactionDeletionRecoveryTest, ConflictingSpendOfConsumedInputIsReject
     RecreateManager();
     ASSERT_FALSE( apply( first ).has_error() );
     EXPECT_EQ( account_->GetUTXOManager().GetBalance( dest_a ), 1U );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, ConflictingEscrowPayoutsAreArbitratedAtVoteTime )
+{
+    /**
+     * Staging incident 2026-11-19 (escrow hold aaa7ca2d): two processors both
+     * built a payout spending the same escrow outpoint. The slot key of a
+     * transaction subject is src:nonce, so the two payouts sat in DIFFERENT
+     * slots and slot arbitration never compared them; the vote-time conflict
+     * gate only looked at already-CONFIRMED transactions, and neither payout
+     * had been applied when votes were cast — so BOTH reached quorum and both
+     * certificates were written. The loser's certificate is undeliverable
+     * forever ("Rejected double-spending transfer") and poisoned every
+     * subsequent certification on the network.
+     *
+     * Vote time must arbitrate conflicting in-flight spends deterministically
+     * (Blockchain::BestHash, the same tie-break slot arbitration uses): every
+     * validator that sees both proposals votes Approve only for the
+     * lower-hash one, so only one certificate can ever form.
+     */
+    using Status = sgns::TransactionManager::TransactionStatus;
+    auto apply   = [this]( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+    {
+        return sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState( *manager_,
+                                                                                           transaction,
+                                                                                           Status::CONFIRMED );
+    };
+
+    // The production supergenius_chain validator requires chain-synced UTXO
+    // witness data this in-process fixture does not carry. The probe approves
+    // the witness and parameter legs so the test isolates the outpoint
+    // arbitration gate (the same pattern UnknownInputTypeRulesPendingNotRejected
+    // uses for its probe).
+    static ControllableParametersValidator validator;
+    validator.parameters_valid_ = true;
+    ScopedValidatorSwap swap( "supergenius_chain", &validator );
+
+    auto mint = MakeTransaction( 0 );
+    ASSERT_FALSE( apply( mint ).has_error() );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance(), 1U );
+
+    // Escrow hold locks the mint output under a lock address.
+    const std::string escrow_lock = "0x" + std::string( 64, '1' );
+    auto              escrow_params = account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId );
+    ASSERT_TRUE( escrow_params.has_value() );
+    auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), mint->GetHash() );
+    escrow_dag.set_uncle_hash( escrow_lock );
+    auto escrow = std::make_shared<sgns::EscrowTransaction>(
+        sgns::EscrowTransaction::New( std::move( escrow_params.value() ), 1, std::move( escrow_dag ) ) );
+    escrow->MakeSignature( *account_ );
+    StoreCertificate( escrow );
+    StoreTransaction( escrow );
+    ASSERT_FALSE( apply( escrow ).has_error() );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance( escrow_lock ), 1U );
+
+    const auto escrow_outpoint = sgns::base::Hash256::fromReadableString( escrow->GetHash() );
+    ASSERT_TRUE( escrow_outpoint.has_value() );
+
+    const std::string dest_a = "0x" + std::string( 64, 'a' );
+    const std::string dest_b = "0x" + std::string( 64, 'b' );
+    // Two different processors fire payouts for the same escrow outpoint, each
+    // on its own nonce chain (slot keys src:nonce never collide) — the exact
+    // staging race.
+    auto processor_b = sgns::GeniusAccount::New( kTokenId, base_path / "processor_b" );
+    ASSERT_TRUE( processor_b );
+    auto payout_a = MakePayout( *account_,
+                                escrow_outpoint.value(),
+                                0,
+                                account_->ReserveNextNonce(),
+                                escrow->GetHash(),
+                                dest_a );
+    auto payout_b = MakePayout( *processor_b, escrow_outpoint.value(), 0, 0, "", dest_b );
+
+    auto drive = []( sgns::TransactionManager                        &manager,
+                     const std::shared_ptr<sgns::TransferTransaction> &payout )
+    {
+        auto commitment = manager.BuildUTXOTransitionCommitment( *payout );
+        EXPECT_TRUE( commitment.has_value() );
+        auto subject = sgns::ConsensusManager::CreateNonceSubject( payout->GetSrcAddress(),
+                                                                   payout->GetNonce(),
+                                                                   payout->GetHash(),
+                                                                   payout->SerializeToEmbeddedTransaction(),
+                                                                   commitment,
+                                                                   std::nullopt );
+        EXPECT_TRUE( subject.has_value() );
+        return sgns::TransactionManagerPendingLifecycleTestAccess::HandleNonceConsensusSubject(
+            manager,
+            subject.value() );
+    };
+
+    auto result_a = drive( *manager_, payout_a );
+    ASSERT_TRUE( result_a.has_value() );
+    // First arrival sees no conflict yet: its Approve is provisional and the
+    // decision is the final tracked state once both payouts went through the
+    // gate (arrival order must not decide the outcome — BestHash does).
+    EXPECT_EQ( result_a.value().check, sgns::ConsensusManager::Check::Approve );
+    auto result_b = drive( *manager_, payout_b );
+    ASSERT_TRUE( result_b.has_value() );
+
+    const auto winner = sgns::Blockchain::BestHash( payout_a->GetHash(), payout_b->GetHash() );
+    EXPECT_EQ( result_b.value().check,
+               winner == payout_b->GetHash() ? sgns::ConsensusManager::Check::Approve :
+                                               sgns::ConsensusManager::Check::Reject )
+        << "the second arrival must be approved exactly when BestHash ranks it first";
+
+    auto tracked_a = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                                       payout_a->GetHash() );
+    auto tracked_b = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                                       payout_b->GetHash() );
+    ASSERT_TRUE( tracked_a.has_value() );
+    ASSERT_TRUE( tracked_b.has_value() );
+    // Exactly one payout survives, and it is the deterministic winner: the
+    // loser must never stay votable, otherwise both certificates can form.
+    EXPECT_EQ( winner == payout_a->GetHash() ? tracked_a->status : tracked_b->status, Status::VERIFYING )
+        << "BestHash winner payout must remain votable";
+    EXPECT_EQ( winner == payout_a->GetHash() ? tracked_b->status : tracked_a->status, Status::FAILED )
+        << "conflicting payout must fail at vote time instead of reaching quorum too";
+}
+
+TEST_F( TransactionDeletionRecoveryTest, LoserPayoutCertificateIsQuarantinedNotRetriedForever )
+{
+    /**
+     * Backstop for certificates formed before the vote-time gate (exactly the
+     * staging 2026-11-19 state: both payouts certified, winner applied, loser's
+     * certificate permanently undeliverable). The handler must classify the
+     * permanent apply failure (double-spend invalid_argument) as a final
+     * Reject — which the certificate work journal retires (MarkDone) and
+     * uses to wake dependent pending proposals — instead of returning an
+     * error, which ProcessCommittedCertificate retries with exponential
+     * backoff forever ("handler failed N times, backing off 60000ms").
+     */
+    using Status = sgns::TransactionManager::TransactionStatus;
+    auto apply   = [this]( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+    {
+        return sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState( *manager_,
+                                                                                           transaction,
+                                                                                           Status::CONFIRMED );
+    };
+
+    // Same probe as ConflictingEscrowPayoutsAreArbitratedAtVoteTime: the
+    // certificate-delivery path under test runs after quorum, where the
+    // witness leg no longer applies.
+    static ControllableParametersValidator validator;
+    validator.parameters_valid_ = true;
+    ScopedValidatorSwap swap( "supergenius_chain", &validator );
+
+    auto mint = MakeTransaction( 0 );
+    ASSERT_FALSE( apply( mint ).has_error() );
+
+    const std::string escrow_lock   = "0x" + std::string( 64, '1' );
+    auto              escrow_params = account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId );
+    ASSERT_TRUE( escrow_params.has_value() );
+    auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), mint->GetHash() );
+    escrow_dag.set_uncle_hash( escrow_lock );
+    auto escrow = std::make_shared<sgns::EscrowTransaction>(
+        sgns::EscrowTransaction::New( std::move( escrow_params.value() ), 1, std::move( escrow_dag ) ) );
+    escrow->MakeSignature( *account_ );
+    StoreCertificate( escrow );
+    StoreTransaction( escrow );
+    ASSERT_FALSE( apply( escrow ).has_error() );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance( escrow_lock ), 1U );
+
+    const auto escrow_outpoint = sgns::base::Hash256::fromReadableString( escrow->GetHash() );
+    ASSERT_TRUE( escrow_outpoint.has_value() );
+
+    const std::string dest_a = "0x" + std::string( 64, 'a' );
+    const std::string dest_b = "0x" + std::string( 64, 'b' );
+    const std::string dest_c = "0x" + std::string( 64, 'c' );
+    auto processor_b = sgns::GeniusAccount::New( kTokenId, base_path / "processor_b" );
+    ASSERT_TRUE( processor_b );
+    auto payout_a = MakePayout( *account_,
+                                escrow_outpoint.value(),
+                                0,
+                                account_->ReserveNextNonce(),
+                                escrow->GetHash(),
+                                dest_a );
+    auto payout_b = MakePayout( *processor_b, escrow_outpoint.value(), 0, 0, "", dest_b );
+
+    // The loser's proposal was votable while neither payout had been applied —
+    // the pre-halt staging behavior that let both certificates form.
+    auto commitment_b = manager_->BuildUTXOTransitionCommitment( *payout_b );
+    ASSERT_TRUE( commitment_b.has_value() );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( payout_b->GetSrcAddress(),
+                                                               payout_b->GetNonce(),
+                                                               payout_b->GetHash(),
+                                                               payout_b->SerializeToEmbeddedTransaction(),
+                                                               commitment_b,
+                                                               std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+    auto vote_result = sgns::TransactionManagerPendingLifecycleTestAccess::HandleNonceConsensusSubject(
+        *manager_,
+        subject.value() );
+    ASSERT_TRUE( vote_result.has_value() );
+    ASSERT_EQ( vote_result.value().check, sgns::ConsensusManager::Check::Approve );
+
+    // The winner's certificate is delivered and applied first: the escrow
+    // outpoint is consumed and only dest_a is credited.
+    ASSERT_FALSE( apply( payout_a ).has_error() );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance( dest_a ), 1U );
+    EXPECT_FALSE( account_->GetUTXOManager().GetUnconsumedUTXO( escrow_outpoint.value(), 0 ).has_value() );
+
+    // The loser's certificate arrives afterwards. It can never be applied; the
+    // handler must report a final Reject, not a retryable error.
+    const auto certificate_b = MakeCertificate( *processor_b, payout_b );
+    auto cert_result = sgns::TransactionManagerPendingLifecycleTestAccess::OnConsensusCertificate(
+        *manager_,
+        payout_b->GetHash(),
+        certificate_b );
+    ASSERT_TRUE( cert_result.has_value() )
+        << "a permanently rejected certificate must not be returned as a retryable error";
+    EXPECT_EQ( cert_result.value(), sgns::ConsensusManager::Check::Reject );
+
+    const auto tracked_b = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx(
+        *manager_,
+        payout_b->GetHash() );
+    ASSERT_TRUE( tracked_b.has_value() );
+    EXPECT_EQ( tracked_b->status, Status::FAILED );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance( dest_b ), 0U );
+
+    // The pipeline must move on: an independent transaction still applies and
+    // credits its destination after the poison certificate was quarantined.
+    const auto payout_a_outpoint = sgns::base::Hash256::fromReadableString( payout_a->GetHash() );
+    ASSERT_TRUE( payout_a_outpoint.has_value() );
+    auto followup = MakePayout( *account_,
+                                payout_a_outpoint.value(),
+                                0,
+                                account_->ReserveNextNonce(),
+                                payout_a->GetHash(),
+                                dest_c );
+    ASSERT_FALSE( apply( followup ).has_error() );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance( dest_c ), 1U );
 }
 
 TEST_F( TransactionManagerPreviousHashTest, EscrowChainIdDefaultAndScopedOverride )
