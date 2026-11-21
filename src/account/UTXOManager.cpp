@@ -1,12 +1,20 @@
+/**
+ * @file UTXOManager.cpp
+ * @brief Local UTXO lifecycle and locked spend verification.
+ */
 #include "UTXOManager.hpp"
 #include "UTXOMerkle.hpp"
 
 #include <algorithm>
 #include <chrono>
 #include <numeric>
+#include <limits>
 #include <stdexcept>
 
 #include "account/proto/SGTransaction.pb.h"
+#include "account/EscrowReleaseTransactionV2.hpp"
+#include "account/EscrowTransaction.hpp"
+#include "account/InputValidators.hpp"
 #include "base/blob.hpp"
 #include "storage/database_error.hpp"
 
@@ -810,7 +818,40 @@ namespace sgns
 
     bool UTXOManager::VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const
     {
+        const std::shared_lock lock( utxos_mutex_ );
         return VerifyParametersForOwner( params, address, address );
+    }
+
+    bool UTXOManager::VerifyEscrowReleaseParameters( const EscrowReleaseTransactionV2 &release,
+                                                     const EscrowTransaction          &hold ) const
+    {
+        const auto params      = release.GetUTXOParameters();
+        const auto hold_params = hold.GetUTXOParameters();
+        const auto hash        = base::Hash256::fromHex( hold.GetHash() );
+        if ( !hold.CheckHash() || hash.has_error() || params.first.size() != 1 || params.second.empty() ||
+             hold_params.second.empty() || params.first.front().txid_hash_ != hash.value() ||
+             params.first.front().output_idx_ != input_validator_constants::ESCROW_LOCK_OUTPUT_INDEX )
+        {
+            return false;
+        }
+        const auto            &locked = hold_params.second.front();
+        const std::shared_lock lock( utxos_mutex_ );
+        const auto             tracked = utxo_outpoints_.find(
+            OutPoint{ hash.value(), input_validator_constants::ESCROW_LOCK_OUTPUT_INDEX } );
+        if ( !utxo_address::IsEscrowLockAddress( locked.dest_address ) || tracked == utxo_outpoints_.end() ||
+             tracked->second.utxo.GetAmount() != locked.encrypted_amount ||
+             !tracked->second.utxo.GetTokenID().Equals( locked.token_id ) )
+        {
+            return false;
+        }
+        if ( std::any_of( params.second.begin(),
+                          params.second.end(),
+                          []( const OutputDestInfo &output )
+                          { return output.dest_address.empty() || output.token_id.size() == 0; } ) )
+        {
+            return false;
+        }
+        return VerifyParametersForOwner( params, release.GetSrcAddress(), locked.dest_address );
     }
 
     bool UTXOManager::VerifyParametersForOwner( const UTXOTxParameters &params,
@@ -818,8 +859,6 @@ namespace sgns
                                                 const std::string      &expected_owner ) const
     {
         uint64_t expected_amount = 0;
-
-        std::shared_lock lock( utxos_mutex_ );
 
         std::unordered_set<OutPoint, OutPointHash> seen_inputs;
         seen_inputs.reserve( params.first.size() );
@@ -854,11 +893,8 @@ namespace sgns
                 return false;
             }
 
-            const auto &owner_address          = utxo_it->second.utxo.GetOwnerAddress();
-            const bool  delegated_escrow_spend = owner_address != expected_owner && input.output_idx_ == 0 &&
-                                                utxo_address::IsEscrowLockAddress( owner_address );
-
-            if ( owner_address != expected_owner && !delegated_escrow_spend )
+            const auto &owner_address = utxo_it->second.utxo.GetOwnerAddress();
+            if ( owner_address != expected_owner )
             {
                 logger_->warn( "Outpoint {}:{} does not belong to {}",
                                input.txid_hash_.toReadableString(),
@@ -867,23 +903,23 @@ namespace sgns
                 return false;
             }
 
-            if ( delegated_escrow_spend )
+            const auto amount = utxo_it->second.utxo.GetAmount();
+            if ( amount > std::numeric_limits<uint64_t>::max() - expected_amount )
             {
-                logger_->debug( "Allowing delegated escrow spend for outpoint {}:{} by {} (lock owner: {})",
-                                input.txid_hash_.toReadableString(),
-                                input.output_idx_,
-                                signer.substr( 0, 8 ),
-                                owner_address );
+                return false;
             }
-
-            expected_amount += utxo_it->second.utxo.GetAmount();
+            expected_amount += amount;
         }
 
-        uint64_t real_amount = std::accumulate( params.second.cbegin(),
-                                                params.second.cend(),
-                                                UINT64_C( 0 ),
-                                                []( const uint64_t s, const OutputDestInfo &o )
-                                                { return o.encrypted_amount + s; } );
+        uint64_t real_amount = 0;
+        for ( const auto &output : params.second )
+        {
+            if ( output.encrypted_amount > std::numeric_limits<uint64_t>::max() - real_amount )
+            {
+                return false;
+            }
+            real_amount += output.encrypted_amount;
+        }
 
         return real_amount == expected_amount && seen_inputs.size() == params.first.size();
     }

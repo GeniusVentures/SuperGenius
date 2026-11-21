@@ -22,6 +22,8 @@
 
 namespace sgns
 {
+    class EscrowReleaseTransactionV2;
+    class EscrowTransaction;
     /**
      * @brief Hash functor for using OutPoint keys in unordered containers.
      */
@@ -406,6 +408,15 @@ namespace sgns
         bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
 
         /**
+         * @brief Verifies a typed release using the actual resolved hold's output and lock owner.
+         * @param[in] release Payment signed by the submitting processor.
+         * @param[in] hold Immutable producer resolved by GeniusInputValidator against its certificate.
+         * @return True when the exact hold output remains spendable and payment checks pass.
+         */
+        bool VerifyEscrowReleaseParameters( const EscrowReleaseTransactionV2 &release,
+                                            const EscrowTransaction          &hold ) const;
+
+        /**
          * @brief       Returns the tracked state of a specific outpoint when present.
          * @param[in]   utxo_id The transaction hash that created the UTXO
          * @param[in]   output_idx The output index of the UTXO within the transaction
@@ -572,7 +583,7 @@ namespace sgns
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class UTXOManagerTestAccess;
 
-        /** @brief Shares locked spend verification while keeping the expected owner private. */
+        /** @brief Shares spend verification with utxos_mutex_ held by the caller; owner stays private. */
         bool VerifyParametersForOwner( const UTXOTxParameters &params, const std::string &signer,
                                        const std::string &expected_owner ) const;
 

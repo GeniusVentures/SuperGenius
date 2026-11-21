@@ -197,6 +197,23 @@ namespace sgns
         {
             return WitnessVerdict::kInvalid;
         }
+        if ( const auto *release = dynamic_cast<const EscrowReleaseTransactionV2 *>( &tx ) )
+        {
+            if ( !release->CheckHash() || !release->CheckSignature() )
+            {
+                return WitnessVerdict::kInvalid;
+            }
+            const auto resolved = ResolveEscrowReleaseInput( *release, blockchain );
+            if ( resolved.verdict != WitnessVerdict::kValid )
+            {
+                return resolved.verdict;
+            }
+            // Use only the typed transaction's own signed parameters; caller-supplied
+            // parameters cannot select a different input or owner for this route.
+            return utxo_manager.VerifyEscrowReleaseParameters( *release, *resolved.producer )
+                       ? WitnessVerdict::kValid
+                       : WitnessVerdict::kInvalid;
+        }
         return IInputValidator::ValidateTransactionUTXOParameters( tx, params, address, utxo_manager, blockchain );
     }
 

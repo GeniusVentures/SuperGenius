@@ -339,6 +339,19 @@ namespace
                          .ConsumeUTXOs( good.first, hold->GetUTXOParameters().second.front().dest_address )
                          .has_value() );
         EXPECT_EQ( Local( release ), Verdict::kInvalid );
+        for ( uint8_t scenario = 0; scenario < 3; ++scenario )
+        {
+            const auto actual = Hold( "0x" + std::string( 64, static_cast<char>( 'b' + scenario ) ) );
+            Certify( *actual );
+            const auto hash   = base::Hash256::fromHex( actual->GetHash() ).value();
+            const auto owner  = scenario == 0 ? processor_->GetAddress()
+                                              : actual->GetUTXOParameters().second.front().dest_address;
+            const auto amount = scenario == 1 ? 18U : 17U;
+            const auto token  = TokenID::FromBytes( { static_cast<uint8_t>( scenario == 2 ? 1 : 0 ) } );
+            ASSERT_TRUE(
+                account_->GetUTXOManager().PutUTXO( GeniusUTXO( hash, 0, amount, token, owner ), owner ).has_value() );
+            EXPECT_EQ( Local( Release( *actual, *processor_ ) ), Verdict::kInvalid ) << static_cast<int>( scenario );
+        }
     }
 
     TEST_F( EscrowReleaseV2ValidationTest, FreshTransferEscrowBypassRejectedLocally )
