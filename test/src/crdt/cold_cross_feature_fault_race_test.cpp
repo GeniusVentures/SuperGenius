@@ -144,6 +144,7 @@
 #include "crdt/globaldb/ColdStorageManager.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/hierarchical_key.hpp"
+#include "crdt/proto/bcast.pb.h"
 #include "storage/database_error.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "transaction/PruneEligibility.hpp"
@@ -4035,5 +4036,356 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_SuiteEnd_AuditWalkAndCounterTeeth )
         auto restore = sgns::PruneEligibility::CanRestoreElement( *gw_db_, path );
         EXPECT_TRUE( restore.has_error() )
             << "teeth: the violation state fails the recovery consult closed";
+    }
+}
+
+// ---------------------------------------------------------------------------
+// X11 (plan 19-04 Task 2): the ONE full-wire leg.
+// ---------------------------------------------------------------------------
+
+/// The pubsub-path announcement encoder (the v1.1 recipe's
+/// EncodeCidAnnouncement - the CRDTBroadcast envelope carrying one head
+/// CID, exactly what Publish broadcasts, built test-side because
+/// EncodeBroadcastStatic is protected).
+static Buffer EncodeCidAnnouncement( const CID &cid )
+{
+    auto cid_string = cid.toString();
+    if ( !cid_string )
+    {
+        ADD_FAILURE() << "EncodeCidAnnouncement: CID unencodable";
+        Buffer empty;
+        return empty;
+    }
+    sgns::crdt::pb::CRDTBroadcast msg;
+    msg.add_heads()->set_cid( cid_string.value() );
+    Buffer out;
+    out.put( msg.SerializeAsString() );
+    return out;
+}
+
+
+/**
+ * @brief X11: the composed wire (S4/S5 x E4 across nodes) - hazards:
+ *        RESURRECTION + LOST LAST COPY. The ONE real-pubsub case in the
+ *        matrix (D-06): no second full-wire leg exists by decision.
+ *
+ * TOPOLOGY (the v1.1 resurrection leg-3 recipe verbatim): two REAL
+ *        GlobalDB instances over the MultiGlobalDBTest topology - two
+ *        GossipPubSub hosts on separate io contexts, real in-process
+ *        libp2p + graphsync wire, A dials B - hermetic cold on B via
+ *        SetColdStorageStackClientsForTesting fakes (D-10: zero network
+ *        beyond the loopback wire, zero services, fresh-clone safe).
+ *
+ * PROPAGATION PROLOGUE: A puts + deletes on the shared topic - BOTH
+ *        deltas propagate to B over the wire and drain Durable there
+ *        (durable_upload_count >= 2), and the value is dead on both
+ *        nodes - the two-GlobalDB wire is really carrying traffic
+ *        before the claims are driven.
+ *
+ * REFUSAL TERMINALITY ON THE WIRE: A puts keyX on a PRIVATE topic (B
+ *        never receives the block - the never-held, never-sealed state
+ *        the evidence consult governs); B carries a node-local /prune/blk
+ *        evidence row for that cid (the sanctioned builder key + the
+ *        production record shape - B the light node's own policy state).
+ *        A rebroadcasts the cid announcement on the shared topic: B's
+ *        receive lane registers the route and its worker's fetch
+ *        consults B's evidence -> HISTORY_PRUNED_LOCALLY, TERMINAL -
+ *        never a peer fall-through onto the wire, never a cold Get, the
+ *        key never appears on B.
+ *
+ * FAILOVER SERVES ONLY UNEVIDENCED HISTORY: the same drive WITHOUT the
+ *        evidence row (keyY, private topic, rebroadcast) - B's fetch
+ *        misses every local tier, consults NoEvidence, falls through to
+ *        the PEER LEG over the wire, and A SERVES (real graphsync) - the
+ *        key arrives on B CID-verified (the merge accepts only verified
+ *        nodes).
+ *
+ * SCOPE RULING (A5 invoked, recorded for the SUMMARY - not silently
+ *        narrowed): the plan's A-side concurrent-erase leg (A's prune
+ *        cycle mid-serve) requires per-node tx stacks the recipe does
+ *        not carry; its claim (the gate defers under an in-flight serve
+ *        - no lost last copy) is already crossed hermetically by X3-B
+ *        leg 2 and X8-B (19-02, teeth on record). The wire leg lands
+ *        the two claims the recipe extends to cleanly.
+ *
+ * POSTURE (D-06): Tier-1 default - the case RUNS with no env knob.
+ *        SGNS_CROSS_RACE_FULLWIRE_ENABLE is the DEMOTED-state opt-in
+ *        only: a recorded ruling in notes/19-* with run IDs (never a
+ *        silent skip, never a quarantine entry) flips the case to
+ *        opt-in; promotion = two consecutive green dispatches of
+ *        build-release-tags.yml on all three desktop platforms.
+ *        Deadlines are generous and instrumented - on exhaustion the
+ *        failure dumps BOTH nodes' GetColdStorageStatus (round-6:
+ *        instrument, never bump).
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_FullWire_RefusalFailoverUnderConcurrentErase )
+{
+    LogKnobs( "X11" );
+
+    const std::string shared_topic  = "x11-shared";
+    const std::string private_topic = "x11-private";
+
+    auto dump_status = []( const char *tag, const sgns::crdt::GlobalDB &node ) {
+        auto s = node.GetColdStorageStatus();
+        std::ostringstream oss;
+        oss << "[" << tag << "]"
+            << " gc_enabled=" << s.gc_enabled
+            << " gc_inhibited_staging=" << s.gc_inhibited_staging
+            << " gc_evicting_count=" << s.gc_evicting_count
+            << " gc_last_pass_candidates=" << s.gc_last_pass_candidates
+            << " gc_disposed_marker_count=" << s.gc_disposed_marker_count
+            << " durable=" << s.durable_upload_count
+            << " pending=" << s.pending_upload_count
+            << " staging_healthy=" << s.staging_healthy
+            << " flush_backoff=" << s.flush_backoff_active;
+        return oss.str();
+    };
+
+    // --- The hermetic S3 pair node B's FULL stack runs on (the in-file
+    // TimingS3Client wrapper keeps the op counts observable).
+    auto fake2       = std::make_shared<InMemoryS3Client>();
+    auto timing2     = std::make_shared<TimingS3Client>( fake2 );
+    auto fake2_admin = std::make_shared<InMemoryS3AdminClient>();
+
+    // --- Two pubsub hosts on separate io contexts (the recipe).
+    auto pubs1         = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
+    auto start1_future = pubs1->Start( 0, {} );
+    auto pubs2         = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
+    auto start2_future = pubs2->Start( 0, {} );
+    ASSERT_TRUE( PollUntil(
+        [&] {
+            if ( start1_future.wait_for( std::chrono::milliseconds( 0 ) ) != std::future_status::ready )
+            {
+                return false;
+            }
+            if ( start2_future.wait_for( std::chrono::milliseconds( 0 ) ) != std::future_status::ready )
+            {
+                return false;
+            }
+            return !start1_future.get() && !start2_future.get();
+        },
+        std::chrono::milliseconds( 20000 ) ) )
+        << "X11: pubsub hosts failed to start";
+
+    auto io_context1 = pubs1->GetAsioContext();
+    auto io_context2 = pubs2->GetAsioContext();
+    auto scheduler1  = std::make_shared<libp2p::basic::SchedulerImpl>(
+        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context1 ),
+        libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+    auto network1   = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler1 );
+    auto generator1 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+    auto scheduler2  = std::make_shared<libp2p::basic::SchedulerImpl>(
+        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context2 ),
+        libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+    auto network2   = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(), scheduler2 );
+    auto generator2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+
+    // --- Node B's cold posture: ON, hermetic fakes via the TEST-ONLY
+    // override (retention dormant - this leg drives no eviction).
+    sgns::crdt::GlobalDB::ColdStorageOptions cold_b;
+    cold_b.enabled   = true;
+    cold_b.endpoint  = "hermetic.invalid"; // overridden below - never contacted
+    cold_b.bucket    = "x11";
+    cold_b.accessKey = "test";
+    cold_b.secretKey = "test";
+    cold_b.backpressure.drain_interval_ms = 50;
+    cold_b.backpressure.warn_pending      = 100000;
+    cold_b.backpressure.critical_pending  = 200000;
+    cold_b.backpressure.backoff_cap_ms    = 1000;
+    cold_b.durability.flush_min_interval_ms = 50;
+    cold_b.durability.flush_max_interval_ms = 300;
+    sgns::crdt::SetColdStorageStackClientsForTesting(
+        std::static_pointer_cast<S3Client>( timing2 ),
+        std::static_pointer_cast<sgns::blockstore::S3AdminClient>( fake2_admin ) );
+
+    const std::string node_a_dir = FreshDir( "x11-a" );
+    const std::string node_b_dir = FreshDir( "x11-b" );
+    auto gdb_a_ret = sgns::crdt::GlobalDB::New( io_context1,
+                                                node_a_dir,
+                                                pubs1,
+                                                sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                network1,
+                                                scheduler1,
+                                                generator1,
+                                                nullptr,
+                                                sgns::crdt::GlobalDB::BackupOptions{ false, 15, 12, true },
+                                                sgns::crdt::GlobalDB::ColdStorageOptions{} /* A: cold OFF */ );
+    auto gdb_b_ret = sgns::crdt::GlobalDB::New( io_context2,
+                                                node_b_dir,
+                                                pubs2,
+                                                sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                network2,
+                                                scheduler2,
+                                                generator2,
+                                                nullptr,
+                                                sgns::crdt::GlobalDB::BackupOptions{ false, 15, 12, true },
+                                                cold_b );
+    ASSERT_TRUE( gdb_a_ret.has_value() ) << "X11: node A GlobalDB failed to construct";
+    ASSERT_TRUE( gdb_b_ret.has_value() ) << "X11: node B GlobalDB failed to construct";
+    auto gdb_a = std::move( gdb_a_ret.value() );
+    auto gdb_b = std::move( gdb_b_ret.value() );
+    // Hygiene: the process-global override has served its purpose.
+    sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
+
+    gdb_a->AddBroadcastTopic( shared_topic );
+    gdb_b->AddBroadcastTopic( shared_topic );
+    gdb_a->AddListenTopic( shared_topic );
+    gdb_b->AddListenTopic( shared_topic );
+    gdb_a->AddBroadcastTopic( private_topic ); // A only - B never listens
+    gdb_a->Start();
+    gdb_b->Start();
+    pubs1->AddPeers( { pubs2->GetInterfaceAddress() } );
+
+    // --- PROPAGATION PROLOGUE: put + delete on the shared topic - the
+    // wire really carries traffic (both deltas Durable on B, value dead
+    // on both nodes).
+    const std::string prologue_key = "x11/prologue";
+    {
+        sgns::crdt::GlobalDB::Buffer value_buffer;
+        value_buffer.put( std::string( "prologue-value" ) );
+        auto put_ret = gdb_a->Put( sgns::crdt::HierarchicalKey( prologue_key ), value_buffer, { shared_topic } );
+        ASSERT_TRUE( put_ret.has_value() ) << "X11: node A prologue put failed";
+        auto tomb_ret = gdb_a->GetCRDTDataStore()->DeleteKey( sgns::crdt::HierarchicalKey( prologue_key ),
+                                                              { shared_topic } );
+        ASSERT_TRUE( tomb_ret.has_value() ) << "X11: node A prologue delete failed";
+
+        ASSERT_TRUE( PollUntil(
+            [&] { return gdb_b->GetColdStorageStatus().durable_upload_count >= 2; },
+            std::chrono::milliseconds( 60000 ) ) )
+            << "X11: node B never received+drained both prologue deltas; "
+            << dump_status( "B", *gdb_b );
+        auto q_a = gdb_a->QueryKeyValues( prologue_key );
+        auto q_b = gdb_b->QueryKeyValues( prologue_key );
+        ASSERT_TRUE( q_a.has_value() && q_b.has_value() );
+        EXPECT_TRUE( q_a.value().empty() ) << "X11: A's prologue value is dead";
+        EXPECT_TRUE( q_b.value().empty() ) << "X11: B's prologue value is dead after propagation";
+    }
+
+    // --- The two private-topic puts (B never receives these blocks).
+    CID cid_x, cid_y;
+    {
+        sgns::crdt::GlobalDB::Buffer value_x;
+        value_x.put( std::string( "x-value" ) );
+        auto put_x = gdb_a->Put( sgns::crdt::HierarchicalKey( "x11/refused/key" ), value_x, { private_topic } );
+        ASSERT_TRUE( put_x.has_value() );
+        cid_x = put_x.value();
+        sgns::crdt::GlobalDB::Buffer value_y;
+        value_y.put( std::string( "y-value" ) );
+        auto put_y = gdb_a->Put( sgns::crdt::HierarchicalKey( "x11/served/key" ), value_y, { private_topic } );
+        ASSERT_TRUE( put_y.has_value() );
+        cid_y = put_y.value();
+    }
+
+    // --- REFUSAL TERMINALITY ON THE WIRE: B carries the /prune/blk
+    // evidence row for cid_x (sanctioned builder key + production
+    // record shape - the light node's own policy state).
+    {
+        const auto cid_x_string = cid_x.toString();
+        ASSERT_TRUE( cid_x_string.has_value() );
+        sgns::crdt::GlobalDB::Buffer marker_key;
+        marker_key.put( sgns::PruneEligibility::BuildPruneBlockMarkerKey( cid_x_string.value() ) );
+        SGTransaction::PrunedBlockRecord record;
+        record.set_pruning_tx_hash( "x11-test-pruning-tx-hash" );
+        record.set_has_erased_at_generation( true );
+        record.set_erased_at_generation( 1 );
+        sgns::crdt::GlobalDB::Buffer marker_value;
+        marker_value.put( record.SerializeAsString() );
+        ASSERT_TRUE( gdb_b->GetDataStore()->put( marker_key, marker_value ).has_value() );
+
+        // QUIESCE first (run1 find): the propagation drain's trailing
+        // S3 traffic would otherwise pollute the zero-Get attribution.
+        ASSERT_TRUE( PollUntil( [&] { return gdb_b->GetColdStorageStatus().pending_upload_count == 0; },
+                                std::chrono::milliseconds( 10000 ) ) )
+            << "X11: B never quiesced; " << dump_status( "B", *gdb_b );
+        const auto settle_end = std::chrono::steady_clock::now() + std::chrono::milliseconds( 300 );
+        ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= settle_end; },
+                                std::chrono::milliseconds( 1000 ) ) );
+
+        const uint64_t gets_before     = timing2->OpCount( S3Op::Get );
+        const auto     pending_before = gdb_b->GetColdStorageStatus().pending_upload_count;
+
+        auto bcast_a = gdb_a->GetBroadcaster();
+        ASSERT_TRUE( bcast_a != nullptr );
+        std::atomic<bool> refusal_sent{ false };
+        ASSERT_TRUE( PollUntil(
+            [&] {
+                auto sent = bcast_a->Broadcast( EncodeCidAnnouncement( cid_x ), shared_topic );
+                if ( sent.has_value() )
+                {
+                    refusal_sent.store( true );
+                }
+                return refusal_sent.load();
+            },
+            std::chrono::milliseconds( 10000 ) ) )
+            << "X11: the refusal-drive rebroadcast never published (address "
+               "resolution race)";
+
+        // Bounded observation window for the would-be fetch/merge.
+        const auto window_end = std::chrono::steady_clock::now() + std::chrono::milliseconds( 1500 );
+        ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= window_end; },
+                                std::chrono::milliseconds( 2000 ) ) );
+
+        auto q_b = gdb_b->QueryKeyValues( "x11/refused/key" );
+        ASSERT_TRUE( q_b.has_value() );
+        EXPECT_TRUE( q_b.value().empty() )
+            << "X11 refusal: B's evidenced history stays refused - never "
+               "re-delivered, never resurrected";
+        EXPECT_EQ( timing2->OpCount( S3Op::Get ), gets_before )
+            << "X11 refusal: the consult refused TERMINALLY - no cold Get, no "
+               "peer fall-through onto the wire; " << dump_status( "B", *gdb_b );
+        EXPECT_EQ( gdb_b->GetColdStorageStatus().pending_upload_count, pending_before )
+            << "X11 refusal: nothing re-journaled on B";
+    }
+
+    // --- FAILOVER SERVES ONLY UNEVIDENCED HISTORY: the same drive
+    // without the evidence row - B misses every local tier, falls
+    // through to the peer leg, and A SERVES over the wire.
+    {
+        auto bcast_a = gdb_a->GetBroadcaster();
+        ASSERT_TRUE( bcast_a != nullptr );
+        std::atomic<bool> failover_sent{ false };
+        ASSERT_TRUE( PollUntil(
+            [&] {
+                auto sent = bcast_a->Broadcast( EncodeCidAnnouncement( cid_y ), shared_topic );
+                if ( sent.has_value() )
+                {
+                    failover_sent.store( true );
+                }
+                return failover_sent.load();
+            },
+            std::chrono::milliseconds( 10000 ) ) )
+            << "X11: the failover-drive rebroadcast never published (address "
+               "resolution race)";
+
+        ASSERT_TRUE( PollUntil(
+            [&] {
+                auto q = gdb_b->QueryKeyValues( "x11/served/key" );
+                return q.has_value() && !q.value().empty();
+            },
+            std::chrono::milliseconds( 60000 ) ) )
+            << "X11 failover: the unevidenced history never arrived on B over "
+               "the wire; " << dump_status( "A", *gdb_a ) << "; " << dump_status( "B", *gdb_b );
+        auto q_b = gdb_b->QueryKeyValues( "x11/served/key" );
+        ASSERT_TRUE( q_b.has_value() );
+        ASSERT_EQ( q_b.value().size(), 1u );
+        const std::string served_value( q_b.value().begin()->second.toString() );
+        EXPECT_EQ( served_value, std::string( "y-value" ) )
+            << "X11 failover: A served CID-VERIFIED bytes over the wire (the "
+               "merge accepts only verified nodes)";
+    }
+
+    // --- Deterministic listener release (the recipe's order): drain the
+    // GlobalDBs BEFORE the pubsubs release the hosts, then stop the
+    // pubsubs explicitly.
+    gdb_a->ShutdownNow();
+    gdb_b->ShutdownNow();
+    try
+    {
+        pubs1->Stop();
+        pubs2->Stop();
+    }
+    catch ( const std::exception &err )
+    {
+        std::cerr << "X11 GossipPubSub::Stop() exception: " << err.what() << std::endl;
     }
 }
