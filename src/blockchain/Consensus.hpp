@@ -647,9 +647,22 @@ namespace sgns
         /**
          * @brief Retrieves the validated authoritative certificate for a canonical slot.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
-         * @return Certificate when the exact authoritative record is present and approved, or an error.
+         * @return Approved certificate; NOT_FOUND for absence, invalid_argument for rejection,
+         *         resource_unavailable_try_again for deferred authority, or the storage error.
          */
         outcome::result<Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
+        /**
+         * @brief Recovers a unique nonce subject from existing canonical certificate records.
+         * @param[in] account_id Exact subject account.
+         * @param[in] nonce Exact subject nonce.
+         * @param[in] expected_tx_hash Optional exact subject transaction hash.
+         * @return Validated certificate, with the same errors as GetCertificateBySlot;
+         *         contradictory or ambiguous matching records are invalid_argument.
+         */
+        outcome::result<Certificate> FindCertificateByNonceSubject(
+            const std::string                &account_id,
+            uint64_t                          nonce,
+            const std::optional<std::string> &expected_tx_hash = std::nullopt ) const;
         /**
          * @brief Checks whether an approved authoritative certificate exists for a canonical slot.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.

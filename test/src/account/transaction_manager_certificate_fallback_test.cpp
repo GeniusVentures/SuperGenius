@@ -36,6 +36,7 @@
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/proto/SGTransaction.pb.h"
 #include "crypto/hasher.hpp"
+#include "storage/database_error.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <gsl/span>
 #include "testutil/storage/base_crdt_test.hpp"

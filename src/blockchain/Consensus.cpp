@@ -4974,11 +4974,67 @@ namespace sgns
             logger_->error( "{}: certificate slot key mismatch expected={}", __func__, key );
             return outcome::failure( std::errc::invalid_argument );
         }
-        if ( ValidateCertificate( certificate ) != Check::Approve )
+        const auto validation = ValidateCertificate( certificate );
+        if ( validation == Check::Pending || validation == Check::Stalled )
+        {
+            return outcome::failure( std::errc::resource_unavailable_try_again );
+        }
+        if ( validation != Check::Approve )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
         return certificate;
+    }
+
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::FindCertificateByNonceSubject(
+        const std::string                &account_id,
+        uint64_t                          nonce,
+        const std::optional<std::string> &expected_tx_hash ) const
+    {
+        if ( account_id.empty() || !db_ || ( expected_tx_hash && expected_tx_hash->empty() ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        BOOST_OUTCOME_TRY( auto records, db_->QueryKeyValues( CERTIFICATE_BASE_PATH_KEY ) );
+        std::optional<Certificate> selected;
+        for ( const auto &[key, value] : records )
+        {
+            Certificate candidate;
+            // A malformed unrelated record cannot identify this subject. The direct
+            // slot path still reports its parse failure when its slot is known.
+            if ( !candidate.ParseFromArray( value.data(), value.size() ) ||
+                 candidate.proposal().subject().account_id() != account_id ||
+                 !SubjectTypeMatches( candidate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+            {
+                continue;
+            }
+            auto subject = DecodeNonceSubject( candidate.proposal().subject() );
+            if ( subject.has_error() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            if ( subject.value().nonce() != nonce ||
+                 ( expected_tx_hash && subject.value().tx_hash() != *expected_tx_hash ) )
+            {
+                continue;
+            }
+            BOOST_OUTCOME_TRY( auto canonical_key, db_->KeyToString( key ) );
+            if ( GetExpectedCertificateSlotKey( candidate ) != canonical_key )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            BOOST_OUTCOME_TRY( auto approved, GetCertificateBySlot( GetSlotKey( candidate.proposal() ) ) );
+            if ( approved.SerializeAsString() != candidate.SerializeAsString() || selected )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            selected.emplace( std::move( approved ) );
+        }
+        if ( !selected )
+        {
+            return outcome::failure( storage::DatabaseError::NOT_FOUND );
+        }
+        return std::move( *selected );
     }
 
     bool ConsensusManager::CheckCertificateForSlot( const std::string &slot_key ) const

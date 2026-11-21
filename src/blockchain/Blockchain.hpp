@@ -332,6 +332,17 @@ namespace sgns
          */
         outcome::result<ConsensusManager::Certificate> GetCertificateBySlot( const std::string &slot_key ) const;
         /**
+         * @brief Forwards read-only canonical nonce-subject recovery to consensus.
+         * @param[in] account_id Exact subject account.
+         * @param[in] nonce Exact subject nonce.
+         * @param[in] expected_tx_hash Optional exact subject transaction hash.
+         * @return Unique approved certificate or the owning classified lookup error.
+         */
+        outcome::result<ConsensusManager::Certificate> FindCertificateByNonceSubject(
+            const std::string                &account_id,
+            uint64_t                          nonce,
+            const std::optional<std::string> &expected_tx_hash = std::nullopt ) const;
+        /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
          * @param[in] b Second hash candidate.

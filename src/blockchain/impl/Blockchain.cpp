@@ -2051,6 +2051,14 @@ namespace sgns
         return consensus_manager_->GetCertificateBySlot( slot_key );
     }
 
+    outcome::result<ConsensusManager::Certificate> Blockchain::FindCertificateByNonceSubject(
+        const std::string                &account_id,
+        uint64_t                          nonce,
+        const std::optional<std::string> &expected_tx_hash ) const
+    {
+        return consensus_manager_->FindCertificateByNonceSubject( account_id, nonce, expected_tx_hash );
+    }
+
     const std::string &Blockchain::BestHash( const std::string &a, const std::string &b )
     {
         return ConsensusManager::BestHash( a, b );
