@@ -167,19 +167,9 @@ namespace sgns
         const auto certificate = blockchain.GetCertificateBySlot( producer->GetSlotID() );
         if ( certificate.has_error() )
         {
-            // The owning API collapses authorization deferral and rejection. Raw bytes may
-            // disprove binding, but can never authorize a release without the approved lookup.
-            const auto key = "/cert/" + producer->GetSlotID();
-            const auto raw = db->Get( key );
-            if ( raw.has_value() )
+            if ( certificate.error() == std::errc::invalid_argument )
             {
-                ConsensusCertificate candidate;
-                if ( !candidate.ParseFromArray( raw.value().data(), static_cast<int>( raw.value().size() ) ) ||
-                     ConsensusManager::GetExpectedCertificateSlotKey( candidate ) != key ||
-                     !TransactionManager::CertificateMatchesTransaction( candidate, *producer ) )
-                {
-                    return {};
-                }
+                return {};
             }
             return { WitnessVerdict::kNotSynced, nullptr };
         }

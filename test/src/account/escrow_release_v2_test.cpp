@@ -767,9 +767,9 @@ namespace
         ASSERT_TRUE( rejected.has_value() );
         rejected.value().mutable_votes( 0 )->set_signature( "invalid" );
         PersistCertificate( *hold, rejected.value() );
-        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kNotSynced );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kInvalid );
         EXPECT_EQ( LegacyMintAdmissionTestAccess::TypeRules( *manager_, release ).check,
-                   ConsensusManager::Check::Pending );
+                   ConsensusManager::Check::Reject );
 
         // Exercise full existing manager ingress with ordinary Transfer while V2 dispatch is still plan 04.
         const auto owned = OwnedProducer( processor_->GetAddress() );

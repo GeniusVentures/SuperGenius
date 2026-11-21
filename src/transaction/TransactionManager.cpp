@@ -1777,44 +1777,78 @@ namespace sgns
 
     std::string TransactionManager::GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const
     {
-        // The canonical slot certificate is the value-independent authority for
-        // the predecessor hash. A tx/ value cannot always answer: registration
-        // transactions persist at reg/{src_addr}, never under tx/{hash}
-        // (SendTransactionItem routes them there), and a pruned frontier
-        // transaction's value is gone from tx/ entirely (GATE-04) -- while a
-        // certificate at /cert/<addr>:<nonce-1> is never pruned. The cert embeds
-        // the exact certified transaction hash, which binds the chain link the
-        // same way CertificateMatchesTransaction does. Any certified embedded
-        // transaction type resolves; every binding check below fails closed to
-        // "" (never a guessed hash).
         if ( nonce == 0 || !globaldb_m )
         {
             return "";
         }
+        const auto persisted   = account_m->GetLocalConfirmedTxHash( nonce - 1 );
+        const auto predecessor = ResolveCertifiedPredecessor(
+            account_m->GetAddress(),
+            nonce - 1,
+            persisted.has_value() ? std::optional{ persisted.value() } : std::nullopt );
+        return predecessor.has_value() ? predecessor.value()->GetHash() : "";
+    }
 
-        const std::string slot_key           = account_m->GetAddress() + ":" + std::to_string( nonce - 1 );
-        auto              certificate_result = blockchain_->GetCertificateBySlot( slot_key );
-        if ( certificate_result.has_error() )
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::ResolveCertifiedPredecessor(
+        const std::string                &address,
+        uint64_t                          nonce,
+        const std::optional<std::string> &expected_hash ) const
+    {
+        std::shared_ptr<GeniusTransaction> predecessor;
+        if ( expected_hash )
         {
-            return "";
+            const auto tracked = GetTrackedTxByHash( *expected_hash );
+            if ( tracked && tracked->tx )
+            {
+                predecessor = tracked->tx;
+            }
+            else
+            {
+                const auto value = FetchTransaction( *globaldb_m, GetTransactionPath( *expected_hash ) );
+                if ( value.has_value() )
+                {
+                    predecessor = value.value();
+                }
+                else if ( value.error() != storage::DatabaseError::NOT_FOUND )
+                {
+                    return outcome::failure( value.error() );
+                }
+            }
+            if ( !predecessor )
+            {
+                // Revocation may rewrite reg/ under a new hash. Only the
+                // original exact hash is useful; otherwise recover its certificate.
+                const auto registration = FetchTransaction( *globaldb_m, GetBlockChainBase() + "reg/" + address );
+                if ( registration.has_value() && registration.value() &&
+                     registration.value()->GetHash() == *expected_hash )
+                {
+                    predecessor = registration.value();
+                }
+            }
         }
-
-        auto nonce_subject = ConsensusManager::DecodeNonceSubject( certificate_result.value().proposal().subject() );
-        if ( nonce_subject.has_error() ||
-             nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET ||
-             nonce_subject.value().nonce() != ( nonce - 1 ) ||
-             certificate_result.value().proposal().subject().account_id() != account_m->GetAddress() )
+        if ( predecessor && ( !expected_hash || !predecessor->CheckHash() || predecessor->GetSrcAddress() != address ||
+                              predecessor->GetNonce() != nonce || predecessor->GetHash() != *expected_hash ) )
         {
-            return "";
+            return std::errc::invalid_argument;
         }
-
-        auto embedded = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
-        if ( embedded.has_error() || !embedded.value() )
+        // Known values retain the direct virtual-slot path. Without a durable
+        // expected hash the owner scan must establish uniqueness, even if an
+        // ordinary source:nonce record also happens to exist.
+        auto certificate = predecessor ? blockchain_->GetCertificateBySlot( predecessor->GetSlotID() )
+                                       : blockchain_->FindCertificateByNonceSubject( address, nonce, expected_hash );
+        BOOST_OUTCOME_TRY( certificate );
+        BOOST_OUTCOME_TRY( auto subject,
+                           ConsensusManager::DecodeNonceSubject( certificate.value().proposal().subject() ) );
+        BOOST_OUTCOME_TRY( auto embedded, DeSerializeEmbeddedTransaction( subject.transaction() ) );
+        if ( !embedded || !embedded->CheckHash() || embedded->GetSrcAddress() != address ||
+             embedded->GetNonce() != nonce || ( expected_hash && embedded->GetHash() != *expected_hash ) ||
+             !CertificateMatchesTransaction( certificate.value(), *embedded ) ||
+             ConsensusManager::GetSlotKey( certificate.value().proposal() ) != embedded->GetSlotID() ||
+             ( predecessor && predecessor->SerializeByteVector() != embedded->SerializeByteVector() ) )
         {
-            return "";
+            return std::errc::invalid_argument;
         }
-
-        return embedded.value()->GetHash();
+        return embedded;
     }
 
     std::string TransactionManager::GetTrackedOutgoingPreviousHash( uint64_t nonce ) const

@@ -5002,7 +5002,7 @@ namespace sgns
             Certificate candidate;
             // A malformed unrelated record cannot identify this subject. The direct
             // slot path still reports its parse failure when its slot is known.
-            if ( !candidate.ParseFromArray( value.data(), value.size() ) ||
+            if ( !candidate.ParseFromString( value.toString() ) ||
                  candidate.proposal().subject().account_id() != account_id ||
                  !SubjectTypeMatches( candidate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
             {

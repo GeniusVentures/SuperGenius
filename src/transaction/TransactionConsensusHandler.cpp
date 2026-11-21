@@ -596,59 +596,15 @@ namespace sgns
                     return { ConsensusManager::ValidationResult::Reject() };
                 }
             }
-            auto previous_transaction_result = TransactionManager::FetchTransaction(
-                *owner_.globaldb_m,
-                TransactionManager::GetTransactionPath( previous_hash ) );
-            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
-                 previous_transaction_result.value()->GetHash() != previous_hash )
+            const auto predecessor = owner_.ResolveCertifiedPredecessor( tx.GetSrcAddress(),
+                                                                         tx.GetNonce() - 1,
+                                                                         previous_hash );
+            if ( predecessor.has_error() )
             {
-                // Registration transactions persist at reg/{src_addr}, not tx/{hash}
-                // (SendTransactionItem routes them there), so any nonce chain that
-                // passes through a registration (a re-registration, or an ordinary
-                // transfer/mint after RegisterChild) cannot resolve its predecessor
-                // through the tx/ namespace. The stored reg/ record is the child's
-                // current chain head — but a revoke rewrites it locally (detach_flag)
-                // under a fresh hash, so the stored record may no longer match the
-                // ORIGINAL registration the sender chains to. The immutable
-                // certificate at the predecessor's slot still embeds the original
-                // transaction: resolve through it.
-                const std::string reg_key  = TransactionManager::GetBlockChainBase() + "reg/" + tx.GetSrcAddress();
-                auto              reg_data = owner_.globaldb_m->Get( reg_key );
-                if ( reg_data.has_value() )
+                if ( predecessor.error() == std::errc::invalid_argument )
                 {
-                    auto stored_reg = TransactionManager::DeSerializeTransaction( reg_data.value() );
-                    if ( !stored_reg.has_error() && stored_reg.value() &&
-                         stored_reg.value()->GetHash() == previous_hash )
-                    {
-                        previous_transaction_result = stored_reg;
-                    }
+                    return { ConsensusManager::ValidationResult::Reject() };
                 }
-                if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
-                     previous_transaction_result.value()->GetHash() != previous_hash )
-                {
-                    const std::string prev_slot = tx.GetSrcAddress() + ":" + std::to_string( tx.GetNonce() - 1 );
-                    auto              prev_cert = owner_.blockchain_->GetCertificateBySlot( prev_slot );
-                    if ( prev_cert.has_value() )
-                    {
-                        auto prev_subject = ConsensusManager::DecodeNonceSubject(
-                            prev_cert.value().proposal().subject() );
-                        if ( !prev_subject.has_error() && prev_subject.value().tx_hash() == previous_hash &&
-                             prev_cert.value().proposal().subject().account_id() == tx.GetSrcAddress() )
-                        {
-                            auto embedded = TransactionManager::DeSerializeEmbeddedTransaction(
-                                prev_subject.value().transaction() );
-                            if ( embedded.has_value() && embedded.value() &&
-                                 embedded.value()->GetHash() == previous_hash )
-                            {
-                                previous_transaction_result = embedded;
-                            }
-                        }
-                    }
-                }
-            }
-            if ( previous_transaction_result.has_error() || !previous_transaction_result.value() ||
-                 previous_transaction_result.value()->GetHash() != previous_hash )
-            {
                 // Invalid is not missing: when this node already holds the finalized
                 // predecessor of the sender's chain for this nonce and it is not the
                 // claimed previous hash, the reference can never resolve — reject
@@ -673,30 +629,6 @@ namespace sgns
                     { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
             }
 
-            auto previous_cert_result = owner_.blockchain_->GetCertificateBySlot(
-                previous_transaction_result.value()->GetSlotID() );
-            if ( previous_cert_result.has_error() ||
-                 !TransactionManager::CertificateMatchesTransaction( previous_cert_result.value(),
-                                                                     *previous_transaction_result.value() ) )
-            {
-                logger_->error( "{}: Missing previous certificate for hash {}", __func__, previous_hash );
-                return { ConsensusManager::ValidationResult::Pending(
-                    { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
-            }
-            const auto &previous_subject = previous_cert_result.value().proposal().subject();
-            auto        previous_nonce   = ConsensusManager::DecodeNonceSubject( previous_subject );
-            if ( previous_nonce.has_error() )
-            {
-                return { ConsensusManager::ValidationResult::Reject() };
-            }
-            if ( previous_subject.account_id() != tx.GetSrcAddress() )
-            {
-                return { ConsensusManager::ValidationResult::Reject() };
-            }
-            if ( ( previous_nonce.value().nonce() + 1 ) != tx.GetNonce() )
-            {
-                return { ConsensusManager::ValidationResult::Reject() };
-            }
         }
 
         auto nonce_result = owner_.account_m->GetPeerNonce( tx.GetSrcAddress() );

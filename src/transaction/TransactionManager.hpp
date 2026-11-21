@@ -622,20 +622,28 @@ namespace sgns
         std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
 
         /**
-         * @brief Resolves the previous hash for @p nonce from the canonical
-         *        slot certificate at /cert/<addr>:<nonce-1> (GATE-04).
+         * @brief Resolves the previous hash for @p nonce from canonical certificates.
          *
          * The certificate is the single authority for the predecessor hash
          * when tracked/persisted state cannot answer -- a frontier
          * transaction's value may be pruned, a certificate never is -- with
-         * binding discipline identical to CertificateMatchesTransaction: the
-         * subject must decode, the embedded transaction case must be set, the
-         * certified nonce must equal nonce-1, and the subject account must be
-         * the node's own address. Any certified embedded transaction type
-         * resolves (not only registrations). Fails closed to an empty string
-         * on any failed check.
+         * exact sender, nonce, hash and virtual slot must bind the embedded
+         * transaction. A missing durable head requires a unique canonical
+         * nonce subject. Fails closed to an empty string on any failed check.
          */
         std::string GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const;
+        /**
+         * @brief Resolves an exact certified account predecessor, including pruned custom slots.
+         * @param[in] address Sender account whose chain is resolved.
+         * @param[in] nonce Predecessor nonce, not the next transaction nonce.
+         * @param[in] expected_hash Optional durable or claimed exact predecessor hash.
+         * @return Fully bound predecessor; invalid_argument for contradictions,
+         *         otherwise the classified owning lookup error.
+         */
+        outcome::result<std::shared_ptr<GeniusTransaction>> ResolveCertifiedPredecessor(
+            const std::string                &address,
+            uint64_t                          nonce,
+            const std::optional<std::string> &expected_hash = std::nullopt ) const;
         std::string QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 
         /**
