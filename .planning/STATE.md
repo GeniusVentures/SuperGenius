@@ -1,42 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Light-node transaction pruning
-current_phase: 20
+milestone: v1.3
+milestone_name: Security Remediation & Network Readiness
+current_phase: 21.1
 status: executing
-stopped_at: Phase 21.1 planning complete; execute only after verified Phase 21
-last_updated: "2026-11-20T23:12:08.733Z"
-last_activity: 2026-11-20 -- Phase 21.1 planning complete
+stopped_at: Phase 21.1 execution started on verified baseline 8373ed726; next plan 01
+last_updated: "2026-11-21T12:55:56.394Z"
+last_activity: 2026-11-21 -- Phase 21.1 execution started
 progress:
-  total_phases: 26
-  completed_phases: 4
-  total_plans: 37
-  completed_plans: 24
+  total_phases: 33
+  completed_phases: 5
+  total_plans: 47
+  completed_plans: 33
   percent: 15
 ---
 
-# State: SuperGenius — Light-node Transaction Pruning
+# State: SuperGenius — Security Remediation & Network Readiness
 
 **Last updated:** 2026-10-15
-**Milestone:** v1.2 — Light-node transaction pruning
-**Current Phase:** 20
+**Milestone:** v1.3 — Security Remediation & Network Readiness
+**Current Phase:** 21.1
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-10-15)
-**Core value:** Light-node disk stays bounded by physically erasing spent transaction history — both the CRDT value and its raw ipfs-lite CID block — beyond a depth/finality window, while the unspent UTXO set is kept and the node stays fully operational.
-**Current focus:** Phase 20 — reclamation proof & e2e hardening
+**Core value:** One authorized settlement produces at most one authoritative certificate and one financial effect across arrival orders, sync and restart.
+**Current focus:** Phase 21.1 — escrow-payout-slot-identity-double-payout-prevention
 
 ## Current Position
 
-Phase: 19 (pruned-node-survival-recovery-hardening) — EXECUTING
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-11-20 -- Phase 21.1 planning complete
+Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 21.1
+Last activity: 2026-11-21 -- Phase 21.1 execution started
 
 Progress: [██████████] 100%
 
-## Roadmap Snapshot
+## Historical v1.2 Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
@@ -48,7 +48,7 @@ Progress: [██████████] 100%
 
 ## Key Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecting current work (v1.2):
+Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor decisions from v1.2:
 
 - Only light nodes prune; full/archive never erase history — light nodes are disk-constrained consumers, full/archive remain the complete sync/audit source
 - Erase both levels — CRDT value + raw ipfs-lite block — via the existing tx→CID map (already exists at `TransactionManager.cpp:4322/4433`; extended with a deletion lifecycle, not replaced)
@@ -63,7 +63,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Notes
 
-- **Parallel milestone:** v1.3 (Security Remediation & Network Readiness, Phases 21-29) is planned on `develop` while this branch executes v1.2 — both milestones run in parallel. This STATE.md tracks the v1.2 branch position; v1.3's primary STATE/PROJECT/ROADMAP live on develop (snapshot: `.planning/milestones/v1.2-ROADMAP.md` covers this milestone's numbering). REQUIREMENTS.md on this branch carries both: the v1.3 doc plus a parallel v1.2 section. Do not execute v1.3 phases here.
+- **Active phase branch:** This branch executes v1.3 Phase 21.1 under the user's explicit execution request. Verified Phase 21 was integrated at `8373ed7260aa8d10e5c988a4e205604e87533f13`; all 13 selected integration regression targets passed. The earlier v1.2 position and decisions below are retained as predecessor history; its roadmap snapshot remains in `.planning/milestones/v1.2-ROADMAP.md`.
 - Phase numbering continues across milestones: v1.1's highest phase was 15; v1.2 phases are 16-20. Do not reset or renumber. (Phases 01-07 predate formal GSD milestone tracking — bridge-relayer/consensus-voting work, unrelated.)
 - Research synthesis (`.planning/research/SUMMARY.md`, HIGH confidence) converged the 5-phase structure; the two hard ordering constraints (block-parse gate before block deletion; own-frontier fix before first real prune) are encoded in the roadmap's execution order.
 - Research flags deeper research during planning for Phases 17 (own-frontier mechanism choice, window definition, lock/re-verify protocol), 18 (re-delivery guard placement and state source), and 19 (checkpoint-rebuild guard mechanism); Phases 16 and 20 follow standard patterns (skip research-phase).
@@ -73,7 +73,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Operator Next Steps
 
-- Plan the first phase: /gsd:plan-phase 16
+- Execute Phase 21.1 plans on the current phase branch; retain the explicit final operator activation checkpoint.
 
 ### Quick Tasks Completed
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ## Session
 
-**Last session:** 2026-11-20T23:12:08.728Z
-**Stopped At:** Phase 21.1 planning complete; execute only after verified Phase 21
+**Last session:** 2026-11-21T12:55:56.388Z
+**Stopped At:** Phase 21.1 execution started on verified baseline 8373ed726; next plan 01
 **Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-01-PLAN.md
 
 ## Accumulated Context
