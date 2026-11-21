@@ -410,13 +410,13 @@ namespace sgns
         outcome::result<TransactionLookupResult> LookupTransaction( const std::string &tx_hash ) const;
 
         /**
-         * @brief Finds every tracked transaction in @p element's nonce slot except @p element itself.
+         * @brief Finds every unequal-hash transaction sharing @p element's canonical slot or source/nonce.
          */
         std::vector<std::shared_ptr<GeniusTransaction>> GetConflictingTransactions(
             const GeniusTransaction &element ) const;
 
         /**
-         * @brief Finds one tracked transaction in @p element's nonce slot (first by map
+         * @brief Finds one tracked canonical-slot or source/nonce conflict (first by map
          *        iteration) other than @p element itself.
          * @return The conflicting transaction, or an error when none is tracked.
          */
@@ -1185,6 +1185,10 @@ namespace sgns
         /// @brief Creates evidence only from the validated canonical slot and exact signed embedded bytes.
         outcome::result<CertifiedApplicationEvidence> GetCertifiedApplicationEvidence(
             const GeniusTransaction &transaction ) const;
+
+        /// @brief Resolves every tracked conflict of an exactly certified winner using existing finality arbitration.
+        outcome::result<ConsensusManager::Check> ResolveCertifiedTransactionConflicts(
+            const std::shared_ptr<GeniusTransaction> &winner );
 
         /**
          * @brief Obtains the public-chain input validator for RPC endpoint wiring.

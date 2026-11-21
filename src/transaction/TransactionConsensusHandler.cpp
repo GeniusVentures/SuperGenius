@@ -217,107 +217,14 @@ namespace sgns
                 }
             }
             logger_->debug( "{}: Transaction {} confirmed by consensus", __func__, tx_hash );
+        }
 
-            logger_->debug( "{}: Checking for conflicting transaction with {}", __func__, tx_hash );
-
-            auto conflicting_tx = owner_.GetConflictingTransaction( *tx );
-
-            if ( conflicting_tx.has_value() )
-            {
-                logger_->warn( "{}: Found conflicting transaction: {}", __func__, conflicting_tx.value()->GetHash() );
-                std::unique_lock tx_lock( owner_.tx_mutex_m );
-                auto             it = owner_.tx_processed_m.find(
-                    TransactionManager::GetTransactionPath( conflicting_tx.value()->GetHash() ) );
-                if ( it == owner_.tx_processed_m.end() )
-                {
-                    // The conflicting entry may live under a different network's key
-                    // namespace; resolve by value scan before dereferencing.
-                    it = std::find_if(
-                        owner_.tx_processed_m.begin(),
-                        owner_.tx_processed_m.end(),
-                        [&conflicting_tx]( const auto &kv )
-                        { return kv.second.tx && kv.second.tx->GetHash() == conflicting_tx.value()->GetHash(); } );
-                }
-                if ( it == owner_.tx_processed_m.end() )
-                {
-                    // Nothing locally tracked to arbitrate against; the incoming
-                    // transaction was already confirmed above.
-                    tx_lock.unlock();
-                    return ConsensusManager::Check::Approve;
-                }
-
-                if ( it->second.status == TransactionStatus::CONFIRMED )
-                {
-                    logger_->error( "{}: Conflicting transaction {} is CONFIRMED as well as incoming {}, not sure "
-                                    "what to do",
-                                    __func__,
-                                    conflicting_tx.value()->GetHash(),
-                                    tx_hash );
-                    tx_lock.unlock();
-                    // The incoming transaction carries a validated quorum certificate
-                    // (this handler only runs after ValidateCertificate and
-                    // CertificateMatchesTransaction); the conflict outranks it only if
-                    // it is final by the same standard. CheckTransactionValidity
-                    // promotes locally tracked transactions to CONFIRMED on signature
-                    // validity alone — letting that promotion win the BestHash
-                    // tie-break reverted a certified winner's already-applied effects
-                    // and DeleteTransaction'd it from the CRDT while every peer
-                    // confirmed it: permanent divergence on exactly this node.
-                    auto       conflict_certificate  = owner_.GetTransactionCertificate( *conflicting_tx.value() );
-                    const bool conflict_is_certified = conflict_certificate.has_value() &&
-                                                       TransactionManager::CertificateMatchesTransaction(
-                                                           conflict_certificate.value(),
-                                                           *conflicting_tx.value() );
-                    if ( !conflict_is_certified || owner_.ShouldReplaceTransaction( *conflicting_tx.value(), *tx ) )
-                    {
-                        auto result = owner_.ChangeTransactionState( conflicting_tx.value(),
-                                                                     TransactionStatus::FAILED );
-                        if ( result.has_error() )
-                        {
-                            logger_->error( "{}: Failed to change conflicting transaction state to FAILED for "
-                                            "current tx {}: {}",
-                                            __func__,
-                                            conflicting_tx.value()->GetHash(),
-                                            result.error().message() );
-                        }
-                    }
-                    else
-                    {
-                        auto result = owner_.ChangeTransactionState( tx, TransactionStatus::FAILED );
-                        if ( result.has_error() )
-                        {
-                            logger_->error( "{}: Failed to change transaction state to FAILED for new tx {}: {}",
-                                            __func__,
-                                            tx_hash,
-                                            result.error().message() );
-                            return outcome::failure( result.error() );
-                        }
-                        // Demotion succeeded: the certified conflict outranks this tx, so the
-                        // decision is final. Reject (not failure) — an error return would make
-                        // the certificate handler retry forever, re-confirming and re-demoting
-                        // the tx on every pass (ProcessCommittedCertificate treats only
-                        // Stalled/error as retryable).
-                        return ConsensusManager::Check::Reject;
-                    }
-                }
-                else
-                {
-                    logger_->warn( "{}: Setting conflicting transaction {} to FAILED since the new one {} is "
-                                   "confirmed:",
-                                   __func__,
-                                   conflicting_tx.value()->GetHash(),
-                                   tx_hash );
-                    tx_lock.unlock();
-                    auto result = owner_.ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
-                    if ( result.has_error() )
-                    {
-                        logger_->error( "{}: Failed to change transaction state to FAILED for hash {}: {}",
-                                        __func__,
-                                        tx_hash,
-                                        result.error().message() );
-                    }
-                }
-            }
+        // Preserve successful application before callback conflict cleanup: rejected
+        // historical payloads must not demote legitimate tracked transactions.
+        BOOST_OUTCOME_TRY( auto resolution, owner_.ResolveCertifiedTransactionConflicts( tx ) );
+        if ( resolution == ConsensusManager::Check::Reject )
+        {
+            return resolution;
         }
 
         auto tx_hash_bin = base::Hash256::fromReadableString( tx_hash );

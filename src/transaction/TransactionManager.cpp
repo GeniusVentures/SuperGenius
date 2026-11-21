@@ -62,6 +62,14 @@ namespace sgns
 {
     namespace
     {
+        /// @brief Canonical event identity complements the existing account-chain conflict rule.
+        bool AreTransactionsConflicting( const GeniusTransaction &lhs, const GeniusTransaction &rhs )
+        {
+            return lhs.GetHash() != rhs.GetHash() &&
+                   ( lhs.GetSlotID() == rhs.GetSlotID() ||
+                     ( lhs.GetSrcAddress() == rhs.GetSrcAddress() && lhs.GetNonce() == rhs.GetNonce() ) );
+        }
+
         /// Eager registration of the built-in validators, before main().
         ///
         /// These used to self-register via static initializers in the exported
@@ -2704,6 +2712,11 @@ namespace sgns
             evidence.emplace( std::move( exact ) );
             m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", tx_key );
             next_tx_state = TransactionStatus::CONFIRMED;
+            BOOST_OUTCOME_TRY( auto resolution, ResolveCertifiedTransactionConflicts( transaction ) );
+            if ( resolution == ConsensusManager::Check::Reject )
+            {
+                return outcome::success();
+            }
         }
         if ( fetch_and_process_before_state_change_hook_for_test_ )
         {
@@ -5154,7 +5167,22 @@ namespace sgns
 
         auto conflicting_txs = GetConflictingTransactions( *new_tx );
 
-        if ( !conflicting_txs.empty() )
+        auto       certificate_result = GetTransactionCertificate( *new_tx );
+        const bool has_cert           = certificate_result.has_value() &&
+                              CertificateMatchesTransaction( certificate_result.value(), *new_tx );
+        std::optional<CertifiedApplicationEvidence> evidence;
+        if ( has_cert )
+        {
+            BOOST_OUTCOME_TRY( auto exact, GetCertifiedApplicationEvidence( *new_tx ) );
+            evidence.emplace( std::move( exact ) );
+            BOOST_OUTCOME_TRY( auto resolution, ResolveCertifiedTransactionConflicts( new_tx ) );
+            if ( resolution == ConsensusManager::Check::Reject )
+            {
+                return outcome::success();
+            }
+        }
+
+        if ( !has_cert && !conflicting_txs.empty() )
         {
             bool has_confirmed_conflict = false;
             {
@@ -5191,30 +5219,12 @@ namespace sgns
 
         m_logger->debug( "Checking if the transaction has a valid certificate to be confirmed {}", key );
 
-        auto next_tx_state      = TransactionStatus::VERIFYING;
-        auto certificate_result = GetTransactionCertificate( *new_tx );
-        auto has_cert           = certificate_result.has_value() &&
-                        CertificateMatchesTransaction( certificate_result.value(), *new_tx );
-        std::optional<CertifiedApplicationEvidence> evidence;
+        auto next_tx_state = TransactionStatus::VERIFYING;
 
         if ( has_cert )
         {
-            BOOST_OUTCOME_TRY( auto exact, GetCertifiedApplicationEvidence( *new_tx ) );
-            evidence.emplace( std::move( exact ) );
             m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", key );
             next_tx_state = TransactionStatus::CONFIRMED;
-            for ( const auto &conflict : conflicting_txs )
-            {
-                const auto tracked = GetTrackedTxByHash( conflict->GetHash() );
-                if ( !tracked.has_value() || tracked->status == TransactionStatus::FAILED )
-                {
-                    continue;
-                }
-                m_logger->warn(
-                    "Setting conflicting transaction to FAILED because the new has a certificate and it doesn't: {}",
-                    conflict->GetHash() );
-                BOOST_OUTCOME_TRY( ChangeTransactionState( conflict, TransactionStatus::FAILED ) );
-            }
         }
 
         auto maybe_existing = GetTrackedTxByHash( new_tx->GetHash() );
@@ -5402,8 +5412,7 @@ namespace sgns
         std::shared_lock                                tx_lock( tx_mutex_m );
         for ( const auto &[_, tracked] : tx_processed_m )
         {
-            if ( tracked.tx && tracked.cached_nonce == element.GetNonce() &&
-                 tracked.tx->GetSrcAddress() == element.GetSrcAddress() && tracked.tx->GetHash() != element.GetHash() )
+            if ( tracked.tx && AreTransactionsConflicting( *tracked.tx, element ) )
             {
                 conflicts.push_back( tracked.tx );
             }
@@ -5414,33 +5423,47 @@ namespace sgns
     outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::GetConflictingTransaction(
         const GeniusTransaction &element ) const
     {
-        // Scan the tracked set directly instead of GetTransactionByNonceAndAddress:
-        // when several records share the address+nonce (a contested slot after the
-        // winner's certificate arrives, with both the winner and the loser tracked
-        // locally), the single-result lookup can return the element itself and the
-        // hash inequality below then reports "no conflict" — iteration order of the
-        // tracked map decided node-by-node whether the loser ever failed. Every
-        // entry that is not the element itself is a conflict.
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
         for ( const auto &[_, tracked] : tx_processed_m )
         {
-            if ( !tracked.tx )
+            if ( tracked.tx && AreTransactionsConflicting( *tracked.tx, element ) )
             {
-                continue;
+                return tracked.tx;
             }
-            if ( tracked.tx->GetNonce() != element.GetNonce() ||
-                 tracked.tx->GetSrcAddress() != element.GetSrcAddress() )
-            {
-                continue;
-            }
-            if ( tracked.tx->GetHash() == element.GetHash() )
-            {
-                continue;
-            }
-            return tracked.tx;
         }
 
         return outcome::failure( std::errc::no_such_file_or_directory );
+    }
+
+    outcome::result<ConsensusManager::Check> TransactionManager::ResolveCertifiedTransactionConflicts(
+        const std::shared_ptr<GeniusTransaction> &winner )
+    {
+        for ( const auto &conflict : GetConflictingTransactions( *winner ) )
+        {
+            const auto tracked = GetTrackedTxByHash( conflict->GetHash() );
+            if ( !tracked.has_value() || tracked->status == TransactionStatus::FAILED )
+            {
+                continue;
+            }
+            if ( tracked->status == TransactionStatus::CONFIRMED )
+            {
+                // Signature-only cached confirmation is not certificate finality. A shared-slot
+                // lookup may return the incoming winner's certificate, so retain exact binding.
+                const auto certificate = GetTransactionCertificate( *conflict );
+                const bool certified   = certificate.has_value() &&
+                                       CertificateMatchesTransaction( certificate.value(), *conflict );
+                if ( certified && !ShouldReplaceTransaction( *conflict, *winner ) )
+                {
+                    BOOST_OUTCOME_TRY( ChangeTransactionState( winner, TransactionStatus::FAILED ) );
+                    return ConsensusManager::Check::Reject;
+                }
+            }
+            m_logger->warn( "Failing conflicting transaction {} for certified winner {}",
+                            conflict->GetHash(),
+                            winner->GetHash() );
+            BOOST_OUTCOME_TRY( ChangeTransactionState( conflict, TransactionStatus::FAILED ) );
+        }
+        return ConsensusManager::Check::Approve;
     }
 
     bool TransactionManager::ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
