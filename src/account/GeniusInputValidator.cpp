@@ -17,6 +17,8 @@
 #include <vector>
 
 #include "account/GeniusAccount.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
+#include "account/EscrowTransaction.hpp"
 #include "account/GeniusTransaction.hpp"
 #include "transaction/TransactionManager.hpp"
 #include "account/TokenID.hpp"
@@ -117,6 +119,85 @@ namespace sgns
         IInputValidator::Register( "supergenius_chain", &instance );
         IInputValidator::Register( "", &instance );
         return true;
+    }
+
+    GeniusInputValidator::EscrowReleaseInput GeniusInputValidator::ResolveEscrowReleaseInput(
+        const EscrowReleaseTransactionV2 &release,
+        const Blockchain                 &blockchain ) const
+    {
+        const auto &params = release.GetUTXOParameters();
+        if ( params.first.size() != 1 || params.second.empty() ||
+             params.first.front().output_idx_ != input_validator_constants::ESCROW_LOCK_OUTPUT_INDEX )
+        {
+            return {};
+        }
+        const auto db = blockchain.GetGlobalDB();
+        if ( !db )
+        {
+            return { WitnessVerdict::kNotSynced, nullptr };
+        }
+        const auto producer_hash = params.first.front().txid_hash_.toReadableString();
+        const auto path          = TransactionManager::GetTransactionPath( producer_hash );
+        const auto bytes         = db->Get( path );
+        if ( bytes.has_error() )
+        {
+            return { WitnessVerdict::kNotSynced, nullptr };
+        }
+        const auto fetched = TransactionManager::DeSerializeTransaction( bytes.value() );
+        if ( fetched.has_error() || !fetched.value() || fetched.value()->GetHash() != producer_hash ||
+             !fetched.value()->CheckHash() )
+        {
+            return {};
+        }
+        const auto producer = std::dynamic_pointer_cast<const EscrowTransaction>( fetched.value() );
+        if ( !producer )
+        {
+            return {};
+        }
+        const auto hold_params = producer->GetUTXOParameters();
+        if ( hold_params.second.empty() ||
+             !utxo_address::IsEscrowLockAddress( hold_params.second.front().dest_address ) )
+        {
+            return {};
+        }
+        const auto certificate = blockchain.GetCertificateBySlot( producer->GetSlotID() );
+        if ( certificate.has_error() )
+        {
+            // The owning API collapses authorization deferral and rejection. Raw bytes may
+            // disprove binding, but can never authorize a release without the approved lookup.
+            const auto key = "/cert/" + producer->GetSlotID();
+            const auto raw = db->Get( key );
+            if ( raw.has_value() )
+            {
+                ConsensusCertificate candidate;
+                if ( !candidate.ParseFromArray( raw.value().data(), static_cast<int>( raw.value().size() ) ) ||
+                     ConsensusManager::GetExpectedCertificateSlotKey( candidate ) != key ||
+                     !TransactionManager::CertificateMatchesTransaction( candidate, *producer ) )
+                {
+                    return {};
+                }
+            }
+            return { WitnessVerdict::kNotSynced, nullptr };
+        }
+        if ( !TransactionManager::CertificateMatchesTransaction( certificate.value(), *producer ) )
+        {
+            return {};
+        }
+        return { WitnessVerdict::kValid, producer };
+    }
+
+    IInputValidator::WitnessVerdict GeniusInputValidator::ValidateTransactionUTXOParameters(
+        const GeniusTransaction &tx,
+        const UTXOTxParameters  &params,
+        const std::string       &address,
+        const UTXOManager       &utxo_manager,
+        const Blockchain        &blockchain ) const
+    {
+        if ( address != tx.GetSrcAddress() )
+        {
+            return WitnessVerdict::kInvalid;
+        }
+        return IInputValidator::ValidateTransactionUTXOParameters( tx, params, address, utxo_manager, blockchain );
     }
 
     bool GeniusInputValidator::ValidateUTXOParameters( const UTXOTxParameters &params,

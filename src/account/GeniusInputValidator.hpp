@@ -13,12 +13,38 @@
 
 namespace sgns
 {
+    class EscrowReleaseTransactionV2;
+    class EscrowTransaction;
+
     /**
      * @brief Validator for native Genius-chain transactions.
      */
     class GeniusInputValidator final : public IInputValidator
     {
     public:
+        /// @brief Immutable certified producer, available only with a valid verdict.
+        struct EscrowReleaseInput
+        {
+            WitnessVerdict                           verdict{ WitnessVerdict::kInvalid };
+            std::shared_ptr<const EscrowTransaction> producer;
+        };
+
+        /**
+         * @brief Resolves the sole release input to its actual certified escrow-hold output.
+         * @param[in] release Typed payout whose claimed outpoint is checked.
+         * @param[in] blockchain Authoritative producer and certificate source.
+         * @return Valid with the immutable producer, pending when evidence is missing, otherwise invalid.
+         */
+        EscrowReleaseInput ResolveEscrowReleaseInput( const EscrowReleaseTransactionV2 &release,
+                                                      const Blockchain                 &blockchain ) const;
+
+        /// @copydoc IInputValidator::ValidateTransactionUTXOParameters
+        WitnessVerdict ValidateTransactionUTXOParameters( const GeniusTransaction &tx,
+                                                          const UTXOTxParameters  &params,
+                                                          const std::string       &address,
+                                                          const UTXOManager       &utxo_manager,
+                                                          const Blockchain        &blockchain ) const override;
+
         /**
          * @brief Validates UTXO ownership and signatures for Genius-native inputs.
          * @param[in] params UTXO inputs and outputs carried by the transaction.

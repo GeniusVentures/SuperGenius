@@ -42,6 +42,7 @@ namespace
 
         void SetUp() override
         {
+            previous_decoders_ = GeniusTransaction::GetDeSerializers();
             account_   = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
             processor_ = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
             ASSERT_NE( account_, nullptr );
@@ -84,6 +85,7 @@ namespace
             account_.reset();
             processor_.reset();
             Blockchain::SetAuthorizedFullNodeAddress( previous_authority_ );
+            GeniusTransaction::GetDeSerializers() = previous_decoders_;
         }
 
         SGTransaction::DAGStruct Dag( const GeniusAccount &signer, uint64_t nonce = 0 ) const
@@ -179,8 +181,9 @@ namespace
         std::shared_ptr<GeniusAccount>      account_;
         std::shared_ptr<GeniusAccount>      processor_;
         std::shared_ptr<Blockchain>         blockchain_;
-        std::shared_ptr<TransactionManager> manager_;
-        std::string                         previous_authority_;
+        std::shared_ptr<TransactionManager>                                          manager_;
+        std::string                                                                  previous_authority_;
+        std::unordered_map<std::string, GeniusTransaction::TransactionDeserializeFn> previous_decoders_;
     };
 
     TEST_F( EscrowReleaseV2ValidationTest, V2ResolverBindsCertifiedHold )
@@ -213,14 +216,20 @@ namespace
         Certify( *hold );
         EXPECT_EQ( validator_.ResolveEscrowReleaseInput( Release( *hold, *processor_, 1 ), *blockchain_ ).verdict,
                    Verdict::kInvalid );
-        const auto release = Release( *hold, *processor_ );
-        auto       other   = Hold( "0x" + std::string( 64, 'b' ) );
+        const auto   release = Release( *hold, *processor_ );
+        base::Buffer malformed;
+        malformed.put( std::vector<uint8_t>{ 0xff } );
+        ASSERT_TRUE( db_->Put( { TransactionManager::GetTransactionPath( *hold ) }, malformed, {} ).has_value() );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kInvalid );
+        auto other = Hold( "0x" + std::string( 64, 'b' ) );
         Persist( *other, TransactionManager::GetTransactionPath( *hold ) );
         EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kInvalid );
         Persist( *hold );
         const auto wrong_certificate = Certificate( *other );
         ASSERT_TRUE( wrong_certificate.has_value() );
         PersistCertificate( *hold, wrong_certificate.value() );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kInvalid );
+        ASSERT_TRUE( db_->Put( { "/cert/" + hold->GetSlotID() }, malformed, {} ).has_value() );
         EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kInvalid );
     }
 

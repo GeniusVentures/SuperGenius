@@ -76,6 +76,27 @@ namespace sgns
                                              const UTXOManager      &utxo_manager ) const = 0;
 
         /**
+         * @brief Validates inputs with transaction context, retaining ordinary validation by default.
+         * @param[in] tx Transaction supplying the typed spend authority.
+         * @param[in] params Transaction inputs and outputs.
+         * @param[in] address Source address supplied by the caller.
+         * @param[in] utxo_manager Local spend-state and signature validator.
+         * @param[in] blockchain Certified producer lookup service.
+         * @return Valid, invalid, or retryable missing evidence.
+         */
+        virtual WitnessVerdict ValidateTransactionUTXOParameters( const GeniusTransaction &tx,
+                                                                  const UTXOTxParameters  &params,
+                                                                  const std::string       &address,
+                                                                  const UTXOManager       &utxo_manager,
+                                                                  const Blockchain        &blockchain ) const
+        {
+            (void) tx;
+            (void) blockchain;
+            return ValidateUTXOParameters( params, address, utxo_manager ) ? WitnessVerdict::kValid
+                                                                           : WitnessVerdict::kInvalid;
+        }
+
+        /**
          * @brief Validates the chain-specific witness data associated with a transaction input set.
          * @param[in] subject Consensus subject that carries nonce, witness, and UTXO commitment data.
          * @param[in] tx Transaction whose inputs and outputs are being validated.
