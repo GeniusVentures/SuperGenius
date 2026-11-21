@@ -430,6 +430,27 @@ namespace sgns::crdt
         size_t GetFailedRootRetryCountForTest() const;
 
         /**
+         * @brief       Marks a pubsub topic as latency-priority for head intake.
+         *
+         * Heads announced on such topics are seeded onto the DAG worker ahead
+         * of any ordinary-topic backlog. The validator registry registers its
+         * topic: a fresh joiner otherwise waits behind the whole
+         * processing-channel history before its registry document is even
+         * requested, deferring blockchain start (and READY) by minutes.
+         * @param[in]   topic topic base name as passed to AddListenTopic; the
+         *              network/version appendix is appended for matching.
+         */
+        void AddPriorityTopic( const std::string &topic );
+
+        /**
+         * @brief       Test-only: base58 CIDs in the order their root jobs were
+         *              seeded onto the DAG worker (external lanes only).
+         * @note        No production caller may invoke this.
+         * @return      Base58 CID strings, oldest seed first.
+         */
+        std::vector<std::string> GetSeededRootOrderForTest();
+
+        /**
          * @brief       Test-only: current stalled-delta retry-ladder size.
          * @note        No production caller may invoke this.
          * @return      Number of CIDs currently scheduled for stalled-delta retry.
@@ -592,7 +613,7 @@ namespace sgns::crdt
         void DeleteElementsCallback( const std::string &key, const std::string &cid );
 
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast );
-        bool EnqueueRootCID( const CID &cid );
+        bool EnqueueRootCID( const CID &cid, bool priority = false );
 
         outcome::result<CID> WaitForJob( const CID &cid );
 
@@ -683,7 +704,12 @@ namespace sgns::crdt
         std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
         std::mutex                                           pendingHeadsMutex_;
         std::queue<CID>                                      pendingRootQueue_;
+        std::queue<CID>                                      priorityRootQueue_;
         std::optional<CID>                                   activeRootCID_;
+        mutable std::mutex                                   priorityTopicsMutex_;
+        std::set<std::string>                                priorityTopics_;
+        /// Test-only seed-order recorder (F17); guarded by dagWorkerMutex_.
+        std::vector<std::string>                             seededRootOrderForTest_;
 
         // Recovery owns its own bounded frontier and never borrows root-job state.
         static constexpr size_t FORCED_WALK_PROGRESS_INTERVAL = 100;

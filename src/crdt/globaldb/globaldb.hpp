@@ -176,6 +176,14 @@ namespace sgns::crdt
         void                  AddListenTopic( std::string topicName );
 
         /**
+         * Marks a topic as latency-priority for head intake on the active CRDT
+         * datastore: heads announced on it seed ahead of the ordinary backlog
+         * (F17 fresh-join registry latency). Safe to call before Start.
+         * @param[in] topicName topic base name (appendix added internally).
+         */
+        void                  AddPriorityTopic( const std::string &topicName );
+
+        /**
          * @brief Queues a recovery walk with explicit validators, including retained sealed blocks.
          * @param[in] topics Enrolled topics whose current history should be revisited.
          * @param[in] guard Domain-owned check protecting absent elements from restoration after pruning.

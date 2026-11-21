@@ -59,6 +59,14 @@ namespace sgns::crdt
         outcome::result<base::Buffer> Next() override;
 
         /**
+         * @brief Retrieves the next incoming broadcast payload with the topic
+         *        it arrived on, so the intake can prioritize latency-critical
+         *        topics (F17: fresh-join validator registry).
+         * @return pair of payload and originating topic, or outcome::failure
+         */
+        outcome::result<std::pair<base::Buffer, std::string>> NextWithTopic() override;
+
+        /**
          * @brief Blocks until a message is queued or \p timeout elapses.
          * @param timeout Longest time to block.
          */
@@ -183,7 +191,7 @@ namespace sgns::crdt
         std::set<std::string>                                     topicsToListen_;
         std::set<std::string>                                     topicsToBroadcast_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
-        std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
+        std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
 
         std::shared_ptr<GossipPubSub> pubSub_; ///< Pubsub used to broadcast/receive messages
 

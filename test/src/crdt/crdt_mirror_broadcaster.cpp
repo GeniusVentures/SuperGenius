@@ -32,12 +32,22 @@ namespace sgns::crdt
             bpi->add_addrs( data );
             bmsg.set_allocated_peer( bpi );
             const std::string bCastData( bmsg.SerializeAsString() );
-            counterpart->listOfBroadcasts_.push( bCastData );
+            counterpart->listOfBroadcasts_.emplace( topic, bCastData );
         }
         return outcome::success();
     }
 
     outcome::result<base::Buffer> CRDTMirrorBroadcaster::Next()
+    {
+        auto next_result = NextWithTopic();
+        if ( next_result.has_error() )
+        {
+            return next_result.error();
+        }
+        return std::move( next_result.value().first );
+    }
+
+    outcome::result<std::pair<base::Buffer, std::string>> CRDTMirrorBroadcaster::NextWithTopic()
     {
         std::lock_guard<std::mutex> lock( mutex_ );
         if ( listOfBroadcasts_.empty() )
@@ -46,7 +56,8 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        std::string                    strBuffer = listOfBroadcasts_.front();
+        std::string                    strBuffer = listOfBroadcasts_.front().second;
+        const std::string              topic     = listOfBroadcasts_.front().first;
         broadcasting::BroadcastMessage bmsg;
 
         if ( !bmsg.ParseFromString( strBuffer ) )
@@ -60,7 +71,7 @@ namespace sgns::crdt
 
         base::Buffer buffer;
         buffer.put( data_str );
-        return buffer;
+        return std::make_pair( std::move( buffer ), topic );
     }
 
     bool CRDTMirrorBroadcaster::HasTopic( const std::string &topic )

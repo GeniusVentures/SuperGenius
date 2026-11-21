@@ -1066,4 +1066,58 @@ namespace sgns::crdt
         EXPECT_TRUE( converged );
 
     }
+
+    TEST_F( CrdtDatastoreTest, PriorityTopicHeadSeedsAheadOfOrdinaryBacklog )
+    {
+        /**
+         * F17 (fresh-join registry latency): a head announced on a priority topic
+         * (the validator registry) must be seeded onto the single DAG worker
+         * ahead of heads announced earlier on ordinary topics. On the privnet
+         * fresh joiner the registry document queued at boot second 1 was only
+         * requested after ~5400 processing-channel blocks (8m36s), keeping
+         * blockchain start deferred the whole time (boot 23:43:34 -> READY
+         * 23:52:50).
+         */
+        auto producer = CreateLoopBackCRDTInstance( databasePath + "priority-source", ipfsDataStore_ );
+        crdtDatastore_->AddTopicName( "lane-processing" );
+        crdtDatastore_->AddTopicName( "gnus-validator-registry" );
+        crdtDatastore_->AddPriorityTopic( "gnus-validator-registry" );
+
+        ASSERT_OUTCOME_SUCCESS( ordinary_cid,
+                                producer.datastore->Publish( CreateTestDelta( "PriorityOrdinary", "v1" ),
+                                                             { "lane-processing" } ) );
+        ASSERT_OUTCOME_SUCCESS( priority_cid,
+                                producer.datastore->Publish( CreateTestDelta( "PriorityRegistry", "v1" ),
+                                                             { "gnus-validator-registry" } ) );
+
+        producer.broadcaster->SetMirrorCounterPart( broadcaster_ );
+
+        auto announce = [&producer]( const CID &cid, const std::string &topic ) -> outcome::result<void>
+        {
+            auto              cid_string = cid.toString().value();
+            pb::CRDTBroadcast announcement;
+            announcement.add_heads()->set_cid( cid_string );
+            Buffer encoded;
+            encoded.put( announcement.SerializeAsString() );
+            return producer.broadcaster->Broadcast( encoded, topic );
+        };
+        ASSERT_OUTCOME_SUCCESS_TRY( announce( ordinary_cid, "lane-processing" ) );
+        ASSERT_OUTCOME_SUCCESS_TRY( announce( priority_cid, "gnus-validator-registry" ) );
+
+        ASSERT_TRUE( waitForCondition(
+            [&]
+            {
+                auto ordinary_status = crdtDatastore_->GetJobStatus( ordinary_cid );
+                auto priority_status = crdtDatastore_->GetJobStatus( priority_cid );
+                return ordinary_status.has_value() && ordinary_status.value() == CrdtDatastore::JobStatus::COMPLETED &&
+                       priority_status.has_value() && priority_status.value() == CrdtDatastore::JobStatus::COMPLETED;
+            },
+            std::chrono::seconds( 15 ) ) ) << "both heads were not processed";
+
+        auto order = crdtDatastore_->GetSeededRootOrderForTest();
+        ASSERT_EQ( order.size(), 2U ) << "expected exactly two seeded roots";
+        EXPECT_EQ( order.at( 0 ), priority_cid.toString().value() )
+            << "priority-topic head must seed before the ordinary-topic backlog";
+        EXPECT_EQ( order.at( 1 ), ordinary_cid.toString().value() );
+    }
 }

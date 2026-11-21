@@ -11,6 +11,7 @@
 #include "base/buffer.hpp"
 #include <queue>
 #include <string>
+#include <utility>
 
 namespace sgns::crdt
 {
@@ -36,10 +37,16 @@ namespace sgns::crdt
          */
         outcome::result<base::Buffer> Next() override;
 
+        /**
+         * @brief Payload plus the originating topic, so intake can exercise
+         *        the priority-topic lane (F17) in tests.
+         */
+        outcome::result<std::pair<base::Buffer, std::string>> NextWithTopic() override;
+
         bool HasTopic( const std::string &topic ) override;
 
-        /** Queue of broadcast messages */
-        std::queue<std::string> listOfBroadcasts_;
+        /** Queue of broadcast messages as (topic, wire payload) pairs */
+        std::queue<std::pair<std::string, std::string>> listOfBroadcasts_;
 
         std::mutex mutex_;
 

@@ -1445,6 +1445,10 @@ namespace sgns
             } );
 
         db_->AddListenTopic( validator_topic_ );
+        // F17: registry heads must not queue behind the processing-channel
+        // history on the fresh-join intake or blockchain start stays deferred
+        // for minutes waiting for the registry document.
+        db_->AddPriorityTopic( validator_topic_ );
 
         const bool result = filter_registered && callback_registered;
         logger_->info( "{}: result={}", __func__, result );

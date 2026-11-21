@@ -271,7 +271,7 @@ namespace sgns::crdt
             {
                 {
                     std::lock_guard<std::mutex> lock( queueMutex_ );
-                    messageQueue_.emplace( std::move( peerId ), bmsg.data() );
+                    messageQueue_.emplace( std::move( peerId ), incomingTopic, bmsg.data() );
                 }
                 queueCv_.notify_one();
             }
@@ -454,6 +454,16 @@ namespace sgns::crdt
 
     outcome::result<base::Buffer> PubSubBroadcasterExt::Next()
     {
+        auto next_result = NextWithTopic();
+        if ( next_result.has_error() )
+        {
+            return next_result.error();
+        }
+        return std::move( next_result.value().first );
+    }
+
+    outcome::result<std::pair<base::Buffer, std::string>> PubSubBroadcasterExt::NextWithTopic()
+    {
         std::lock_guard<std::mutex> lock( queueMutex_ );
 
         if ( messageQueue_.empty() )
@@ -462,12 +472,13 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        std::string strBuffer = std::get<1>( messageQueue_.front() );
+        std::string strBuffer = std::get<2>( messageQueue_.front() );
+        std::string topic     = std::get<1>( messageQueue_.front() );
         messageQueue_.pop();
 
         base::Buffer buffer;
         buffer.put( strBuffer );
-        return buffer;
+        return std::make_pair( std::move( buffer ), std::move( topic ) );
     }
 
     void PubSubBroadcasterExt::WaitForNext( std::chrono::milliseconds timeout )
@@ -610,7 +621,7 @@ namespace sgns::crdt
             }
             {
                 std::lock_guard<std::mutex> lock( queueMutex_ );
-                messageQueue_.emplace( peer_id_res.value(), std::string( cid_buffer.value().toString() ) );
+                messageQueue_.emplace( peer_id_res.value(), std::string{}, std::string( cid_buffer.value().toString() ) );
             }
             ret = true;
         } while ( 0 );

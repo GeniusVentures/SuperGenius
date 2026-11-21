@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include <tuple>
+#include <utility>
 #include <string>
 #include <optional>
 
@@ -43,6 +44,25 @@ namespace sgns::crdt
          * @return buffer value or outcome::failure on error
          */
         virtual outcome::result<base::Buffer> Next() = 0;
+
+        /**
+         * Obtain the next payload together with the pubsub topic it arrived on.
+         *
+         * Lets the CRDT intake tell latency-priority topics (the validator
+         * registry) from ordinary backlog. The default serves consumers whose
+         * broadcaster cannot know the topic: Next() paired with an empty topic
+         * string, which the intake treats as non-priority.
+         * @return pair of payload and originating topic, or outcome::failure
+         */
+        virtual outcome::result<std::pair<base::Buffer, std::string>> NextWithTopic()
+        {
+            auto next_result = Next();
+            if ( next_result.has_error() )
+            {
+                return next_result.error();
+            }
+            return std::make_pair( std::move( next_result.value() ), std::string{} );
+        }
 
         /**
          * Block until Next() may have a payload, or until \p timeout elapses.

@@ -727,6 +727,14 @@ namespace sgns::crdt
         }
     }
 
+    void GlobalDB::AddPriorityTopic( const std::string &topicName )
+    {
+        if ( auto crdt_datastore = ActiveCRDTDataStore() )
+        {
+            crdt_datastore->AddPriorityTopic( topicName );
+        }
+    }
+
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
     {
         auto crdt_datastore = ActiveCRDTDataStore();

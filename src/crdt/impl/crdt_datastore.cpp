@@ -1,6 +1,7 @@
 #include <fmt/std.h>
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
+#include "base/sgns_version.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
@@ -151,7 +152,8 @@ namespace sgns::crdt
                                    return closeStarted_ || !dagWorkerJobListThreadRunning_ ||
                                           !dagWorker.dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
                                           !rootCIDJobList_.empty() || HasPendingForcedWalk() ||
-                                          ( !activeRootCID_.has_value() && !pendingRootQueue_.empty() );
+                                          ( !activeRootCID_.has_value() &&
+                                            ( !pendingRootQueue_.empty() || !priorityRootQueue_.empty() ) );
                                } );
 
         return !closeStarted_ && dagWorkerJobListThreadRunning_ && dagWorker.dagWorkerThreadRunning_;
@@ -187,14 +189,24 @@ namespace sgns::crdt
     bool CrdtDatastore::SeedNextExternalRoot()
     {
         std::unique_lock lk( dagWorkerMutex_ );
-        if ( activeRootCID_.has_value() || pendingRootQueue_.empty() )
+        if ( activeRootCID_.has_value() || ( pendingRootQueue_.empty() && priorityRootQueue_.empty() ) )
         {
             return false;
         }
 
-        CID next = pendingRootQueue_.front();
-        pendingRootQueue_.pop();
+        CID next;
+        if ( !priorityRootQueue_.empty() )
+        {
+            next = priorityRootQueue_.front();
+            priorityRootQueue_.pop();
+        }
+        else
+        {
+            next = pendingRootQueue_.front();
+            pendingRootQueue_.pop();
+        }
         activeRootCID_ = next;
+        seededRootOrderForTest_.push_back( next.toString().value() );
         lk.unlock();
 
         logger_->debug( "Seeding new external root CID {}", next.toString().value() );
@@ -1075,19 +1087,37 @@ namespace sgns::crdt
         // one announcement per wait interval however fast they arrived.
         while ( handleNextThreadRunning_ )
         {
-            auto broadcasterNextResult = broadcaster_->Next();
+            auto broadcasterNextResult = broadcaster_->NextWithTopic();
             if ( broadcasterNextResult.has_failure() )
             {
                 return;
             }
 
-            auto decodeResult = DecodeBroadcast( broadcasterNextResult.value() );
+            auto decodeResult = DecodeBroadcast( broadcasterNextResult.value().first );
             if ( decodeResult.has_failure() )
             {
                 logger_->error( "Broadcaster: Unable to decode broadcast (error code {})",
                                 std::to_string( broadcasterNextResult.error().value() ) );
                 continue;
             }
+
+            // Priority-topic matching (F17): heads announced on a registered
+            // priority topic skip the ordinary intake backlog, so a fresh
+            // joiner's registry document is not stuck behind the whole
+            // processing-channel history on the single DAG worker. Topics may
+            // arrive with the network/version appendix (production pubsub) or
+            // without it (test broadcasters, DirectCID feeds); match both.
+            const bool is_priority_topic = [this, &broadcasterNextResult]()
+            {
+                std::lock_guard<std::mutex> lock( priorityTopicsMutex_ );
+                const auto &incoming_topic = broadcasterNextResult.value().second;
+                if ( priorityTopics_.find( incoming_topic ) != priorityTopics_.end() )
+                {
+                    return true;
+                }
+                return priorityTopics_.find( incoming_topic + version::GetNetAndVersionAppendix() ) !=
+                       priorityTopics_.end();
+            }();
 
             for ( const auto &bCastHeadCID : decodeResult.value() )
             {
@@ -1168,9 +1198,12 @@ namespace sgns::crdt
                     continue;
                 }
 
-                if ( EnqueueRootCID( bCastHeadCID ) )
+                if ( EnqueueRootCID( bCastHeadCID, is_priority_topic ) )
                 {
-                    logger_->debug( "{}: Queueing processing for block {}", __func__, bCastHeadCID.toString().value() );
+                    logger_->debug( "{}: Queueing processing for block {} (priority topic: {})",
+                                    __func__,
+                                    bCastHeadCID.toString().value(),
+                                    is_priority_topic );
                     dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
                 }
                 else
@@ -2674,6 +2707,16 @@ namespace sgns::crdt
             queue_copy.pop();
         }
 
+        auto priority_copy = priorityRootQueue_;
+        while ( !priority_copy.empty() )
+        {
+            if ( priority_copy.front() == cid )
+            {
+                return true;
+            }
+            priority_copy.pop();
+        }
+
         return false;
     }
 
@@ -2681,7 +2724,7 @@ namespace sgns::crdt
     /// its accessors. Relaxed ordering suffices: tests only read deltas.
     std::atomic<uint64_t> CrdtDatastore::root_fetch_attempts_for_test_{ 0 };
 
-    bool CrdtDatastore::EnqueueRootCID( const CID &cid )
+    bool CrdtDatastore::EnqueueRootCID( const CID &cid, bool priority )
     {
         std::unique_lock lk( dagWorkerMutex_ );
         if ( IsRootCIDPendingOrActiveLocked( cid ) )
@@ -2689,7 +2732,14 @@ namespace sgns::crdt
             return false;
         }
 
-        pendingRootQueue_.push( cid );
+        if ( priority )
+        {
+            priorityRootQueue_.push( cid );
+        }
+        else
+        {
+            pendingRootQueue_.push( cid );
+        }
         auto it = pending_jobs_.find( cid );
         if ( it == pending_jobs_.end() || it->second != JobStatus::COMPLETED )
         {
@@ -2709,6 +2759,20 @@ namespace sgns::crdt
     void CrdtDatastore::ResetRootFetchAttemptsForTest()
     {
         root_fetch_attempts_for_test_.store( 0, std::memory_order_relaxed );
+    }
+
+    void CrdtDatastore::AddPriorityTopic( const std::string &topic )
+    {
+        const auto full_topic = topic + version::GetNetAndVersionAppendix();
+        std::lock_guard<std::mutex> lock( priorityTopicsMutex_ );
+        priorityTopics_.insert( full_topic );
+        logger_->debug( "AddPriorityTopic: '{}' (full '{}')", topic, full_topic );
+    }
+
+    std::vector<std::string> CrdtDatastore::GetSeededRootOrderForTest()
+    {
+        std::lock_guard<std::mutex> lock( dagWorkerMutex_ );
+        return seededRootOrderForTest_;
     }
 
     void CrdtDatastore::ScheduleFailedRootRetryForTest( CrdtDatastore &datastore, const CID &cid )
