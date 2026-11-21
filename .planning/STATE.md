@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
 status: executing
-stopped_at: Completed 21.1-05-PLAN.md; next plan 21.1-06
-last_updated: "2026-11-21T15:16:53.877Z"
-last_activity: 2026-11-21 -- Completed plan 21.1-05; next plan 06
+stopped_at: Completed 21.1-06-PLAN.md; next plan 21.1-07
+last_updated: "2026-11-21T15:41:48.371Z"
+last_activity: 2026-11-21 -- Completed plan 21.1-06; next plan 07
 progress:
   total_phases: 33
   completed_phases: 5
   total_plans: 47
-  completed_plans: 38
+  completed_plans: 39
   percent: 15
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
-Last activity: 2026-11-21 -- Completed plan 21.1-05; next plan 06
+Last activity: 2026-11-21 -- Completed plan 21.1-06; next plan 07
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 85%
 
 ## Historical v1.2 Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-21T15:16:53.870Z
-**Stopped At:** Completed 21.1-05-PLAN.md; next plan 21.1-06
+**Last session:** 2026-11-21T15:41:48.364Z
+**Stopped At:** Completed 21.1-06-PLAN.md; next plan 21.1-07
 **Resume File:** None
 
 ## Accumulated Context
@@ -159,6 +159,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 21.1 P03 | 35min | 3 tasks | 10 files |
 | Phase 21.1 P04 | 33m30s recorded verification window | 3 tasks | 6 files |
 | Phase 21.1 P05 | 19m04s | 2 tasks | 5 files |
+| Phase 21.1 P06 | 21m19s | 3 tasks | 11 files |
 
 ## Decisions
 
@@ -255,6 +256,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 21.1]: Exact certificate binding does not establish pre-activation eligibility; final plan 08 operator boundary remains required.
 - [Phase 21.1]: Conflict identity excludes equal hashes and uses equal virtual slots or existing source/nonce; all certified ingress routes resolve every tracked contender.
 - [Phase 21.1]: Signature-only CONFIRMED is not finality without exact canonical certificate binding; retain existing certified BestHash arbitration and callback application-before-cleanup ordering.
+- [Phase 21.1]: Canonical nonce recovery reads existing CRDT certificate records through owning full validation; missing/storage and retryable authority remain distinct from rejection.
+- [Phase 21.1]: One manager predecessor resolver binds the original embedded source, nonce, hash and virtual slot; durable genuine own-spender evidence alone permits payout rebuild.
 
 ## Deferred Items
 
