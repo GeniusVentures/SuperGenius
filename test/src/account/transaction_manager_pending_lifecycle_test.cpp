@@ -401,6 +401,26 @@ namespace
                     .has_value() );
         }
 
+        /// @brief Stores the real value/CID and retires its topic head for the guarded prune driver.
+        void StorePrunableTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+        {
+            const auto                   path = sgns::TransactionManager::GetTransactionPath( *transaction );
+            sgns::crdt::GlobalDB::Buffer value;
+            value.put( transaction->SerializeByteVector() );
+            const auto stored = db_->Put( { path }, value, { "CRDT.Datastore.TEST.Channel" } );
+            ASSERT_TRUE( stored.has_value() );
+            ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::StoreTransactionCID(
+                             *manager_,
+                             path,
+                             stored.value().toString().value() )
+                             .has_value() );
+            sgns::crdt::GlobalDB::Buffer retired;
+            retired.put( "retire-" + transaction->GetHash() );
+            ASSERT_TRUE(
+                db_->Put( { "/recovery/retire/" + transaction->GetHash() }, retired, { "CRDT.Datastore.TEST.Channel" } )
+                    .has_value() );
+        }
+
         void ProcessStoredTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
         {
             sgns::test::assertWaitForCondition(
@@ -1038,6 +1058,53 @@ TEST_F( TransactionDeletionRecoveryTest, V2RevertRestoresOnlyOwnEffects )
     EXPECT_EQ( restored->GetOwnerAddress(), hold->GetUTXOParameters().second.front().dest_address );
     EXPECT_FALSE( ledger.GetOutPointState( winner_hash, 0 ).has_value() );
     EXPECT_TRUE( ledger.GetUnconsumedUTXO( loser_hash, 0 ).has_value() );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, V2PrunedHoldRevertRestoresOnlyOwnEffects )
+{
+    constexpr uint64_t AMOUNT      = 17;
+    const auto         hold        = MakeCertifiedHold( AMOUNT );
+    const auto         winner      = MakeRelease( *hold, { { AMOUNT, account_->GetAddress(), kTokenId } } );
+    const auto         loser       = MakeRelease( *hold, { { AMOUNT, std::string( 128, 'b' ), kTokenId } } );
+    auto              &ledger      = account_->GetUTXOManager();
+    const auto         hold_hash   = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
+    const auto         winner_hash = sgns::base::Hash256::fromHex( winner->GetHash() ).value();
+    const auto         loser_hash  = sgns::base::Hash256::fromHex( loser->GetHash() ).value();
+    const auto         original    = ledger.GetUnconsumedUTXO( hold_hash, 0 );
+    if ( !original )
+    {
+        FAIL() << "hold must exist before payment";
+    }
+    ASSERT_TRUE( ConfirmPayment( winner ).has_value() );
+    StorePrunableTransaction( hold );
+    ASSERT_TRUE( manager_->EraseTransactionEntryPruned( hold->GetHash() ).has_value() );
+    ASSERT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *hold ) ).has_error() );
+    ASSERT_TRUE( blockchain_->GetCertificateBySlot( hold->GetSlotID() ).has_value() );
+
+    ASSERT_TRUE( ConfirmPayment( loser ).has_error() );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *loser ).has_value() );
+    EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ winner_hash } );
+    EXPECT_FALSE( ledger.GetUnconsumedUTXO( hold_hash, 0 ).has_value() );
+    EXPECT_FALSE( ledger.GetOutPointState( loser_hash, 0 ).has_value() );
+    EXPECT_EQ( ledger.GetBalance( account_->GetAddress() ), AMOUNT );
+    ASSERT_TRUE( ledger.GetUnconsumedUTXO( winner_hash, 0 ).has_value() );
+
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *winner ).has_value() );
+    const auto restored = ledger.GetUnconsumedUTXO( hold_hash, 0 );
+    if ( !restored )
+    {
+        FAIL() << "own rollback must restore the pruned original hold";
+    }
+    EXPECT_EQ( restored->GetTxID(), original->GetTxID() );
+    EXPECT_EQ( restored->GetOutputIdx(), original->GetOutputIdx() );
+    EXPECT_EQ( restored->GetOwnerAddress(), original->GetOwnerAddress() );
+    EXPECT_EQ( restored->GetTokenID(), original->GetTokenID() );
+    EXPECT_EQ( restored->GetAmount(), original->GetAmount() );
+    EXPECT_FALSE( ledger.GetOutPointSpender( hold_hash, 0 ).has_value() );
+    EXPECT_FALSE( ledger.GetOutPointState( winner_hash, 0 ).has_value() );
+    EXPECT_EQ( ledger.GetBalance( original->GetOwnerAddress() ), AMOUNT );
+    EXPECT_EQ( ledger.GetBalance( account_->GetAddress() ), 0U );
+    EXPECT_EQ( ledger.GetBalance( std::string( 128, 'b' ) ), 0U );
 }
 
 TEST_F( TransactionDeletionRecoveryTest, V2UnappliedCleanupDoesNotRequireMissingHold )
@@ -1845,21 +1912,11 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
     ASSERT_TRUE( sgns::TransactionManager::CertificateMatchesTransaction( certificate.value(), *winner ) );
     EXPECT_FALSE( sgns::TransactionManager::CertificateMatchesTransaction( certificate.value(), *loser ) );
 
-    // Seed the real CRDT value/CID and retire its topic head before the guarded prune.
+    // Both consumed hold and payment values can be pruned while canonical certificates survive.
+    StorePrunableTransaction( hold );
+    StorePrunableTransaction( winner );
+    const auto                   hold_path   = sgns::TransactionManager::GetTransactionPath( *hold );
     const auto                   winner_path = sgns::TransactionManager::GetTransactionPath( *winner );
-    sgns::crdt::GlobalDB::Buffer value;
-    value.put( winner->SerializeByteVector() );
-    const auto stored = db_->Put( { winner_path }, value, { "CRDT.Datastore.TEST.Channel" } );
-    ASSERT_TRUE( stored.has_value() );
-    ASSERT_TRUE(
-        sgns::TransactionManagerPendingLifecycleTestAccess::StoreTransactionCID( *manager_,
-                                                                                 winner_path,
-                                                                                 stored.value().toString().value() )
-            .has_value() );
-    sgns::crdt::GlobalDB::Buffer retired;
-    retired.put( "retire-" + winner->GetHash() );
-    ASSERT_TRUE( db_->Put( { "/recovery/retire/" + winner->GetHash() }, retired, { "CRDT.Datastore.TEST.Channel" } )
-                     .has_value() );
     ASSERT_TRUE( ConfirmPayment( winner ).has_value() );
     auto      &ledger      = account_->GetUTXOManager();
     const auto hold_hash   = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
@@ -1899,6 +1956,9 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
     expect_winner();
     ASSERT_TRUE( manager_->EraseTransactionEntryPruned( winner->GetHash() ).has_value() );
     ASSERT_TRUE( db_->Get( winner_path ).has_error() );
+    ASSERT_TRUE( manager_->EraseTransactionEntryPruned( hold->GetHash() ).has_value() );
+    ASSERT_TRUE( db_->Get( hold_path ).has_error() );
+    ASSERT_TRUE( blockchain_->GetCertificateBySlot( hold->GetSlotID() ).has_value() );
     for ( const auto &output : outputs.value() )
     {
         ASSERT_TRUE( ledger.ClearUnspentKeepConsumed( output.dest_address ).has_value() );
@@ -1915,6 +1975,7 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
     manager_->RegisterTopicNames();
     ASSERT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ winner_hash } );
     ASSERT_TRUE( db_->Get( winner_path ).has_error() );
+    ASSERT_TRUE( db_->Get( hold_path ).has_error() );
     std::vector<uint64_t> balances_before_loser;
     for ( const auto &output : outputs.value() )
     {
@@ -1955,6 +2016,7 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
         ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *loser ).has_value() );
         expect_winner();
         EXPECT_TRUE( db_->Get( winner_path ).has_error() );
+        EXPECT_TRUE( db_->Get( hold_path ).has_error() );
     }
 }
 
