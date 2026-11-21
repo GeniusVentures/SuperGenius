@@ -2355,3 +2355,92 @@ TEST_F( CertificateFallbackTest, BurnCleanup_MintFundsCatchPathRemovesBurnUtxoAf
     EXPECT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, "post-cleanup-probe", UTXOManager::UTXOType::UTXO_BRIDGE ),
                UTXOManager::OutpointClaim::kNotClaimable );
 }
+
+// ---------------------------------------------------------------------------
+// F9: stale VERIFYING head candidates must not chain the next nonce
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// MakeTransfer with an explicit DAG timestamp: the F9 poison is an OLD
+    /// non-confirmed head, so the test controls candidate age directly.
+    std::shared_ptr<TransferTransaction> MakeTransferAged( const std::string &source_address,
+                                                           uint64_t           nonce,
+                                                           int64_t            timestamp_ms,
+                                                           const std::string &previous_hash = {} )
+    {
+        SGTransaction::DAGStruct dag;
+        dag.set_type( "transfer" );
+        dag.set_source_addr( source_address );
+        dag.set_nonce( nonce );
+        dag.set_previous_hash( previous_hash );
+        dag.set_timestamp( timestamp_ms );
+        return std::make_shared<TransferTransaction>( TransferTransaction::New( {}, {}, std::move( dag ) ) );
+    }
+
+    int64_t NowMs()
+    {
+        return static_cast<int64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+    }
+} // anonymous namespace
+
+/**
+ * F9 (P1 burst self-conflict cascade): a tracked head stuck VERIFYING is
+ * never marked FAILED (no timeout exists), so the candidate loop's FAILED
+ * skip never fires. When it is the ONLY tracked candidate for nonce-1, the
+ * tracked rung answers with the zombie's hash and short-circuits the
+ * certificate-backed rungs — every later transaction chains onto a
+ * predecessor that can never certify ("BuildUTXOWitness: Missing input
+ * UTXO" forever; survives restart because the journal reloads the zombie).
+ * A non-confirmed candidate older than the chain-liveness window must be
+ * skipped so the cert rung resolves the true predecessor. Fresh in-flight
+ * heads keep chaining (burst behavior preserved) — second half of the test.
+ */
+TEST_F( CertificateFallbackTest, StaleVerifyingHeadSkippedForNextNonceChaining )
+{
+    constexpr uint64_t kZombieNonce = 150;
+    const auto         account_address = account_->GetAddress();
+    const auto         now_ms          = NowMs();
+
+    // The zombie: tracked VERIFYING, authored 10 minutes ago. No certificate
+    // will ever arrive for its slot.
+    const auto zombie = MakeTransferAged( account_address, kZombieNonce, now_ms - 600000 );
+    ASSERT_FALSE( zombie->GetHash().empty() );
+    ASSERT_TRUE( FetchAndProcess( zombie ).has_value() );
+    const auto zombie_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, zombie->GetHash() );
+    ASSERT_TRUE( zombie_tracked.has_value() );
+    ASSERT_EQ( zombie_tracked->status, TransactionManager::TransactionStatus::VERIFYING );
+
+    // The network's truth: a competing transaction for the SAME slot
+    // (inputless transfers share src:nonce) was certified elsewhere and its
+    // certificate is durable at /cert/<addr>:<nonce>. This wallet never
+    // tracked it (restart-with-journal shape). Certificate built under
+    // default timing, THEN the round timer parks so async dispatch cannot
+    // re-track anything behind the test's back.
+    const auto winner = MakeTransferAged( account_address, kZombieNonce, now_ms - 300000 );
+    ASSERT_NE( zombie->GetHash(), winner->GetHash() );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( TransactionManager::CertificateMatchesTransaction( certificate.value(), *winner ) );
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+
+    // Pre-fix this answers with the zombie's hash (tracked-rung short-circuit
+    // over a stale non-confirmed head). Post-fix the stale zombie is skipped
+    // and the cert rung resolves the certified predecessor.
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kZombieNonce + 1 ),
+               winner->GetHash() );
+
+    // Fresh in-flight heads still chain: burst behavior is preserved.
+    constexpr uint64_t kFreshNonce = 160;
+    const auto         fresh       = MakeTransferAged( account_address, kFreshNonce, NowMs() );
+    ASSERT_TRUE( FetchAndProcess( fresh ).has_value() );
+    const auto fresh_tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, fresh->GetHash() );
+    ASSERT_TRUE( fresh_tracked.has_value() );
+    ASSERT_EQ( fresh_tracked->status, TransactionManager::TransactionStatus::VERIFYING );
+    EXPECT_EQ( CertificateFallbackTestAccess::GetOutgoingPreviousHash( *tm_, kFreshNonce + 1 ),
+               fresh->GetHash() );
+}

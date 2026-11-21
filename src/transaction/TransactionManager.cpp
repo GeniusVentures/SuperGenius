@@ -109,6 +109,11 @@ namespace sgns
     // handler-level MAX_EMBEDDED_TX_BYTES for defense-in-depth (per D-02).
     static constexpr size_t MAX_PUBSUB_TX_BYTES = 64 * 1024; // 65536 bytes
 
+    // F9: a non-confirmed head candidate older than this is a zombie — its
+    // certification never arrived and nothing marks it FAILED. Well above
+    // normal certification latency (seconds), well below poison age.
+    static constexpr int64_t kStaleHeadCandidateMaxAgeMs = 120000;
+
     const std::unordered_map<
         std::string,
         std::pair<TransactionManager::TransactionParserFn, TransactionManager::TransactionParserFn>>
@@ -1835,6 +1840,33 @@ namespace sgns
                 if ( tracked.status == TransactionStatus::FAILED || tracked.status == TransactionStatus::INVALID )
                 {
                     continue;
+                }
+                // F9: a non-confirmed candidate older than the chain-liveness
+                // window is a zombie head — its certification never arrived and
+                // nothing ever marks it FAILED, so the skip above never fires
+                // (the poison survives restart via the tracked journal).
+                // Chaining onto it strands every later nonce behind a
+                // predecessor that can never certify ("BuildUTXOWitness:
+                // Missing input UTXO"). Skip it so the certificate-backed
+                // rungs resolve the true predecessor. Fresh in-flight entries
+                // (an ordinary burst) still chain.
+                if ( tracked.status != TransactionStatus::CONFIRMED )
+                {
+                    const int64_t age_ms =
+                        static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                  std::chrono::system_clock::now().time_since_epoch() )
+                                                  .count() ) -
+                        static_cast<int64_t>( tracked.tx->GetTimestamp() );
+                    if ( age_ms > kStaleHeadCandidateMaxAgeMs )
+                    {
+                        m_logger->debug( "Skipping stale non-confirmed head candidate {} for nonce {} "
+                                         "(age {} ms, status {})",
+                                         tracked.tx->GetHash(),
+                                         nonce,
+                                         age_ms,
+                                         static_cast<int>( tracked.status ) );
+                        continue;
+                    }
                 }
                 candidates.emplace_back( tracked.tx->GetHash(),
                                          tracked.status == TransactionStatus::CONFIRMED );
