@@ -801,6 +801,25 @@ jobs:
           GTEST_FILTER: '*-LocalPriceManagerTest.*:ConsensusPendingLifecycleTest.CertificateCallbackStallsUntilPostCommitReadbackCanReleaseSameSlot:TrustFirstBootE2ETest.TransientRefreshRetryExhaustionIsCappedCoalescedAndIdle'
         run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry
 
+      - name: Tier-1 fail-closed lane
+        # !cancelled(): the lane is an INDEPENDENT signal - a full-suite
+        # failure (e.g. a known flaky integration test) must not mask the
+        # fail-closed lane by skipping it (07-REVIEW WR-02).
+        if: ${{ !cancelled() && env.RUN_TESTS == 'true' && matrix.target != 'Linux' }}
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        # TEST-01 (v1.1 Phase 7): -L Tier1 never includes unlabeled tests
+        # and --no-tests=error fails an empty selection, so a label typo or
+        # an unlabeled cold-storage registration cannot pass vacuously.
+        # Additive step - the existing fail-open full-suite lane above is
+        # unchanged (Pitfall 12: the two lanes coexist).
+        # TEST-02 SC4 (run 40840831965): contended-runner budget for the
+        # SC1 absolute-p99 guard on the self-hosted mac. No test-filter
+        # env here by design - the labeled hermetic set carries no known
+        # flakes; exclusions live in the full-suite lane only.
+        env:
+          SGNS_TEST_P99_BOUND_MS: ${{ matrix.target == 'OSX' && '2000' || '' }}
+        run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -L Tier1 --no-tests=error
+
       # SC4 round 13: surface macOS crash reports (.ips) for any
       # SEGFAULTed test binary - the exit-time teardown crash class
       # (network_config_private_network_test, runs 41744226815/
@@ -926,6 +945,18 @@ jobs:
               ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -LE requires_foundry; \
             fi'
           unset GTEST_FILTER
+
+      - name: Tier-1 fail-closed lane (Linux)
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        if: ${{ env.RUN_TESTS == 'true' && matrix.target == 'Linux' }}
+        shell: bash
+        # TEST-01 (v1.1 Phase 7): hermetic Tier-1 lane; the keyring/dbus
+        # wrapper above is not needed (cold-storage Tier-1 tests touch no
+        # keyring and no MNN) - this is the lane the Linux full-suite
+        # keyring-skip note above points at for desktop cold coverage.
+        # Additive step - the existing fail-open full-suite lane above is
+        # unchanged (Pitfall 12). --no-tests=error fails an empty selection.
+        run: ctest . -j ${{ env.CTEST_JOBS }} -C ${{ matrix.build-type }} --output-on-failure -L Tier1 --no-tests=error
 
       # Segfault triage (Linux): the price/account suites crash inside the
       # first sgns::HTTPClient exchange on EL8 (both arches; hermetic stub,
