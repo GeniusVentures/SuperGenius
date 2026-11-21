@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
 status: executing
-stopped_at: Phase 21.1 execution started on verified baseline 8373ed726; next plan 01
-last_updated: "2026-11-21T12:55:56.394Z"
-last_activity: 2026-11-21 -- Phase 21.1 execution started
+stopped_at: Completed 21.1-01-PLAN.md; next plan 21.1-02
+last_updated: "2026-11-21T13:11:00.383Z"
+last_activity: 2026-11-21 -- Completed plan 21.1-01; next plan 02
 progress:
   total_phases: 33
   completed_phases: 5
   total_plans: 47
-  completed_plans: 33
+  completed_plans: 34
   percent: 15
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 21.1
-Last activity: 2026-11-21 -- Phase 21.1 execution started
+Plan: 2 of 8
+Status: Ready to execute
+Last activity: 2026-11-21 -- Completed plan 21.1-01; next plan 02
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 74%
 
 ## Historical v1.2 Roadmap Snapshot
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-21T12:55:56.388Z
-**Stopped At:** Phase 21.1 execution started on verified baseline 8373ed726; next plan 01
-**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-01-PLAN.md
+**Last session:** 2026-11-21T13:11:00.191Z
+**Stopped At:** Completed 21.1-01-PLAN.md; next plan 21.1-02
+**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-02-PLAN.md
 
 ## Accumulated Context
 
@@ -154,6 +154,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P07 | 82min | 2 tasks | 1 files |
 | Phase 19 P05 | 105min | 3 tasks tasks | 7 files files |
 | Phase 19 P06 | 34min | 2 tasks | 1 files |
+| Phase 21.1 P01 | 11min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -240,6 +241,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 19]: (19-07): A directly-fetched block silences the broadcast intake for that CID (HasBlock skip, delta never merges) -- discard the LRU copy (DeleteCIDBlock, the RetryDueFailedRoots idiom) between proof phases
 - [Phase 19]: (19-05): Tri-state lookup result carries the invariant violation on the verdict (VALUE_PRESENT_INVARIANT_VIOLATION + found tx) so the loud case is observable on the result, not only in logs; a present value always outranks a marker
 - [Phase 19]: (19-05): TransactionLookupResult uses an opaque PrunedLookup forward declaration (not a PruneEligibility.hpp include) -- the include leaks rapidjson into every TM.hpp consumer and broke the migration build; the single construction site always sets verdict
+- [Phase 21.1]: TransferInputOwner, both replay branches, ledger errors and notification ordering remain unchanged in shared payment helpers; dedicated V2 behavior belongs to later plans.
 
 ## Deferred Items
 
