@@ -848,6 +848,10 @@ namespace sgns
         const GeniusTransaction &tx ) const
     {
         logger_->debug( "{}: Checking type rules", __func__ );
+        if ( tx.GetType() == "escrow-release" )
+        {
+            return ConsensusManager::ValidationResult::Reject();
+        }
         if ( tx.HasUTXOParameters() )
         {
             auto params_opt = tx.GetUTXOParametersOpt();

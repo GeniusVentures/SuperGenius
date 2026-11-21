@@ -612,8 +612,8 @@ namespace sgns
          * resolves (not only registrations). Fails closed to an empty string
          * on any failed check.
          */
-        std::string              GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const;
-        std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
+        std::string GetRegisteredOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 
         /**
          * @brief Commits a TransactionItem to the CRDT.
@@ -895,6 +895,12 @@ namespace sgns
         outcome::result<void> ApplyUTXOPayment( const GeniusTransaction &payment, const std::string &input_owner );
         outcome::result<void> ParseMintTransaction( const GeniusTransaction &tx );
         outcome::result<void> ParseEscrowTransaction( const GeniusTransaction &tx );
+        /// @brief Retains legacy release status without applying ledger effects; topics belong to the codec.
+        outcome::result<void> ParseEscrowReleaseTransaction( const GeniusTransaction &tx );
+        /// @brief Applies a dedicated payout against its certified hold owner.
+        outcome::result<void> ParseEscrowReleaseTransactionV2( const GeniusTransaction &tx );
+        /// @brief Preserves genuine own-spender replay and rejects any foreign escrow spender.
+        outcome::result<void> ApplyEscrowPayment( const GeniusTransaction &tx, const std::string &owner );
         outcome::result<void> RevertTransferTransaction( const GeniusTransaction &tx );
         /**
          * @brief Deletes payment outputs and restores inputs to their original owner.
@@ -905,6 +911,12 @@ namespace sgns
         outcome::result<void> RevertUTXOPayment( const GeniusTransaction &payment, const std::string &input_owner );
         outcome::result<void> RevertMintTransaction( const GeniusTransaction &tx );
         outcome::result<void> RevertEscrowTransaction( const GeniusTransaction &tx );
+        /// @brief Reverts legacy release status only, without restoring or deleting any UTXO.
+        outcome::result<void> RevertEscrowReleaseTransaction( const GeniusTransaction &tx );
+        /// @brief Restores only this dedicated payment's durably applied effects.
+        outcome::result<void> RevertEscrowReleaseTransactionV2( const GeniusTransaction &tx );
+        /// @brief Uses durable genuine own-spender evidence before reverting any escrow payment effects.
+        outcome::result<void> RevertEscrowPayment( const GeniusTransaction &tx, const std::string &owner );
         outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
         outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
 
@@ -1053,7 +1065,7 @@ namespace sgns
          * @brief Looks up the CID associated with a transaction hash in RocksDB,
          *        searching across all monitored networks.
          */
-        outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
 
         /**
          * @brief Prune-side tracked-map cleanup: erases the tx_processed_m entry

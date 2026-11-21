@@ -30,6 +30,8 @@
 #include "account/RegistrationTransaction.hpp"
 #include "account/RevokeTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
+#include "account/EscrowReleaseTransaction.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
 #include "account/UTXOMerkle.hpp"
 #include "account/BurnConfig.hpp"
 #include "account/TokenAmount.hpp"
@@ -120,6 +122,12 @@ namespace sgns
             { "migration", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
             { "escrow-hold",
               { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
+            { "escrow-release",
+              { &TransactionManager::ParseEscrowReleaseTransaction,
+                &TransactionManager::RevertEscrowReleaseTransaction } },
+            { "escrow-release-v2",
+              { &TransactionManager::ParseEscrowReleaseTransactionV2,
+                &TransactionManager::RevertEscrowReleaseTransactionV2 } },
             { "registration",
               { &TransactionManager::ParseRegistrationTransaction,
                 &TransactionManager::RevertRegistrationTransaction } },
@@ -2365,7 +2373,10 @@ namespace sgns
             GeniusTransaction::RegisterDeserializer( "mint", &MintTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
-            GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "escrow-release",
+                                                     &EscrowReleaseTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "escrow-release-v2",
+                                                     &EscrowReleaseTransactionV2::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "registration", &RegistrationTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "revoke", &RevokeTransaction::DeSerializeByteVector );
             return true;
@@ -2415,6 +2426,13 @@ namespace sgns
                 std::string bytes;
                 embedded.escrow_release().SerializeToString( &bytes );
                 return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kEscrowReleaseV2:
+            {
+                std::string bytes;
+                embedded.escrow_release_v2().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "escrow-release-v2" )(
                     std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kRegistration:
@@ -3053,6 +3071,113 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseEscrowReleaseTransaction( const GeniusTransaction &tx )
+    {
+        const auto *marker = dynamic_cast<const EscrowReleaseTransaction *>( &tx );
+        if ( !marker )
+        {
+            return std::errc::invalid_argument;
+        }
+        m_logger->debug( "Legacy release status for escrow {}", marker->GetOriginalEscrowHash() );
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseEscrowReleaseTransactionV2( const GeniusTransaction &tx )
+    {
+        const auto *release = dynamic_cast<const EscrowReleaseTransactionV2 *>( &tx );
+        if ( release == nullptr )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto resolved = genius_input_validator_.ResolveEscrowReleaseInput( *release, *blockchain_ );
+        if ( resolved.verdict != IInputValidator::WitnessVerdict::kValid || resolved.producer == nullptr )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto  params = release->GetUTXOParameters();
+        const auto &input  = params.first.front();
+        if ( !account_m->GetUTXOManager().IsOutPointConsumed( input.txid_hash_, input.output_idx_ ) &&
+             !account_m->GetUTXOManager().VerifyEscrowReleaseParameters( *release, *resolved.producer ) )
+        {
+            return std::errc::invalid_argument;
+        }
+        return ApplyEscrowPayment( tx, resolved.producer->GetUTXOParameters().second.front().dest_address );
+    }
+
+    outcome::result<void> TransactionManager::ApplyEscrowPayment( const GeniusTransaction &tx,
+                                                                  const std::string       &owner )
+    {
+        const auto params = tx.GetUTXOParametersOpt();
+        if ( !params || params->first.size() != 1 )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto &input  = params->first.front();
+        auto       &ledger = account_m->GetUTXOManager();
+        BOOST_OUTCOME_TRY( auto durable,
+                           ledger.ReadDurableSpendEvidence( input.txid_hash_, input.output_idx_, owner ) );
+        BOOST_OUTCOME_TRY( auto own_hash, base::Hash256::fromHex( tx.GetHash() ) );
+        if ( ledger.IsOutPointConsumed( input.txid_hash_, input.output_idx_ ) || ( durable && durable->consumed ) )
+        {
+            if ( !durable || !durable->genuine || durable->spender != std::optional{ own_hash } ||
+                 ledger.GetOutPointSpender( input.txid_hash_, input.output_idx_ ) != std::optional{ own_hash } )
+            {
+                return std::errc::invalid_argument;
+            }
+            // Re-consuming an already consumed entry creates a zero-valued tombstone.
+            // Preserve the genuine input so replay and rollback retain its original funds.
+            return PutProducedUTXOs( tx );
+        }
+        const auto original = ledger.GetUnconsumedUTXO( input.txid_hash_, input.output_idx_ );
+        if ( !original || original->GetOwnerAddress() != owner )
+        {
+            return std::errc::invalid_argument;
+        }
+        return ApplyUTXOPayment( tx, owner );
+    }
+
+    outcome::result<void> TransactionManager::RevertEscrowReleaseTransactionV2( const GeniusTransaction &tx )
+    {
+        const auto *release = dynamic_cast<const EscrowReleaseTransactionV2 *>( &tx );
+        if ( release == nullptr )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto resolved = genius_input_validator_.ResolveEscrowReleaseInput( *release, *blockchain_ );
+        if ( resolved.verdict != IInputValidator::WitnessVerdict::kValid || resolved.producer == nullptr )
+        {
+            return std::errc::invalid_argument;
+        }
+        return RevertEscrowPayment( tx, resolved.producer->GetUTXOParameters().second.front().dest_address );
+    }
+
+    outcome::result<void> TransactionManager::RevertEscrowPayment( const GeniusTransaction &tx,
+                                                                   const std::string       &owner )
+    {
+        const auto params = tx.GetUTXOParametersOpt();
+        if ( !params || params->first.size() != 1 )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto &input  = params->first.front();
+        auto       &ledger = account_m->GetUTXOManager();
+        BOOST_OUTCOME_TRY( auto durable,
+                           ledger.ReadDurableSpendEvidence( input.txid_hash_, input.output_idx_, owner ) );
+        BOOST_OUTCOME_TRY( auto own_hash, base::Hash256::fromHex( tx.GetHash() ) );
+        if ( !durable || !durable->genuine || durable->spender != std::optional{ own_hash } ||
+             ledger.GetOutPointSpender( input.txid_hash_, input.output_idx_ ) != std::optional{ own_hash } )
+        {
+            // A never-applied loser owns no effects. This check must remain read-only.
+            return outcome::success();
+        }
+        return RevertUTXOPayment( tx, owner );
+    }
+
+    outcome::result<void> TransactionManager::RevertEscrowReleaseTransaction( const GeniusTransaction &tx )
+    {
+        return ParseEscrowReleaseTransaction( tx );
     }
 
     outcome::result<void> TransactionManager::RevertTransferTransaction( const GeniusTransaction &tx )
