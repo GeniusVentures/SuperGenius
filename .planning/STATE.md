@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
 status: executing
-stopped_at: Completed 21.1-02-PLAN.md; next plan 21.1-03
-last_updated: "2026-11-21T13:31:45.315Z"
-last_activity: 2026-11-21 -- Completed plan 21.1-02; next plan 03
+stopped_at: Completed 21.1-03-PLAN.md; next plan 21.1-04
+last_updated: "2026-11-21T14:11:28.233Z"
+last_activity: 2026-11-21 -- Completed plan 21.1-03; next plan 04
 progress:
   total_phases: 33
   completed_phases: 5
   total_plans: 47
-  completed_plans: 35
+  completed_plans: 36
   percent: 15
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
-Last activity: 2026-11-21 -- Completed plan 21.1-02; next plan 03
+Last activity: 2026-11-21 -- Completed plan 21.1-03; next plan 04
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 78%
 
 ## Historical v1.2 Roadmap Snapshot
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-21T13:31:45.309Z
-**Stopped At:** Completed 21.1-02-PLAN.md; next plan 21.1-03
-**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-03-PLAN.md
+**Last session:** 2026-11-21T14:11:03.786Z
+**Stopped At:** Completed 21.1-03-PLAN.md; next plan 21.1-04
+**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-04-PLAN.md
 
 ## Accumulated Context
 
@@ -156,6 +156,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 19 P06 | 34min | 2 tasks | 1 files |
 | Phase 21.1 P01 | 11min | 2 tasks | 3 files |
 | Phase 21.1 P02 | 16min | 3 tasks | 10 files |
+| Phase 21.1 P03 | 35min | 3 tasks | 10 files |
 
 ## Decisions
 
@@ -245,6 +246,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 21.1]: TransferInputOwner, both replay branches, ledger errors and notification ordering remain unchanged in shared payment helpers; dedicated V2 behavior belongs to later plans.
 - [Phase 21.1]: V2 accepts canonical signed payment bytes and derives identity only from its sole normalized hold outpoint at index zero.
 - [Phase 21.1]: Legacy release UTXOs remain inspectable marker data while generic payment parameters stay disabled.
+- [Phase 21.1]: Only approved canonical certificate lookup authorizes release; demonstrated binding contradictions reject and other failed lookups remain pending.
+- [Phase 21.1]: Typed local and witness rules derive authority from the actual hold output; ordinary Transfers retain strict source ownership and full V2 manager ingress belongs to plan 04.
 
 ## Deferred Items
 
