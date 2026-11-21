@@ -2676,6 +2676,61 @@ void CertificateFallbackTest::RejectLocalTxThroughConsensus( const std::shared_p
  * the burn entry must be GONE everywhere and nothing may linger under the
  * burn-ref reservation id.
  */
+TEST_F( CertificateFallbackTest, CanonicalNonceLookupFindsCustomSlotCertificate )
+{
+    const auto hold = base::Hash256::fromHex( std::string( 64, 'b' ) ).value();
+    const auto release = MakeRelease( *account_, hold, 91, { { 17, account_->GetAddress(), kTestTokenId } } );
+    const auto certificate = BuildSignedCertificate( release );
+    ASSERT_TRUE( certificate.has_value() );
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    PersistCertificateAtSlot( release->GetSlotID(), certificate.value() );
+    ASSERT_TRUE( db_->Get( TransactionManager::GetTransactionPath( *release ) ).has_error() );
+    const auto found = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 91, release->GetHash() );
+    ASSERT_TRUE( found.has_value() );
+    EXPECT_EQ( found.value().SerializeAsString(), certificate.value().SerializeAsString() );
+    EXPECT_TRUE( TransactionManager::CertificateMatchesTransaction( found.value(), *release ) );
+    EXPECT_TRUE( db_->Get( "/cert/" + release->GetHash() ).has_error() );
+}
+
+TEST_F( CertificateFallbackTest, CanonicalNonceLookupRejectsInvalidBindings )
+{
+    auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
+    CertificateFallbackTestAccess::ParkRoundTimer( manager );
+    const auto hold = base::Hash256::fromHex( std::string( 64, 'c' ) ).value();
+    const auto release = MakeRelease( *account_, hold, 92, { { 17, account_->GetAddress(), kTestTokenId } } );
+    const auto certificate = BuildSignedCertificate( release );
+    ASSERT_TRUE( certificate.has_value() );
+    PersistCertificateAtSlot( release->GetSlotID(), certificate.value() );
+    for ( const auto &result : { blockchain_->FindCertificateByNonceSubject( "different-account", 92 ),
+                                blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 93 ),
+                                blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, "wrong-hash" ) } )
+    {
+        ASSERT_TRUE( result.has_error() );
+        EXPECT_EQ( result.error(), storage::DatabaseError::NOT_FOUND );
+    }
+    auto corrupt = certificate.value();
+    corrupt.mutable_votes( 0 )->set_signature( "invalid" );
+    PersistCertificateAtSlot( release->GetSlotID(), corrupt );
+    const auto invalid = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, release->GetHash() );
+    ASSERT_TRUE( invalid.has_error() );
+    EXPECT_EQ( invalid.error(), std::errc::invalid_argument );
+    PersistCertificateAtSlot( release->GetSlotID(), certificate.value() );
+    PersistCertificateAtSlot( "wrong-canonical-key", certificate.value() );
+    const auto wrong_key = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92 );
+    ASSERT_TRUE( wrong_key.has_error() );
+    EXPECT_EQ( wrong_key.error(), std::errc::invalid_argument );
+    ASSERT_TRUE( db_->Remove( { "/cert/wrong-canonical-key" }, {} ).has_value() );
+    const auto other_hold = base::Hash256::fromHex( std::string( 64, 'd' ) ).value();
+    const auto other = MakeRelease( *account_, other_hold, 92, { { 17, account_->GetAddress(), kTestTokenId } } );
+    const auto other_certificate = BuildSignedCertificate( other );
+    ASSERT_TRUE( other_certificate.has_value() );
+    PersistCertificateAtSlot( other->GetSlotID(), other_certificate.value() );
+    const auto ambiguous = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92 );
+    ASSERT_TRUE( ambiguous.has_error() );
+    EXPECT_EQ( ambiguous.error(), std::errc::invalid_argument );
+    EXPECT_TRUE( blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, release->GetHash() ).has_value() );
+}
+
 TEST_F( CertificateFallbackTest, BurnCleanup_LocalMintRejectedByConsensusRemovesBurnUtxoAndReservation )
 {
     const auto burn     = base::Hash256::fromReadableString( std::string( 64, 'b' ) ).value();
