@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
 status: executing
-stopped_at: Completed 21.1-04-PLAN.md; next plan 21.1-05
-last_updated: "2026-11-21T14:54:12.049Z"
-last_activity: 2026-11-21 -- Completed plan 21.1-04; next plan 05
+stopped_at: Completed 21.1-05-PLAN.md; next plan 21.1-06
+last_updated: "2026-11-21T15:16:53.877Z"
+last_activity: 2026-11-21 -- Completed plan 21.1-05; next plan 06
 progress:
   total_phases: 33
   completed_phases: 5
   total_plans: 47
-  completed_plans: 37
+  completed_plans: 38
   percent: 15
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
-Last activity: 2026-11-21 -- Completed plan 21.1-04; next plan 05
+Last activity: 2026-11-21 -- Completed plan 21.1-05; next plan 06
 
-Progress: [████████░░] 80%
+Progress: [████████░░] 83%
 
 ## Historical v1.2 Roadmap Snapshot
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-21T14:54:12.042Z
-**Stopped At:** Completed 21.1-04-PLAN.md; next plan 21.1-05
-**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-05-PLAN.md
+**Last session:** 2026-11-21T15:16:53.870Z
+**Stopped At:** Completed 21.1-05-PLAN.md; next plan 21.1-06
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -158,6 +158,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 21.1 P02 | 16min | 3 tasks | 10 files |
 | Phase 21.1 P03 | 35min | 3 tasks | 10 files |
 | Phase 21.1 P04 | 33m30s recorded verification window | 3 tasks | 6 files |
+| Phase 21.1 P05 | 19m04s | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -252,6 +253,8 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 21.1]: Historical application evidence is private and immutable, bound to the owning manager, canonical slot, exact signed transaction and original embedded bytes.
 - [Phase 21.1]: Ordinary Transfer preflight rejects known foreign owners before ledger mutation; historical escrow effects resolve the actual certified hold and genuine own spender.
 - [Phase 21.1]: Exact certificate binding does not establish pre-activation eligibility; final plan 08 operator boundary remains required.
+- [Phase 21.1]: Conflict identity excludes equal hashes and uses equal virtual slots or existing source/nonce; all certified ingress routes resolve every tracked contender.
+- [Phase 21.1]: Signature-only CONFIRMED is not finality without exact canonical certificate binding; retain existing certified BestHash arbitration and callback application-before-cleanup ordering.
 
 ## Deferred Items
 
