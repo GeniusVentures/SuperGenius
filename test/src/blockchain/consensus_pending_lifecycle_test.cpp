@@ -3430,6 +3430,149 @@ TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackStallsUntilPostCommitR
     sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
 }
 
+TEST_F( ConsensusPendingLifecycleTest, CertificateCallbackSnapshotSurvivesManagerShutdownAndRecoversOnce )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto journal = db_->GetWorkJournal();
+    ASSERT_TRUE( journal );
+
+    struct CallbackBarrier
+    {
+        std::mutex              mutex;
+        std::condition_variable cv;
+        bool                    started   = false;
+        bool                    released  = false;
+        bool                    timed_out = false;
+    };
+
+    auto              barrier         = std::make_shared<CallbackBarrier>();
+    const std::string blocker_pattern = "^/?cert/.+";
+    // A distinct, overlapping pattern runs first in the real callback snapshot,
+    // before Consensus's ^/?cert/[^/]+ callback can lock its weak manager.
+    ASSERT_TRUE( db_->RegisterNewElementCallback(
+        blocker_pattern,
+        [barrier]( sgns::crdt::CRDTCallbackManager::NewDataPair, const std::string & )
+        {
+            std::unique_lock lock( barrier->mutex );
+            barrier->started = true;
+            barrier->cv.notify_all();
+            barrier->timed_out = !barrier->cv.wait_for( lock,
+                                                        std::chrono::seconds( 15 ),
+                                                        [&] { return barrier->released; } );
+        } ) );
+
+    struct CallbackCleanup
+    {
+        std::shared_ptr<sgns::crdt::GlobalDB> db;
+        std::string                           pattern;
+        std::shared_ptr<CallbackBarrier>      barrier;
+        std::thread                           writer{};
+        bool                                  registered = true;
+
+        void ReleaseAndJoin()
+        {
+            {
+                std::lock_guard lock( barrier->mutex );
+                barrier->released = true;
+            }
+            barrier->cv.notify_all();
+            if ( writer.joinable() )
+            {
+                writer.join();
+            }
+            if ( registered )
+            {
+                db->UnregisterNewElementCallback( pattern );
+                registered = false;
+            }
+        }
+
+        ~CallbackCleanup()
+        {
+            ReleaseAndJoin();
+        }
+    } cleanup{ db_, blocker_pattern, barrier };
+
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+    const auto certificate = MakeCertificateForRegistry( account,
+                                                         registry->GetRegistryCid(),
+                                                         97,
+                                                         "0xcallback-snapshot-restart" );
+    ASSERT_EQ( sgns::ConsensusPendingLifecycleTestAccess::ValidateCertificate( manager, certificate ),
+               sgns::ConsensusManager::Check::Approve );
+    const auto key = sgns::ConsensusPendingLifecycleTestAccess::GetExpectedCertificateSlotKey( certificate );
+    ASSERT_FALSE( key.empty() );
+    std::string serialized;
+    ASSERT_TRUE( certificate.SerializeToString( &serialized ) );
+    sgns::crdt::GlobalDB::Buffer value;
+    value.put( serialized );
+
+    auto       write_succeeded = std::make_shared<std::atomic<bool>>( false );
+    const auto write_data      = std::make_shared<std::pair<std::string, sgns::crdt::GlobalDB::Buffer>>( key, value );
+    cleanup.writer             = std::thread(
+        [db = db_, write_data, write_succeeded]() noexcept
+        {
+            try
+            {
+                write_succeeded->store(
+                    db->PutConvergentImmutable( { write_data->first }, write_data->second, {} ).has_value() );
+            }
+            catch ( ... )
+            {
+                // Report an exceptional write through the checked result after joining.
+                write_succeeded->store( false );
+            }
+        } );
+    {
+        std::unique_lock lock( barrier->mutex );
+        ASSERT_TRUE( barrier->cv.wait_for( lock, std::chrono::seconds( 5 ), [&] { return barrier->started; } ) )
+            << "certificate write did not enter the callback snapshot";
+    }
+
+    std::weak_ptr<sgns::ConsensusManager> old_manager = manager;
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+    manager.reset();
+    ASSERT_TRUE( old_manager.expired() ) << "the snapshot must outlive the manager itself";
+
+    cleanup.ReleaseAndJoin();
+    ASSERT_FALSE( barrier->timed_out );
+    ASSERT_TRUE( write_succeeded->load() );
+    const auto stored = db_->Get( { key } );
+    ASSERT_TRUE( stored.has_value() );
+    EXPECT_EQ( std::string( stored.value().toString() ), serialized );
+
+    // The blocker auto-completes Processing before the expired Consensus
+    // callback runs. That callback must recreate retryable work for restart.
+    const auto entry = journal->GetEntry( key );
+    EXPECT_TRUE( entry.has_value() ) << "the expired callback lost durable certificate work";
+    if ( entry.has_value() )
+    {
+        EXPECT_EQ( entry->state, sgns::crdt::CRDTWorkJournal::State::Stalled );
+    }
+
+    auto handler_calls = std::make_shared<std::atomic<int>>( 0 );
+    auto restarted     = MakeSigningManager( registry, account );
+    ASSERT_TRUE( restarted );
+    ASSERT_TRUE( restarted->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [handler_calls, proposal_id = certificate.proposal_id()]( const std::string &,
+                                                                  const sgns::ConsensusManager::Certificate &recovered )
+        {
+            EXPECT_EQ( recovered.proposal_id(), proposal_id );
+            ++*handler_calls;
+            return outcome::success( sgns::ConsensusManager::Check::Approve );
+        } ) );
+    EXPECT_EQ( handler_calls->load(), 1 );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasCertificateWork( restarted, key ) );
+    sgns::ConsensusPendingLifecycleTestAccess::RecoverPendingCertificateWork( restarted );
+    EXPECT_EQ( handler_calls->load(), 1 );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( restarted );
+}
+
 TEST_F( ConsensusPendingLifecycleTest, DurableCertificateWaitsForHandlerRegistrationBeforeFinalizing )
 {
     auto account = MakeSigningAccount();

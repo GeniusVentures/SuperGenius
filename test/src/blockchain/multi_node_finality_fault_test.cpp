@@ -546,6 +546,7 @@ namespace
             std::thread                                      io_thread;
             std::string                                      active_vote_diagnostic_slot;
             std::string                                      active_vote_diagnostic_key;
+            std::string                                      certificate_diagnostic_key;
             ActiveVoteLifecycleSnapshot                      after_consensus_manager_close;
             ActiveVoteLifecycleSnapshot                      after_manager_ownership_release;
             ActiveVoteLifecycleSnapshot                      after_same_root_globaldb_reopen_before_manager;
@@ -568,6 +569,7 @@ namespace
                 io_thread( std::move( other.io_thread ) ),
                 active_vote_diagnostic_slot( std::move( other.active_vote_diagnostic_slot ) ),
                 active_vote_diagnostic_key( std::move( other.active_vote_diagnostic_key ) ),
+                certificate_diagnostic_key( std::move( other.certificate_diagnostic_key ) ),
                 after_consensus_manager_close( std::move( other.after_consensus_manager_close ) ),
                 after_manager_ownership_release( std::move( other.after_manager_ownership_release ) ),
                 after_same_root_globaldb_reopen_before_manager(
@@ -595,6 +597,7 @@ namespace
                 io_thread                                      = std::move( other.io_thread );
                 active_vote_diagnostic_slot                    = std::move( other.active_vote_diagnostic_slot );
                 active_vote_diagnostic_key                     = std::move( other.active_vote_diagnostic_key );
+                certificate_diagnostic_key                     = std::move( other.certificate_diagnostic_key );
                 after_consensus_manager_close                  = std::move( other.after_consensus_manager_close );
                 after_manager_ownership_release                = std::move( other.after_manager_ownership_release );
                 after_same_root_globaldb_reopen_before_manager = std::move(
@@ -629,6 +632,20 @@ namespace
                 Stop();
             }
 
+            void PrintCertificateWork( const char *boundary ) const
+            {
+                if ( !db || certificate_diagnostic_key.empty() )
+                {
+                    return;
+                }
+                const auto entry = db->GetWorkJournal()->GetEntry( certificate_diagnostic_key );
+                std::cout << "ESCROW_RECOVERY peer=" << name << " boundary=" << boundary
+                          << " work=" << ( entry ? static_cast<int>( entry->state ) : -1 )
+                          << " attempts=" << ( entry ? entry->attempt_count : 0 )
+                          << " updated=" << ( entry ? entry->updated_at_ms : 0 )
+                          << " lease=" << ( entry ? entry->lease_until_ms : 0 ) << '\n';
+            }
+
             void Stop() noexcept
             {
                 if ( transactions )
@@ -644,6 +661,7 @@ namespace
                 {
                     consensus->Close();
                 }
+                PrintCertificateWork( "consensus-closed" );
                 after_consensus_manager_close = Snapshot( db, active_vote_diagnostic_key );
                 consensus.reset();
                 blockchain.reset();
@@ -1227,12 +1245,16 @@ namespace
         /// StartPeer). Fixture-scoped so restarts keep the original.
         std::string genesis_authority_address_;
 
-        Peer StartPeer( const std::string &name, uint16_t port, std::string active_vote_diagnostic_key = {} )
+        Peer StartPeer( const std::string &name,
+                        uint16_t           port,
+                        std::string        active_vote_diagnostic_key = {},
+                        std::string        certificate_diagnostic_key = {} )
         {
             Peer peer;
             peer.name                       = name;
             peer.port                       = port;
             peer.active_vote_diagnostic_key = std::move( active_vote_diagnostic_key );
+            peer.certificate_diagnostic_key = std::move( certificate_diagnostic_key );
             peer.root                       = ( base_path / name ).string();
             boost::filesystem::create_directories( peer.root );
             peer.io      = std::make_shared<boost::asio::io_context>();
@@ -1296,6 +1318,7 @@ namespace
                 return peer;
             }
             peer.db = std::move( db.value() );
+            peer.PrintCertificateWork( "database-reopened-before-manager" );
             peer.db->Start();
             peer.after_same_root_globaldb_reopen_before_manager = Peer::Snapshot( peer.db,
                                                                                   peer.active_vote_diagnostic_key );
@@ -1359,10 +1382,11 @@ namespace
             const auto name                       = peer.name;
             const auto port                       = peer.port;
             const auto active_vote_diagnostic_key = peer.active_vote_diagnostic_key;
+            const auto certificate_diagnostic_key = peer.certificate_diagnostic_key;
             StopPeer( peer );
             auto after_consensus_manager_close        = std::move( peer.after_consensus_manager_close );
             auto after_manager_ownership_release      = std::move( peer.after_manager_ownership_release );
-            auto restarted                            = StartPeer( name, port, active_vote_diagnostic_key );
+            auto restarted = StartPeer( name, port, active_vote_diagnostic_key, certificate_diagnostic_key );
             restarted.after_consensus_manager_close   = std::move( after_consensus_manager_close );
             restarted.after_manager_ownership_release = std::move( after_manager_ownership_release );
             peer                                      = std::move( restarted );
@@ -1969,6 +1993,42 @@ namespace
                                 { return ledger.GetBalance( kToken, entry.first ) == entry.second * multiplier; } );
         }
 
+        static void PrintEscrowRecovery( Peer                                   &peer,
+                                         const char                             *boundary,
+                                         const sgns::EscrowTransaction          &hold,
+                                         const sgns::EscrowReleaseTransactionV2 &winner )
+        {
+            peer.certificate_diagnostic_key = "/cert/" + winner.GetSlotID();
+            peer.PrintCertificateWork( boundary );
+            const auto &ledger = peer.account->GetUTXOManager();
+            const auto  hash   = sgns::base::Hash256::fromHex( hold.GetHash() );
+            ASSERT_TRUE( hash.has_value() );
+            const auto spender = ledger.GetOutPointSpender( hash.value(), 0 );
+            std::cout << "ESCROW_LEDGER peer=" << peer.name << " boundary=" << boundary
+                      << " spender=" << ( spender ? spender->toReadableString() : "absent" )
+                      << " genuine=" << ledger.IsOutPointGenuinelyConsumed( hash.value(), 0 ) << " tracked="
+                      << sgns::MultiNodeFinalityFaultTestAccess::TrackedTransactionState( *peer.transactions,
+                                                                                          winner.GetHash() )
+                      << '\n';
+            const auto outputs = winner.GetProducedUTXOs();
+            if ( !outputs.has_value() )
+            {
+                FAIL() << "The canonical winner has no output description";
+            }
+            for ( const auto &output : outputs.value() )
+            {
+                const auto actual  = ledger.GetUTXOs( output.GetOwnerAddress() );
+                const auto present = std::any_of(
+                    actual.begin(),
+                    actual.end(),
+                    [&]( const auto &utxo )
+                    { return utxo.GetTxID() == output.GetTxID() && utxo.GetOutputIdx() == output.GetOutputIdx(); } );
+                std::cout << "ESCROW_RECOVERY_OUTPUT peer=" << peer.name << " boundary=" << boundary
+                          << " index=" << output.GetOutputIdx() << " present=" << present
+                          << " balance=" << ledger.GetBalance( kToken, output.GetOwnerAddress() ) << '\n';
+            }
+        }
+
         static void AssertOneLiveMintEffect( const Peer &peer )
         {
             ASSERT_TRUE( peer.transactions );
@@ -2278,6 +2338,10 @@ TEST_F( FinalityFaultNetwork, EscrowReleaseDelayedDeliveryRestartAndCatchupPaysO
         {
             std::swap( winner, loser );
         }
+        for ( auto *peer : Peers( network ) )
+        {
+            PrintEscrowRecovery( *peer, "before-restart", *hold, *winner );
+        }
         EXPECT_FALSE( network.passive.consensus->CheckCertificateForSlot( winner->GetSlotID() ) );
         if ( leg == 0 )
         {
@@ -2302,6 +2366,10 @@ TEST_F( FinalityFaultNetwork, EscrowReleaseDelayedDeliveryRestartAndCatchupPaysO
                 ->RequestHeadBroadcast( std::set<std::string>( monitored.value().begin(), monitored.value().end() ) )
                 .has_value() );
         const auto peers = Peers( network );
+        for ( auto *peer : peers )
+        {
+            PrintEscrowRecovery( *peer, "after-restart", *hold, *winner );
+        }
         ASSERT_WAIT_FOR_CONDITION(
             [&]
             {
@@ -2316,6 +2384,10 @@ TEST_F( FinalityFaultNetwork, EscrowReleaseDelayedDeliveryRestartAndCatchupPaysO
             std::chrono::seconds( 25 ),
             "restart and passive catch-up preserve one complete payment",
             nullptr );
+        for ( auto *peer : peers )
+        {
+            PrintEscrowRecovery( *peer, "after-catchup", *hold, *winner );
+        }
         for ( auto *peer : peers )
         {
             const auto canonical = peer->consensus->GetCertificateBySlot( winner->GetSlotID() );
