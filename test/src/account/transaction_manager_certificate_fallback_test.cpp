@@ -104,6 +104,15 @@ namespace sgns
             return tm.FetchAndProcessTransaction( key, std::move( data ) );
         }
 
+        /// @brief Drives the real CRDT new-element consumer independently of startup fetch.
+        static outcome::result<void> AddTransactionToProcessedMaps( TransactionManager      &tm,
+                                                                    const GeniusTransaction &tx )
+        {
+            base::Buffer value;
+            value.put( tx.SerializeByteVector() );
+            return tm.AddTransactionToProcessedMaps( { TransactionManager::GetTransactionPath( tx ), value } );
+        }
+
         static outcome::result<std::optional<std::shared_ptr<GeniusTransaction>>> FetchExactTransactionFromCRDT(
             TransactionManager &tm,
             const std::string  &tx_hash )
@@ -655,6 +664,162 @@ public:
             std::move( serialized ) );
     }
 
+    enum class EscrowIngress : uint8_t
+    {
+        TRACKED,
+        EMBEDDED,
+        CRDT,
+        FETCH,
+        EXACT_CRDT
+    };
+
+    /// @brief Exercises one certified winner order against every real tracked contender and ledger effect.
+    void ExerciseEscrowWinnerIngress( EscrowIngress ingress, uint64_t nonce )
+    {
+        CertificateFallbackTestAccess::ParkRoundTimer(
+            CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+        const auto peer            = GeniusAccount::NewEphemeral( kTestTokenId );
+        const auto winner_peer     = GeniusAccount::NewEphemeral( kTestTokenId );
+        const auto loser_recipient = GeniusAccount::NewEphemeral( kTestTokenId );
+        ASSERT_TRUE( peer );
+        ASSERT_TRUE( winner_peer );
+        ASSERT_TRUE( loser_recipient );
+        const auto hold = SeedEscrowHold( nonce );
+        ASSERT_TRUE( hold );
+        const auto                        hold_hash = base::Hash256::fromHex( hold->GetHash() ).value();
+        const std::vector<OutputDestInfo> local_outputs{ { 17, loser_recipient->GetAddress(), kTestTokenId } };
+        const std::vector<OutputDestInfo> winner_outputs{ { 7, account_->GetAddress(), kTestTokenId },
+                                                          { 6, winner_peer->GetAddress(), kTestTokenId },
+                                                          { 4, peer->GetAddress(), kTestTokenId } };
+        auto                              local = MakeRelease( *account_, hold_hash, nonce + 1, local_outputs );
+        const auto remote = MakeRelease( *peer, hold_hash, nonce + 2, { { 17, peer->GetAddress(), kTestTokenId } } );
+        auto       winner = MakeRelease( *winner_peer, hold_hash, nonce + 3, winner_outputs );
+        constexpr uint64_t MAX_HASH_PAIRS = 64;
+        for ( uint64_t attempt = 1; attempt < MAX_HASH_PAIRS &&
+                                    Blockchain::BestHash( local->GetHash(), winner->GetHash() ) != local->GetHash();
+              ++attempt )
+        {
+            local  = MakeRelease( *account_, hold_hash, nonce + 1 + 4 * attempt, local_outputs );
+            winner = MakeRelease( *winner_peer, hold_hash, nonce + 3 + 4 * attempt, winner_outputs );
+        }
+        ASSERT_EQ( Blockchain::BestHash( local->GetHash(), winner->GetHash() ), local->GetHash() );
+        auto      &ledger        = account_->GetUTXOManager();
+        const auto local_balance = ledger.GetBalance();
+        ASSERT_NE( local->GetHash(), remote->GetHash() );
+        ASSERT_NE( local->GetHash(), winner->GetHash() );
+        ASSERT_EQ( local->GetSlotID(), remote->GetSlotID() );
+        ASSERT_EQ( local->GetSlotID(), winner->GetSlotID() );
+        ASSERT_TRUE( FetchAndProcess( remote ).has_value() );
+        ASSERT_TRUE( FetchAndProcess( local ).has_value() );
+        ASSERT_TRUE(
+            CertificateFallbackTestAccess::CheckTransactionValidity( *tm_, { local->GetNonce() } ).has_value() );
+        const auto local_before  = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, local->GetHash() );
+        const auto remote_before = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, remote->GetHash() );
+        if ( !local_before.has_value() || !remote_before.has_value() )
+        {
+            FAIL() << "both contenders must be tracked before winner ingress";
+        }
+        ASSERT_EQ( local_before->status, TransactionManager::TransactionStatus::CONFIRMED );
+        ASSERT_FALSE( local_before->effects_applied );
+        ASSERT_EQ( remote_before->status, TransactionManager::TransactionStatus::VERIFYING );
+        ASSERT_FALSE( ledger.GetOutPointSpender( hold_hash, 0 ) );
+        if ( ingress == EscrowIngress::TRACKED )
+        {
+            ASSERT_TRUE( FetchAndProcess( winner ).has_value() );
+        }
+        else if ( ingress == EscrowIngress::EXACT_CRDT )
+        {
+            PersistTransaction( winner );
+        }
+        const auto before = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+        EXPECT_EQ( before.has_value(), ingress == EscrowIngress::TRACKED );
+        if ( before.has_value() )
+        {
+            EXPECT_EQ( before->status, TransactionManager::TransactionStatus::VERIFYING );
+        }
+        const auto stored = CertificateFallbackTestAccess::FetchExactTransactionFromCRDT( *tm_, winner->GetHash() );
+        ASSERT_TRUE( stored.has_value() );
+        EXPECT_EQ( stored.value().has_value(), ingress == EscrowIngress::EXACT_CRDT );
+        const auto certificate = BuildSignedCertificate( winner );
+        ASSERT_TRUE( certificate.has_value() );
+        PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+        ASSERT_TRUE( blockchain_->GetCertificateBySlot( winner->GetSlotID() ).has_value() );
+        // A loser is never the certificate's subject, even when it retrieves the same slot record.
+        const auto borrowed = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                     local->GetHash(),
+                                                                                     certificate.value() );
+        ASSERT_TRUE( borrowed.has_value() );
+        EXPECT_EQ( borrowed.value(), ConsensusManager::Check::Approve );
+        EXPECT_FALSE( ledger.GetOutPointSpender( hold_hash, 0 ) );
+        EXPECT_EQ( ledger.GetBalance(), local_balance );
+        if ( ingress == EscrowIngress::CRDT )
+        {
+            ASSERT_TRUE( CertificateFallbackTestAccess::AddTransactionToProcessedMaps( *tm_, *winner ).has_value() );
+        }
+        else if ( ingress == EscrowIngress::FETCH )
+        {
+            ASSERT_TRUE( FetchAndProcess( winner ).has_value() );
+        }
+        else
+        {
+            const auto result = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                       winner->GetHash(),
+                                                                                       certificate.value() );
+            ASSERT_TRUE( result.has_value() );
+            EXPECT_EQ( result.value(), ConsensusManager::Check::Approve );
+        }
+        const auto confirmed = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+        if ( !confirmed.has_value() )
+        {
+            FAIL() << "the certified winner must be tracked";
+        }
+        EXPECT_EQ( confirmed->status, TransactionManager::TransactionStatus::CONFIRMED );
+        EXPECT_TRUE( confirmed->effects_applied );
+        const auto winner_hash = base::Hash256::fromHex( winner->GetHash() ).value();
+        EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ winner_hash } );
+        EXPECT_FALSE( ledger.GetUnconsumedUTXO( hold_hash, 0 ) );
+        for ( const auto &loser : { local, remote } )
+        {
+            const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, loser->GetHash() );
+            if ( !tracked.has_value() )
+            {
+                FAIL() << "winner cleanup must retain the failed contender";
+            }
+            EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::FAILED );
+            EXPECT_FALSE( ledger.GetUnconsumedUTXO( base::Hash256::fromHex( loser->GetHash() ).value(), 0 ) );
+        }
+        const auto expected_outputs = winner->GetProducedUTXOs();
+        if ( !expected_outputs.has_value() )
+        {
+            FAIL() << "a release must expose its actual produced outputs";
+        }
+        ASSERT_EQ( expected_outputs->size(), 3U );
+        for ( const auto &expected : *expected_outputs )
+        {
+            const auto actual = ledger.GetUnconsumedUTXO( winner_hash, expected.GetOutputIdx() );
+            if ( !actual.has_value() )
+            {
+                FAIL() << "every entitled payout output must exist";
+            }
+            EXPECT_EQ( actual->GetOwnerAddress(), expected.GetOwnerAddress() );
+            EXPECT_EQ( actual->GetAmount(), expected.GetAmount() );
+            EXPECT_EQ( actual->GetTokenID(), expected.GetTokenID() );
+        }
+        EXPECT_FALSE( ledger.GetUnconsumedUTXO( winner_hash, 3 ) );
+        EXPECT_EQ( ledger.GetBalance(), local_balance + 7U );
+        EXPECT_EQ( ledger.GetBalance( winner_peer->GetAddress() ), 6U );
+        EXPECT_EQ( ledger.GetBalance( peer->GetAddress() ), 4U );
+        EXPECT_EQ( ledger.GetBalance( loser_recipient->GetAddress() ), 0U );
+        // Duplicate delivery cannot add outputs or disturb the winner's input ownership.
+        ASSERT_TRUE(
+            CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() )
+                .has_value() );
+        EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ winner_hash } );
+        EXPECT_EQ( ledger.GetBalance(), local_balance + 7U );
+        EXPECT_EQ( ledger.GetBalance( winner_peer->GetAddress() ), 6U );
+        EXPECT_EQ( ledger.GetBalance( peer->GetAddress() ), 4U );
+    }
+
     /**
      * @brief Seeds one frontier transaction into the exact state the Phase-16
      *        erase lifecycle requires (17-03 / GATE-04 SC-3).
@@ -1119,6 +1284,52 @@ TEST_F( CertificateFallbackTest, LegacyTransferPayoutReplaysOnlyWithExactCanonic
         EXPECT_EQ( output->GetTokenID(), kTestTokenId );
         EXPECT_EQ( ledger.GetBalance(), balance + 17U );
     }
+}
+
+TEST_F( CertificateFallbackTest, CrossPeerEscrowWinnerClearsAllUncertifiedContenders )
+{
+    ExerciseEscrowWinnerIngress( EscrowIngress::TRACKED, 200 );
+}
+
+TEST_F( CertificateFallbackTest, EscrowWinnerIngressOrdersPreserveExactBinding )
+{
+    uint64_t nonce = 300;
+    for ( const auto ingress :
+          { EscrowIngress::EMBEDDED, EscrowIngress::CRDT, EscrowIngress::FETCH, EscrowIngress::EXACT_CRDT } )
+    {
+        SCOPED_TRACE( static_cast<int>( ingress ) );
+        ExerciseEscrowWinnerIngress( ingress, nonce );
+        nonce += 1000;
+    }
+}
+
+TEST_F( CertificateFallbackTest, CanonicalSlotConflictPreservesSenderNonceRules )
+{
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    const auto signer = GeniusAccount::NewEphemeral( kTestTokenId );
+    ASSERT_TRUE( signer );
+    const auto                        first_hold = base::Hash256::fromHex( std::string( 64, 'd' ) ).value();
+    const auto                        other_hold = base::Hash256::fromHex( std::string( 64, 'f' ) ).value();
+    const std::vector<OutputDestInfo> outputs{ { 17, signer->GetAddress(), kTestTokenId } };
+    const auto                        same_nonce = MakeRelease( *signer, first_hold, 400, outputs );
+    const auto                        other_slot = MakeRelease( *signer, other_hold, 400, outputs );
+    const auto                        same_slot  = MakeRelease( *account_, first_hold, 401, outputs );
+    ASSERT_NE( same_nonce->GetSlotID(), other_slot->GetSlotID() );
+    ASSERT_EQ( same_nonce->GetSlotID(), same_slot->GetSlotID() );
+    ASSERT_TRUE( FetchAndProcess( same_nonce ).has_value() );
+    EXPECT_EQ( tm_->GetConflictingTransactions( *same_nonce ).size(), 0U );
+    EXPECT_EQ( tm_->GetConflictingTransactions( *other_slot ).size(), 1U );
+    EXPECT_EQ( tm_->GetConflictingTransactions( *same_slot ).size(), 1U );
+    EXPECT_TRUE( tm_->GetConflictingTransaction( *other_slot ).has_value() );
+    EXPECT_TRUE( tm_->GetConflictingTransaction( *same_slot ).has_value() );
+    const auto ordinary  = MakeTransfer( signer->GetAddress(), 400 );
+    const auto unrelated = MakeTransfer( signer->GetAddress(), 402 );
+    EXPECT_EQ( tm_->GetConflictingTransactions( *ordinary ).size(), 1U );
+    EXPECT_TRUE( tm_->GetConflictingTransaction( *ordinary ).has_value() );
+    EXPECT_TRUE( tm_->GetConflictingTransactions( *unrelated ).empty() );
+    EXPECT_TRUE( tm_->GetConflictingTransaction( *unrelated ).has_error() );
+    EXPECT_FALSE( account_->GetUTXOManager().GetOutPointSpender( first_hold, 0 ) );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
 }
 
 TEST_F( CertificateFallbackTest, SharedEscrowReleaseSlotConfirmsOnlyTheCertifiedTransaction )
