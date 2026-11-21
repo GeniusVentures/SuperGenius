@@ -886,6 +886,13 @@ namespace sgns
         static constexpr std::string_view kBridgeKeySeparator   = ":";
 
         outcome::result<void> ParseTransferTransaction( const GeniusTransaction &tx );
+        /**
+         * @brief Applies payment inputs and outputs with the existing replay contract.
+         * @param[in] payment Transaction supplying UTXO payment parameters.
+         * @param[in] input_owner Resolved owner of the consumed inputs.
+         * @return Success after consumption and production, or the original ledger error.
+         */
+        outcome::result<void> ApplyUTXOPayment( const GeniusTransaction &payment, const std::string &input_owner );
         outcome::result<void> ParseMintTransaction( const GeniusTransaction &tx );
         outcome::result<void> ParseEscrowTransaction( const GeniusTransaction &tx );
         outcome::result<void> RevertTransferTransaction( const GeniusTransaction &tx );

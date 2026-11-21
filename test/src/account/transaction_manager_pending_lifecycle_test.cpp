@@ -389,6 +389,30 @@ namespace
 
     class TransactionDeletionRecoveryTest : public TransactionManagerPreviousHashTest
     {
+    protected:
+        /// @brief Builds a signed transfer over a supplied input without bypassing the production parser.
+        std::shared_ptr<sgns::TransferTransaction> MakePaymentTransfer( const sgns::GeniusUTXO           &input,
+                                                                        std::vector<sgns::OutputDestInfo> outputs,
+                                                                        std::string uncle_hash = {} )
+        {
+            auto dag = MakeDAG( account_->ReserveNextNonce(), input.GetTxID().toReadableString() );
+            dag.set_uncle_hash( std::move( uncle_hash ) );
+            auto transfer = std::make_shared<sgns::TransferTransaction>(
+                sgns::TransferTransaction::New( account_->CreateInputsFromUTXOs( { input } ),
+                                                std::move( outputs ),
+                                                std::move( dag ) ) );
+            transfer->MakeSignature( *account_ );
+            return transfer;
+        }
+
+        /// @brief Applies through the normal confirmation path, including its effects bookkeeping.
+        outcome::result<void> ConfirmPayment( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+        {
+            return sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+                *manager_,
+                transaction,
+                sgns::TransactionManager::TransactionStatus::CONFIRMED );
+        }
     };
 } // namespace
 
@@ -658,6 +682,89 @@ TEST_F( TransactionManagerPreviousHashTest, TrackedPreviousHashPrefersConfirmedC
 
     EXPECT_EQ( transaction->GetNonce(), 2U );
     EXPECT_EQ( transaction->GetPreviousHash(), confirmed_transaction->GetHash() );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, SharedPaymentTransferApplyPreservesEffects )
+{
+    auto                  &utxo_manager = account_->GetUTXOManager();
+    const auto             funding_hash = sgns::base::Hash256::fromReadableString( std::string( 64, '4' ) ).value();
+    const sgns::GeniusUTXO funding( funding_hash, 0, 9, kTokenId, account_->GetAddress() );
+    ASSERT_TRUE( utxo_manager.PutUTXO( funding, funding.GetOwnerAddress() ).has_value() );
+
+    const std::string                       destination_a = "0x" + std::string( 64, 'a' );
+    const std::string                       destination_b = "0x" + std::string( 64, 'b' );
+    const std::vector<sgns::OutputDestInfo> destinations{ { 4, destination_a, kTokenId },
+                                                          { 3, destination_b, kTokenId },
+                                                          { 2, account_->GetAddress(), kTokenId } };
+    const auto                              transfer = MakePaymentTransfer( funding, destinations );
+    const auto transfer_hash = sgns::base::Hash256::fromReadableString( transfer->GetHash() ).value();
+
+    auto expect_outputs = [&]()
+    {
+        for ( size_t index = 0; index < destinations.size(); ++index )
+        {
+            const auto &destination = destinations.at( index );
+            const auto  output      = utxo_manager.GetUnconsumedUTXO( transfer_hash, static_cast<uint32_t>( index ) );
+            ASSERT_TRUE( output.has_value() );
+            EXPECT_EQ( output->GetTxID(), transfer_hash );
+            EXPECT_EQ( output->GetOutputIdx(), index );
+            EXPECT_EQ( output->GetOwnerAddress(), destination.dest_address );
+            EXPECT_EQ( output->GetTokenID(), destination.token_id );
+            EXPECT_EQ( output->GetAmount(), destination.encrypted_amount );
+            EXPECT_EQ( utxo_manager.GetUnconsumedUTXOs( destination.dest_address ).size(), 1U );
+            EXPECT_EQ( utxo_manager.GetBalance( destination.dest_address ), destination.encrypted_amount );
+        }
+        EXPECT_FALSE(
+            utxo_manager.GetOutPointState( transfer_hash, static_cast<uint32_t>( destinations.size() ) ).has_value() );
+    };
+
+    ASSERT_TRUE( ConfirmPayment( transfer ).has_value() );
+    EXPECT_TRUE( utxo_manager.IsOutPointConsumed( funding_hash, 0 ) );
+    EXPECT_EQ( utxo_manager.GetOutPointSpender( funding_hash, 0 ), std::optional{ transfer_hash } );
+    expect_outputs();
+
+    // Forget only the tracking record so confirmation executes the outputs-present replay branch.
+    ASSERT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ForgetTrackedTx( *manager_, transfer->GetHash() ),
+               1U );
+    ASSERT_TRUE( ConfirmPayment( transfer ).has_value() );
+    expect_outputs();
+
+    // A rebuild can lose the outputs while retaining the legitimate spender's consumed evidence.
+    for ( size_t index = 0; index < destinations.size(); ++index )
+    {
+        ASSERT_TRUE(
+            utxo_manager
+                .DeleteUTXO( transfer_hash, static_cast<uint32_t>( index ), destinations.at( index ).dest_address )
+                .has_value() );
+        ASSERT_FALSE( utxo_manager.GetOutPointState( transfer_hash, static_cast<uint32_t>( index ) ).has_value() );
+    }
+    ASSERT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ForgetTrackedTx( *manager_, transfer->GetHash() ),
+               1U );
+    ASSERT_TRUE( ConfirmPayment( transfer ).has_value() );
+    expect_outputs();
+
+    const std::string losing_destination = "0x" + std::string( 64, 'c' );
+    const auto        competitor         = MakePaymentTransfer( funding, { { 9, losing_destination, kTokenId } } );
+    const auto        rejected           = ConfirmPayment( competitor );
+    ASSERT_TRUE( rejected.has_error() );
+    EXPECT_EQ( rejected.error(), std::errc::invalid_argument );
+    EXPECT_FALSE(
+        utxo_manager.GetOutPointState( sgns::base::Hash256::fromReadableString( competitor->GetHash() ).value(), 0 )
+            .has_value() );
+    EXPECT_EQ( utxo_manager.GetBalance( losing_destination ), 0U );
+    EXPECT_EQ( utxo_manager.GetOutPointSpender( funding_hash, 0 ), std::optional{ transfer_hash } );
+    const auto tracked = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
+                                                                                           competitor->GetHash() );
+    if ( tracked.has_value() )
+    {
+        EXPECT_EQ( tracked->status, sgns::TransactionManager::TransactionStatus::VERIFYING );
+        EXPECT_FALSE( tracked->effects_applied );
+    }
+    else
+    {
+        FAIL() << "rejected payment must retain a retryable tracking record";
+    }
+    expect_outputs();
 }
 
 TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsumedInputs )

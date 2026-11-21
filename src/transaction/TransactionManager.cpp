@@ -2693,19 +2693,30 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        auto dest_infos = transfer_tx->GetDstInfos();
+        return ApplyUTXOPayment( *transfer_tx, TransferInputOwner( *transfer_tx ) );
+    }
+
+    outcome::result<void> TransactionManager::ApplyUTXOPayment( const GeniusTransaction &payment,
+                                                                const std::string       &input_owner )
+    {
+        const auto params = payment.GetUTXOParametersOpt();
+        if ( !params )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto &dest_infos = params->second;
 
         // Idempotent replay (startup verification of already-applied transactions) finds every
         // output present already; any other transfer spending an already-consumed input is a
         // double spend and must fail before the destinations get credited a second time.
         auto &utxo_mgr = account_m->GetUTXOManager();
-        auto  inputs   = transfer_tx->GetInputInfos();
+        auto  inputs   = params->first;
         if ( std::any_of( inputs.begin(),
                           inputs.end(),
                           [&utxo_mgr]( const InputUTXOInfo &input )
                           { return utxo_mgr.IsOutPointConsumed( input.txid_hash_, input.output_idx_ ); } ) )
         {
-            const auto outputs = transfer_tx->GetProducedUTXOs();
+            const auto outputs = payment.GetProducedUTXOs();
             const bool replayed =
                 outputs && !outputs->empty() &&
                 std::all_of(
@@ -2726,7 +2737,7 @@ namespace sgns
             if ( !replayed )
             {
                 std::optional<base::Hash256> own_txid;
-                if ( auto parsed = base::Hash256::fromReadableString( transfer_tx->GetHash() ); parsed.has_value() )
+                if ( auto parsed = base::Hash256::fromReadableString( payment.GetHash() ); parsed.has_value() )
                 {
                     own_txid = parsed.value();
                 }
@@ -2746,12 +2757,12 @@ namespace sgns
                 if ( own_replay )
                 {
                     m_logger->info( "Recognized own rebuild replay of transfer {} over preserved spend evidence",
-                                    transfer_tx->GetHash() );
+                                    payment.GetHash() );
                 }
             }
             if ( !own_replay && !replayed )
             {
-                m_logger->error( "Rejected double-spending transfer {}", transfer_tx->GetHash() );
+                m_logger->error( "Rejected double-spending transfer {}", payment.GetHash() );
                 return std::errc::invalid_argument;
             }
         }
@@ -2761,20 +2772,20 @@ namespace sgns
             m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
             m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
-        auto transfer_txid = base::Hash256::fromReadableString( transfer_tx->GetHash() );
+        auto transfer_txid = base::Hash256::fromReadableString( payment.GetHash() );
         if ( transfer_txid.has_error() )
         {
             // WR-01: data_hash is raw dag bytes that migration seeds or
             // corruption can leave malformed — fail closed through the
             // outcome channel, never throw through the processing stack.
-            m_logger->error( "Transfer {} has malformed data_hash", transfer_tx->GetHash() );
+            m_logger->error( "Transfer {} has malformed data_hash", payment.GetHash() );
             return outcome::failure( transfer_txid.error() );
         }
         BOOST_OUTCOME_TRY( utxo_mgr.ConsumeUTXOs( inputs,
-                                                  TransferInputOwner( *transfer_tx ),
+                                                  input_owner,
                                                   sgns::UTXOManager::UTXOType::UTXO_NORMAL,
                                                   transfer_txid.value() ) );
-        BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
+        BOOST_OUTCOME_TRY( PutProducedUTXOs( payment ) );
         for ( const auto &dest_info : dest_infos )
         {
             m_logger->debug( "Notify {} of transfer of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
