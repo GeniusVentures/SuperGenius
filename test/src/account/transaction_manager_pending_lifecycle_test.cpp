@@ -13,6 +13,7 @@
 #include "transaction/TransactionManager.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/EscrowReleaseTransactionV2.hpp"
+#include "account/EscrowReleaseTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
@@ -29,6 +30,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <type_traits>
 
 namespace sgns
 {
@@ -111,6 +113,15 @@ namespace sgns
         static outcome::result<void> Revert( TransactionManager &manager, const GeniusTransaction &tx )
         {
             return manager.RevertTransaction( tx );
+        }
+
+        static constexpr bool CallerReplayFlagIsUnsupported()
+        {
+            return !std::is_invocable_v<decltype( &TransactionManager::ChangeTransactionState ),
+                                        TransactionManager &,
+                                        const std::shared_ptr<GeniusTransaction> &,
+                                        TransactionManager::TransactionStatus,
+                                        bool>;
         }
 
         static outcome::result<std::vector<OutputDestInfo>> PayoutOutputs( const SGProcessing::TaskResult &results,
@@ -723,6 +734,74 @@ TEST_F( TransactionManagerPreviousHashTest, TrackedPreviousHashPrefersConfirmedC
 
     EXPECT_EQ( transaction->GetNonce(), 2U );
     EXPECT_EQ( transaction->GetPreviousHash(), confirmed_transaction->GetHash() );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, LegacyReplayContextCannotBeForged )
+{
+    EXPECT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::CallerReplayFlagIsUnsupported() );
+    for ( const bool backdated : { false, true } )
+    {
+        const auto hold    = MakeCertifiedHold( 17 );
+        const auto hash    = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
+        const auto funding = account_->GetUTXOManager().GetUnconsumedUTXO( hash, 0 );
+        if ( !funding )
+        {
+            FAIL() << "hold must retain funding before unsigned replay context";
+        }
+        const auto transfer = MakePaymentTransfer( funding.value(),
+                                                   { { 17, account_->GetAddress(), kTokenId } },
+                                                   hold->GetUncleHash() );
+        if ( backdated )
+        {
+            transfer->dag_st.set_timestamp( 1 );
+            transfer->FillHash();
+            transfer->MakeSignature( *account_ );
+        }
+        EXPECT_TRUE( ConfirmPayment( transfer ).has_error() );
+        EXPECT_FALSE( account_->GetUTXOManager().IsOutPointConsumed( hash, 0 ) );
+        EXPECT_FALSE( account_->GetUTXOManager()
+                          .GetOutPointState( sgns::base::Hash256::fromHex( transfer->GetHash() ).value(), 0 )
+                          .has_value() );
+    }
+}
+
+TEST_F( TransactionDeletionRecoveryTest, LegacyMarkerReplayNeverPays )
+{
+    const auto hold    = MakeCertifiedHold( 17 );
+    const auto hash    = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
+    const auto funding = account_->GetUTXOManager().GetUnconsumedUTXO( hash, 0 );
+    if ( !funding )
+    {
+        FAIL() << "hold must retain original funds";
+    }
+    const auto transfer = MakePaymentTransfer( funding.value(),
+                                               { { 17, account_->GetAddress(), kTokenId } },
+                                               hold->GetUncleHash() );
+    const auto marker   = std::make_shared<sgns::EscrowReleaseTransaction>(
+        sgns::EscrowReleaseTransaction::New( { transfer->GetInputInfos(), transfer->GetDstInfos() },
+                                             17,
+                                             account_->GetAddress(),
+                                             hold->GetSrcAddress(),
+                                             hold->GetHash(),
+                                             MakeDAG( account_->ReserveNextNonce() ) ) );
+    marker->MakeSignature( *account_ );
+    StoreCertificate( marker );
+    StoreTransaction( marker );
+    ProcessStoredTransaction( marker );
+    EXPECT_FALSE( account_->GetUTXOManager().IsOutPointConsumed( hash, 0 ) );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
+    EXPECT_EQ( manager_->WaitForEscrowRelease( hold->GetHash(), std::chrono::milliseconds( 10 ) ),
+               sgns::TransactionManager::TransactionStatus::INVALID );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *marker ).has_value() );
+    const auto original = transfer->SerializeByteVector();
+    StoreCertificate( transfer );
+    StoreTransaction( transfer );
+    ProcessStoredTransaction( transfer );
+    EXPECT_EQ( transfer->SerializeByteVector(), original );
+    EXPECT_EQ( transfer->GetSlotID(), transfer->GetSrcAddress() + ":" + std::to_string( transfer->GetNonce() ) );
+    EXPECT_EQ( account_->GetUTXOManager().GetOutPointSpender( hash, 0 ),
+               std::optional{ sgns::base::Hash256::fromHex( transfer->GetHash() ).value() } );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 17U );
 }
 
 TEST_F( TransactionDeletionRecoveryTest, V2PaymentConsumesHoldAndCreditsExactDistribution )

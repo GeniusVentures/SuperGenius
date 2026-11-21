@@ -25,6 +25,7 @@
 #include "transaction/TransactionConsensusHandler.hpp"
 #include "transaction/PruneEligibility.hpp"
 #include "account/TransferTransaction.hpp"
+#include "account/EscrowTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "account/RegistrationTransaction.hpp"
 #include "account/GeniusAccount.hpp"
@@ -919,6 +920,101 @@ TEST_F( CertificateFallbackTest, ReplayProtection_RejectsLegacyHashCertificateRe
  * for the winning transaction must not confirm the loser merely because both
  * derive that same slot.
  */
+TEST_F( CertificateFallbackTest, LegacyTransferPayoutReplaysOnlyWithExactCanonicalCertificate )
+{
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    uint64_t nonce   = 50;
+    auto    &ledger  = account_->GetUTXOManager();
+    auto     payment = [&]()
+    {
+        SGTransaction::DAGStruct dag;
+        dag.set_source_addr( account_->GetAddress() );
+        dag.set_nonce( nonce++ );
+        dag.set_timestamp( 1 );
+        const std::string owner = "0x" + std::string( 64, 'a' );
+        auto              hold  = std::make_shared<EscrowTransaction>(
+            EscrowTransaction::New( { {}, { { 17, owner, kTestTokenId } } }, 17, dag ) );
+        hold->MakeSignature( *account_ );
+        const auto hold_certificate = BuildSignedCertificate( hold );
+        EXPECT_TRUE( hold_certificate.has_value() );
+        if ( hold_certificate.has_value() )
+        {
+            PersistCertificateAtSlot( hold->GetSlotID(), hold_certificate.value() );
+        }
+        PersistTransaction( hold );
+        const auto hold_hash = base::Hash256::fromHex( hold->GetHash() ).value();
+        EXPECT_TRUE( ledger.PutUTXO( GeniusUTXO( hold_hash, 0, 17, kTestTokenId, owner ), owner ).has_value() );
+        InputUTXOInfo input{ hold_hash, 0, {} };
+        input.signature_ = account_->Sign( input.SerializeForSigning() );
+        dag.set_nonce( nonce++ );
+        dag.set_uncle_hash( owner );
+        auto transfer = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( { input }, { { 17, account_->GetAddress(), kTestTokenId } }, dag ) );
+        transfer->MakeSignature( *account_ );
+        return transfer;
+    };
+
+    // A signed certificate argument, without the validated canonical record, grants no historical authority.
+    const auto uncertified             = payment();
+    const auto uncertified_certificate = BuildSignedCertificate( uncertified );
+    ASSERT_TRUE( uncertified_certificate.has_value() );
+    EXPECT_TRUE( CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                        uncertified->GetHash(),
+                                                                        uncertified_certificate.value() )
+                     .has_error() );
+    EXPECT_FALSE( ledger.IsOutPointConsumed( uncertified->GetInputInfos().front().txid_hash_, 0 ) );
+
+    // A borrowed producer certificate stored under the payment's old slot also grants no authority.
+    const auto borrowed             = payment();
+    const auto borrowed_certificate = BuildSignedCertificate( uncertified );
+    ASSERT_TRUE( borrowed_certificate.has_value() );
+    PersistCertificateAtSlot( borrowed->GetSlotID(), borrowed_certificate.value() );
+    const auto exact_borrowed = BuildSignedCertificate( borrowed );
+    ASSERT_TRUE( exact_borrowed.has_value() );
+    EXPECT_TRUE(
+        CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, borrowed->GetHash(), exact_borrowed.value() )
+            .has_error() );
+    EXPECT_FALSE( ledger.IsOutPointConsumed( borrowed->GetInputInfos().front().txid_hash_, 0 ) );
+
+    // DAG signatures are excluded from CheckHash, so exact embedded bytes must also bind evidence.
+    const auto tampered = payment();
+    const auto exact    = BuildSignedCertificate( tampered );
+    ASSERT_TRUE( exact.has_value() );
+    PersistCertificateAtSlot( tampered->GetSlotID(), exact.value() );
+    tampered->dag_st.set_signature( "altered-signature" );
+    ASSERT_TRUE( tampered->CheckHash() );
+    EXPECT_TRUE( FetchAndProcess( tampered ).has_error() );
+    EXPECT_FALSE( ledger.IsOutPointConsumed( tampered->GetInputInfos().front().txid_hash_, 0 ) );
+
+    for ( const bool fallback : { false, true } )
+    {
+        const auto historical  = payment();
+        const auto original    = historical->SerializeByteVector();
+        const auto certificate = BuildSignedCertificate( historical );
+        ASSERT_TRUE( certificate.has_value() );
+        PersistCertificateAtSlot( historical->GetSlotID(), certificate.value() );
+        ASSERT_TRUE( blockchain_->GetCertificateBySlot( historical->GetSlotID() ).has_value() );
+        if ( fallback )
+        {
+            ASSERT_TRUE( CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                historical->GetHash(),
+                                                                                certificate.value() )
+                             .has_value() );
+        }
+        else
+        {
+            ASSERT_TRUE( FetchAndProcess( historical ).has_value() );
+        }
+        EXPECT_EQ( historical->SerializeByteVector(), original );
+        EXPECT_EQ( historical->GetSlotID(),
+                   historical->GetSrcAddress() + ":" + std::to_string( historical->GetNonce() ) );
+        const auto hash  = base::Hash256::fromHex( historical->GetHash() ).value();
+        const auto input = historical->GetInputInfos().front();
+        EXPECT_EQ( ledger.GetOutPointSpender( input.txid_hash_, 0 ), std::optional{ hash } );
+        EXPECT_TRUE( ledger.GetUnconsumedUTXO( hash, 0 ).has_value() );
+    }
+}
+
 TEST_F( CertificateFallbackTest, SharedMintSlotConfirmsOnlyTheCertifiedTransaction )
 {
     const auto winner = MakeCompetingMintV2( account_->GetAddress(), 70 );
