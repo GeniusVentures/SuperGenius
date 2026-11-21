@@ -572,6 +572,10 @@ namespace sgns
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class UTXOManagerTestAccess;
 
+        /** @brief Shares locked spend verification while keeping the expected owner private. */
+        bool VerifyParametersForOwner( const UTXOTxParameters &params, const std::string &signer,
+                                       const std::string &expected_owner ) const;
+
         /// Prefix for UTXO-related keys in RocksDB
         static constexpr std::string_view DB_PREFIX = "/utxo";
         ///< Prefix for UTXO checkpoint keys in RocksDB

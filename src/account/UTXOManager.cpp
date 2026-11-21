@@ -810,6 +810,13 @@ namespace sgns
 
     bool UTXOManager::VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const
     {
+        return VerifyParametersForOwner( params, address, address );
+    }
+
+    bool UTXOManager::VerifyParametersForOwner( const UTXOTxParameters &params,
+                                                const std::string      &signer,
+                                                const std::string      &expected_owner ) const
+    {
         uint64_t expected_amount = 0;
 
         std::shared_lock lock( utxos_mutex_ );
@@ -819,7 +826,7 @@ namespace sgns
 
         for ( const auto &input : params.first )
         {
-            if ( !verify_signature_( address, input.signature_, input.SerializeForSigning() ) )
+            if ( !verify_signature_( signer, input.signature_, input.SerializeForSigning() ) )
             {
                 logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
                 return false;
@@ -848,15 +855,15 @@ namespace sgns
             }
 
             const auto &owner_address          = utxo_it->second.utxo.GetOwnerAddress();
-            const bool  delegated_escrow_spend = owner_address != address && input.output_idx_ == 0 &&
-                                                 utxo_address::IsEscrowLockAddress( owner_address );
+            const bool  delegated_escrow_spend = owner_address != expected_owner && input.output_idx_ == 0 &&
+                                                utxo_address::IsEscrowLockAddress( owner_address );
 
-            if ( owner_address != address && !delegated_escrow_spend )
+            if ( owner_address != expected_owner && !delegated_escrow_spend )
             {
                 logger_->warn( "Outpoint {}:{} does not belong to {}",
                                input.txid_hash_.toReadableString(),
                                input.output_idx_,
-                               address );
+                               expected_owner );
                 return false;
             }
 
@@ -865,7 +872,7 @@ namespace sgns
                 logger_->debug( "Allowing delegated escrow spend for outpoint {}:{} by {} (lock owner: {})",
                                 input.txid_hash_.toReadableString(),
                                 input.output_idx_,
-                                address.substr( 0, 8 ),
+                                signer.substr( 0, 8 ),
                                 owner_address );
             }
 
