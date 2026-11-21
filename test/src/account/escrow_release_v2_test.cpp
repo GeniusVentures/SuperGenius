@@ -11,6 +11,8 @@
 
 #include "account/GeniusInputValidator.hpp"
 #include "account/UTXOManager.hpp"
+#include "account/UTXOMerkle.hpp"
+#include "account/RegistrationTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "transaction/TransactionManager.hpp"
@@ -27,6 +29,25 @@
 #include "crypto/hasher.hpp"
 #include "base/hexutil.hpp"
 #include "escrow_release_legacy_fixture.hpp"
+
+namespace sgns
+{
+    /// @brief Exercises the existing admission seam; complete V2 manager dispatch belongs to plan 04.
+    class LegacyMintAdmissionTestAccess
+    {
+    public:
+        static ConsensusManager::ValidationResult TypeRules( TransactionManager &manager, const GeniusTransaction &tx )
+        {
+            return manager.consensus_m_->CheckTransactionTypeRules( tx ) ? ConsensusManager::ValidationResult::Approve()
+                                                                         : ConsensusManager::ValidationResult::Reject();
+        }
+
+        static bool Authorized( TransactionManager &manager, const GeniusTransaction &tx )
+        {
+            return manager.CheckTransactionAuthorization( tx );
+        }
+    };
+}
 
 namespace
 {
@@ -102,8 +123,10 @@ namespace
 
         std::shared_ptr<EscrowTransaction> Hold( const std::string &owner = "0x" + std::string( 64, 'a' ) )
         {
-            auto hold = std::make_shared<EscrowTransaction>(
-                EscrowTransaction::New( { {}, { { 17, owner, TokenID::FromBytes( { 0 } ) } } },
+            InputUTXOInfo funding{ base::Hash256{}, 0, {} };
+            funding.signature_ = account_->Sign( funding.SerializeForSigning() );
+            auto hold          = std::make_shared<EscrowTransaction>(
+                EscrowTransaction::New( { { funding }, { { 17, owner, TokenID::FromBytes( { 0 } ) } } },
                                         17,
                                         Dag( *account_ ) ) );
             hold->MakeSignature( *account_ );
@@ -135,18 +158,20 @@ namespace
                     .has_value() );
         }
 
-        outcome::result<ConsensusCertificate> Certificate( const GeniusTransaction &transaction )
+        outcome::result<ConsensusCertificate> Certificate(
+            const GeniusTransaction                &transaction,
+            std::optional<UTXOTransitionCommitment> commitment = std::nullopt )
         {
             const auto                  registry = blockchain_->GetValidatorRegistry();
             TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseValidationTest" ) );
-            BOOST_OUTCOME_TRY(
-                auto subject,
-                ConsensusManager::CreateNonceSubject( transaction.GetSrcAddress(),
-                                                      transaction.GetNonce(),
-                                                      transaction.GetHash(),
-                                                      transaction.SerializeToEmbeddedTransaction(),
-                                                      handler.BuildUTXOTransitionCommitment( transaction ),
-                                                      std::nullopt ) );
+            BOOST_OUTCOME_TRY( auto subject,
+                               ConsensusManager::CreateNonceSubject(
+                                   transaction.GetSrcAddress(),
+                                   transaction.GetNonce(),
+                                   transaction.GetHash(),
+                                   transaction.SerializeToEmbeddedTransaction(),
+                                   commitment ? commitment : handler.BuildUTXOTransitionCommitment( transaction ),
+                                   std::nullopt ) );
             const auto consensus = blockchain_->GetConsensusManager();
             BOOST_OUTCOME_TRY( auto proposal,
                                consensus->CreateProposal( subject,
@@ -210,6 +235,108 @@ namespace
             auto payment = EscrowReleaseTransactionV2::New( params.first, params.second, Dag( signer ) );
             payment.MakeSignature( signer );
             return payment;
+        }
+
+        std::vector<UTXOTxParameters> InvalidPayments( const UTXOTxParameters &good )
+        {
+            std::vector<UTXOTxParameters> cases;
+            auto                          invalid = good;
+            invalid.first.clear();
+            cases.push_back( invalid );
+            invalid = good;
+            invalid.first.push_back( invalid.first.front() );
+            cases.push_back( invalid );
+            invalid = good;
+            invalid.first.push_back( { base::Hash256{}, 0, {} } );
+            cases.push_back( invalid );
+            invalid                           = good;
+            invalid.first.front().output_idx_ = 1;
+            invalid.first.front().signature_  = processor_->Sign( invalid.first.front().SerializeForSigning() );
+            cases.push_back( invalid );
+            invalid                          = good;
+            invalid.first.front().signature_ = account_->Sign( invalid.first.front().SerializeForSigning() );
+            cases.push_back( invalid );
+            invalid = good;
+            invalid.second.clear();
+            cases.push_back( invalid );
+            invalid                                 = good;
+            invalid.second.front().encrypted_amount = 18;
+            cases.push_back( invalid );
+            invalid                         = good;
+            invalid.second.front().token_id = TokenID();
+            cases.push_back( invalid );
+            invalid        = good;
+            invalid.second = {
+                { std::numeric_limits<uint64_t>::max(), account_->GetAddress(), TokenID::FromBytes( { 0 } ) },
+                { 18, account_->GetAddress(), TokenID::FromBytes( { 0 } ) } };
+            cases.push_back( invalid );
+            return cases;
+        }
+
+        UTXOWitness Proof( const GeniusTransaction &producer ) const
+        {
+            UTXOWitness witness;
+            const auto  outputs = producer.GetProducedUTXOs();
+            if ( !outputs || outputs->empty() )
+            {
+                ADD_FAILURE() << "Certified producer must have an output";
+                return witness;
+            }
+            const auto &output = outputs->front();
+            const auto  hash   = output.GetTxID();
+            auto       *proof  = witness.add_consumed_inputs();
+            proof->set_tx_id_hash( hash.data(), hash.size() );
+            proof->set_output_index( output.GetOutputIdx() );
+            const auto payload = utxo_merkle::SerializeUTXOLeafPayload( output );
+            proof->set_leaf_payload( payload.data(), payload.size() );
+            return witness;
+        }
+
+        ConsensusSubject Subject( const GeniusTransaction &transaction, const UTXOWitness &witness ) const
+        {
+            const TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseValidationTest" ) );
+            const auto                        subject = ConsensusManager::CreateNonceSubject(
+                transaction.GetSrcAddress(),
+                transaction.GetNonce(),
+                transaction.GetHash(),
+                transaction.SerializeToEmbeddedTransaction(),
+                handler.BuildUTXOTransitionCommitment( transaction ),
+                witness );
+            if ( subject.has_error() )
+            {
+                ADD_FAILURE() << "Nonce subject construction failed";
+                return {};
+            }
+            return subject.value();
+        }
+
+        TransactionConsensusHandler::WitnessValidationResult Witness( const GeniusTransaction &transaction,
+                                                                      const UTXOWitness       &witness ) const
+        {
+            const TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseValidationTest" ) );
+            return handler.ValidateWitnessForConsensus( Subject( transaction, witness ), transaction );
+        }
+
+        TransferTransaction OwnedProducer( const std::string &owner )
+        {
+            // Explicitly certified historical seed: funding is not submitted through live mint admission.
+            InputUTXOInfo funding{ base::Hash256{}, 1, {} };
+            funding.signature_ = account_->Sign( funding.SerializeForSigning() );
+            auto producer      = TransferTransaction::New( { funding },
+                                                           { { 17, owner, TokenID::FromBytes( { 0 } ) } },
+                                                      Dag( *account_ ) );
+            producer.MakeSignature( *account_ );
+            return producer;
+        }
+
+        TransferTransaction Transfer( const GeniusTransaction &producer,
+                                      const GeniusAccount     &source,
+                                      GeniusAccount           &signer )
+        {
+            const auto payment = Release( producer, signer );
+            auto transfer = TransferTransaction::New( payment.GetInputInfos(), payment.GetDstInfos(), Dag( source ) );
+            transfer.MakeSignature( signer );
+            return transfer;
         }
 
         GeniusInputValidator                                                         validator_;
@@ -308,30 +435,10 @@ namespace
         const auto release = Release( *hold, *processor_ );
         const auto good    = release.GetUTXOParameters();
         EXPECT_EQ( Local( release ), Verdict::kValid );
-        auto invalid = good;
-        invalid.first.clear();
-        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
-        invalid = good;
-        invalid.first.push_back( invalid.first.front() );
-        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
-        invalid                           = good;
-        invalid.first.front().output_idx_ = 1;
-        invalid.first.front().signature_  = processor_->Sign( invalid.first.front().SerializeForSigning() );
-        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
-        invalid                          = good;
-        invalid.first.front().signature_ = account_->Sign( invalid.first.front().SerializeForSigning() );
-        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
-        invalid                                 = good;
-        invalid.second.front().encrypted_amount = 18;
-        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
-        invalid                         = good;
-        invalid.second.front().token_id = TokenID();
-        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
-        invalid        = good;
-        invalid.second = {
-            { std::numeric_limits<uint64_t>::max(), account_->GetAddress(), TokenID::FromBytes( { 0 } ) },
-            { 18, account_->GetAddress(), TokenID::FromBytes( { 0 } ) } };
-        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        for ( const auto &invalid : InvalidPayments( good ) )
+        {
+            EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        }
         auto bad_account_signature = release;
         bad_account_signature.dag_st.set_signature( "invalid" );
         EXPECT_EQ( Local( bad_account_signature ), Verdict::kInvalid );
@@ -386,6 +493,176 @@ namespace
         auto ordinary    = TransferTransaction::New( spend.GetInputInfos(), spend.GetDstInfos(), Dag( *processor_ ) );
         ordinary.MakeSignature( *processor_ );
         EXPECT_EQ( Local( ordinary ), Verdict::kValid );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2WitnessAcceptsCertifiedHold )
+    {
+        using Result    = TransactionConsensusHandler::WitnessValidationResult;
+        const auto hold = Hold();
+        Certify( *hold );
+        TrackOutputs( *hold );
+        for ( const auto &signer : { account_, processor_ } )
+        {
+            const auto release = Release( *hold, *signer );
+            EXPECT_EQ( Witness( release, Proof( *hold ) ), Result::VALID );
+            EXPECT_EQ( LegacyMintAdmissionTestAccess::TypeRules( *manager_, release ).check,
+                       ConsensusManager::Check::Approve );
+        }
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2WitnessRejectsInvalidPaymentInputs )
+    {
+        using Result    = TransactionConsensusHandler::WitnessValidationResult;
+        const auto hold = Hold();
+        Certify( *hold );
+        TrackOutputs( *hold );
+        const auto release = Release( *hold, *processor_ );
+        const auto good    = release.GetUTXOParameters();
+        const auto proof   = Proof( *hold );
+        EXPECT_EQ( Witness( release, proof ), Result::VALID );
+        for ( const auto &invalid : InvalidPayments( good ) )
+        {
+            EXPECT_EQ( Witness( Payment( invalid, *processor_ ), proof ), Result::INVALID );
+        }
+        auto bad_signature = release;
+        bad_signature.dag_st.set_signature( "invalid" );
+        EXPECT_EQ( Witness( bad_signature, proof ), Result::INVALID );
+        auto tampered = proof;
+        tampered.mutable_consumed_inputs( 0 )->add_produced_branch()->set_sibling_hash( std::string( 32, '\0' ) );
+        EXPECT_EQ( Witness( release, tampered ), Result::INVALID );
+        const auto hash    = base::Hash256::fromHex( hold->GetHash() ).value();
+        const auto payload = utxo_merkle::SerializeUTXOLeafPayload(
+            GeniusUTXO( hash, 0, 17, TokenID::FromBytes( { 0 } ), processor_->GetAddress() ) );
+        tampered = proof;
+        tampered.mutable_consumed_inputs( 0 )->set_leaf_payload( payload.data(), payload.size() );
+        EXPECT_EQ( Witness( release, tampered ), Result::INVALID );
+
+        const TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseValidationTest" ) );
+        auto                              bad_commitment = handler.BuildUTXOTransitionCommitment( *hold );
+        if ( !bad_commitment )
+        {
+            FAIL() << "Hold must have a real transition commitment";
+        }
+        bad_commitment->set_produced_outputs_root( std::string( 32, '\0' ) );
+        const auto certificate = Certificate( *hold, bad_commitment );
+        ASSERT_TRUE( certificate.has_value() );
+        PersistCertificate( *hold, certificate.value() );
+        ASSERT_TRUE( blockchain_->GetCertificateBySlot( hold->GetSlotID() ).has_value() );
+        EXPECT_EQ( Witness( release, proof ), Result::INVALID );
+        Certify( *hold );
+
+        auto bad_subject = Subject( release, proof );
+        auto nonce       = ConsensusManager::DecodeNonceSubject( bad_subject );
+        ASSERT_TRUE( nonce.has_value() );
+        nonce.value().mutable_utxo_commitment()->set_consumed_outpoints_root( std::string( 32, '\0' ) );
+        const auto forged = ConsensusManager::CreateNonceSubject( release.GetSrcAddress(),
+                                                                  release.GetNonce(),
+                                                                  release.GetHash(),
+                                                                  release.SerializeToEmbeddedTransaction(),
+                                                                  nonce.value().utxo_commitment(),
+                                                                  proof );
+        ASSERT_TRUE( forged.has_value() );
+        EXPECT_EQ( handler.ValidateWitnessForConsensus( forged.value(), release ), Result::INVALID );
+        const auto other             = Hold( "0x" + std::string( 64, 'f' ) );
+        const auto wrong_certificate = Certificate( *other );
+        ASSERT_TRUE( wrong_certificate.has_value() );
+        PersistCertificate( *hold, wrong_certificate.value() );
+        EXPECT_EQ( Witness( release, proof ), Result::INVALID );
+        Certify( *hold );
+        ASSERT_TRUE( account_->GetUTXOManager()
+                         .ConsumeUTXOs( good.first, hold->GetUTXOParameters().second.front().dest_address )
+                         .has_value() );
+        EXPECT_EQ( LegacyMintAdmissionTestAccess::TypeRules( *manager_, release ).check,
+                   ConsensusManager::Check::Reject );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, FreshTransferEscrowBypassRejectedByWitness )
+    {
+        using Result    = TransactionConsensusHandler::WitnessValidationResult;
+        const auto hold = Hold();
+        Certify( *hold );
+        TrackOutputs( *hold );
+        for ( const auto &uncle :
+              { hold->GetUTXOParameters().second.front().dest_address, "0x" + std::string( 64, 'f' ) } )
+        {
+            for ( const bool backdated : { false, true } )
+            {
+                auto transfer = Transfer( *hold, *processor_, *processor_ );
+                transfer.dag_st.set_uncle_hash( uncle );
+                if ( backdated )
+                {
+                    transfer.dag_st.set_timestamp( 1 );
+                }
+                transfer.FillHash();
+                transfer.MakeSignature( *processor_ );
+                EXPECT_EQ( Witness( transfer, Proof( *hold ) ), Result::INVALID );
+            }
+        }
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2MissingEvidencePendsAdmission )
+    {
+        using Result    = TransactionConsensusHandler::WitnessValidationResult;
+        const auto hold = Hold();
+        TrackOutputs( *hold );
+        const auto release = Release( *hold, *processor_ );
+        const auto proof   = Proof( *hold );
+        for ( const bool persist_producer : { false, true } )
+        {
+            if ( persist_producer )
+            {
+                Persist( *hold );
+            }
+            EXPECT_EQ( Witness( release, proof ), Result::PENDING );
+            const auto admission = LegacyMintAdmissionTestAccess::TypeRules( *manager_, release );
+            EXPECT_EQ( admission.check, ConsensusManager::Check::Pending );
+            ASSERT_EQ( admission.dependencies.size(), 1 );
+            EXPECT_EQ( admission.dependencies.front(),
+                       ConsensusManager::PendingDependencyKey::Certificate( hold->GetHash() ) );
+        }
+        Certify( *hold );
+        EXPECT_EQ( Witness( release, proof ), Result::VALID );
+        auto rejected = Certificate( *hold );
+        ASSERT_TRUE( rejected.has_value() );
+        rejected.value().mutable_votes( 0 )->set_signature( "invalid" );
+        PersistCertificate( *hold, rejected.value() );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kNotSynced );
+        EXPECT_EQ( LegacyMintAdmissionTestAccess::TypeRules( *manager_, release ).check,
+                   ConsensusManager::Check::Pending );
+
+        // Exercise full existing manager ingress with ordinary Transfer while V2 dispatch is still plan 04.
+        const auto owned = OwnedProducer( processor_->GetAddress() );
+        TrackOutputs( owned );
+        Persist( owned );
+        const auto                  transfer = Transfer( owned, *processor_, *processor_ );
+        TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseValidationTest" ) );
+        const auto admission = handler.HandleNonceConsensusSubject( Subject( transfer, Proof( owned ) ) );
+        ASSERT_TRUE( admission.has_value() );
+        EXPECT_EQ( admission.value().check, ConsensusManager::Check::Pending );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, OrdinaryAndCertifiedParentTransfersRemainValid )
+    {
+        using Result     = TransactionConsensusHandler::WitnessValidationResult;
+        const auto owned = OwnedProducer( processor_->GetAddress() );
+        Certify( owned );
+        TrackOutputs( owned );
+        const auto ordinary = Transfer( owned, *processor_, *processor_ );
+        EXPECT_EQ( Witness( ordinary, Proof( owned ) ), Result::VALID );
+        TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseValidationTest" ) );
+        const auto admission = handler.HandleNonceConsensusSubject( Subject( ordinary, Proof( owned ) ) );
+        ASSERT_TRUE( admission.has_value() );
+        EXPECT_EQ( admission.value().check, ConsensusManager::Check::Approve );
+
+        auto registration = RegistrationTransaction::New( account_->GetAddress(), 1, {}, Dag( *processor_ ) );
+        registration.MakeSignature( *processor_ );
+        Certify( registration );
+        Persist( registration, TransactionManager::GetBlockChainBase() + "reg/" + processor_->GetAddress() );
+        ASSERT_EQ( blockchain_->CheckCertifiedParent( processor_->GetAddress() ), account_->GetAddress() );
+        const auto delegated = Transfer( owned, *processor_, *account_ );
+        EXPECT_FALSE( delegated.CheckSignature() );
+        EXPECT_TRUE( LegacyMintAdmissionTestAccess::Authorized( *manager_, delegated ) );
+        EXPECT_EQ( Witness( delegated, Proof( owned ) ), Result::VALID );
     }
 
     template <typename Message>
