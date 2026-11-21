@@ -2,8 +2,8 @@
   "phase": "21.1",
   "plan": "07",
   "execution_baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
-  "tested_head": "5267fe748b45e0141debe4e92da0b8be4b1f05a1",
-  "tested_head_scope": "Current coordinated-restart counterexample; overall recovery verification is blocked. Earlier passing gates remain attributed to their original source.",
+  "tested_head": "24aeca62b480f7388047299a1aaa0f8809b6641a",
+  "tested_head_scope": "Final local plan-07 source: deterministic callback-loss RED/GREEN, post-fix two-repeat D/E, all five network controls and complete callback/application, compatibility and process-ownership gates passed. Historical failed-run sole causality remains unproven.",
   "activation_status": "pending",
   "validator_inventory": {
     "external_status": "not_provided",
@@ -189,7 +189,7 @@
     }
   },
   "local_verification": {
-    "status": "blocked_restart_recovery_gate",
+    "status": "passed_local_activation_pending",
     "execution_method": "Existing owned CTest targets with TEST_LAUNCHER, resource locks and RUN_SERIAL preserved.",
     "results": [
       {
@@ -273,6 +273,101 @@
         ],
         "overall_passed": false,
         "xml_limit": "gtest XML contains only the passing last iteration; CTest exit8 and full log establish overall failure."
+      },
+      {
+        "gate": "pre_fix_instrumented_de_two_repetitions",
+        "source_head": "ac7786a963d591273c9b9a881a936a396ed182cc",
+        "ctest_elapsed_seconds": 43.74,
+        "repeat_count": 2,
+        "case_count": 2,
+        "failures": 0,
+        "overall_passed": true,
+        "note": "Both instrumented cases passed before the production fix; original intermittent E sole causality is not established.",
+        "source_scope": "Uncommitted diagnostic instrumentation before production fix; precursor to the finalized diagnostic regression commit 1d6f28f36."
+      },
+      {
+        "gate": "deterministic_callback_snapshot_red",
+        "source_head": "1d6f28f36",
+        "ctest_elapsed_seconds": 1.24,
+        "case_count": 1,
+        "failures": 1,
+        "expected_failure": true,
+        "journal_present_after_dispatch": false,
+        "replacement_handler_calls": 0
+      },
+      {
+        "gate": "deterministic_callback_snapshot_green",
+        "source_head": "24aeca62b480f7388047299a1aaa0f8809b6641a",
+        "ctest_elapsed_seconds": 0.96,
+        "gtest_elapsed_seconds": 0.077,
+        "case_count": 1,
+        "failures": 0,
+        "journal_state_after_dispatch": "Stalled",
+        "replacement_handler_calls": 1,
+        "after_retry_handler_calls": 1
+      },
+      {
+        "gate": "post_fix_de_two_repetitions",
+        "source_head": "24aeca62b480f7388047299a1aaa0f8809b6641a",
+        "ctest_elapsed_seconds": 43.69,
+        "repeat_count": 2,
+        "case_count": 2,
+        "failures": 0,
+        "iterations": [
+          {
+            "iteration": 1,
+            "passed": true,
+            "case_elapsed_seconds": 21.345
+          },
+          {
+            "iteration": 2,
+            "passed": true,
+            "case_elapsed_seconds": 21.229
+          }
+        ],
+        "overall_passed": true,
+        "timeout_seconds": 300
+      },
+      {
+        "gate": "final_post_fix_all_five_named_cases",
+        "source_head": "24aeca62b480f7388047299a1aaa0f8809b6641a",
+        "ctest_elapsed_seconds": 62.96,
+        "gtest_elapsed_seconds": 62.847,
+        "case_count": 5,
+        "failures": 0,
+        "overall_passed": true,
+        "timeout_seconds": 300
+      },
+      {
+        "gate": "full_callback_application_smoke_ownership",
+        "source_head": "24aeca62b480f7388047299a1aaa0f8809b6641a",
+        "ctest_elapsed_seconds": 34.09,
+        "target_count": 4,
+        "passed_targets": 4,
+        "gtest_case_count": 88,
+        "failures": 0,
+        "targets": [
+          {
+            "name": "consensus_pending_lifecycle_test",
+            "case_count": 42,
+            "ctest_elapsed_seconds": 4.39
+          },
+          {
+            "name": "transaction_manager_certificate_fallback_test",
+            "case_count": 45,
+            "ctest_elapsed_seconds": 27.91
+          },
+          {
+            "name": "multi_node_finality_fault_compatibility_smoke_test",
+            "case_count": 1,
+            "ctest_elapsed_seconds": 1.5
+          },
+          {
+            "name": "multi_node_finality_fault_process_ownership_test",
+            "passed": true,
+            "ctest_elapsed_seconds": 0.26
+          }
+        ]
       }
     ],
     "signed_transaction_and_certificate_artifacts": [
@@ -942,7 +1037,7 @@
       "P21_1_LEGACY_TTL old_hash=48da53aa5a5196e1f25cb8d5ce0638a419515a288d34b06f307d4b36fa832ea7 old_slot=acb83636a66929f73da8571f9127034279b9472e5d80db9e3fa313504d123efecc0100aff190a246a2c74f7ab59f4497be7a5d7c07e2b390fd96fb17de5e56c3:0 aged_ms=5400000 proposal_ttl_ms=180000 v2_hash=a35b5b311a2283b3bfa54fcf268232661e189a0b37c88a233fcd5bfc15cc53b3 v2_slot=escrow-release-v2:8bdaa2c736c361ad991a6d689367eafdedc385b7d8c2804b565082795258771b:0 cross_era_exclusivity=not-proven activation=pending",
       "P21_1_PENDING_REBUILD old_hash=e7ea0a8d9e0995ffdabc3ef62626f33322b8a05265d7b826c7f0bd087a2d2665 old_slot=e884a84cfeccd353f28491531907d15dbd8c28d45a178e4e73bbfbfd2982100ddb19bef4a1ec642abdc99befd8f45851012456aced9cb6f0cef934afd4befa2e:0 reused_nonce=0 v2_hash=0c7c5f83aaffd007ac97a308c8c0d9d1ce8aa8a99d23955b872850eaa8777a90 v2_slot=escrow-release-v2:75ad8443e8ecf9367432d753263dd0cc2b96c2382d1edf79e5c7358c71fcc23e:0 old_signed_history=preserved results=complete"
     ],
-    "source_sha256": "5ddf74b295e470c8a2f710e18f91d829cf6d4fbfa7c668f711f43582627f2655",
+    "source_sha256": "0f928a5f9d4f45ca5f17e8918f0f1e1e61120725c27943a134b379e9eb0cc220",
     "artifact_logs": [
       "/tmp/phase21-1-07-task1-evidence.log",
       "/tmp/phase21-1-07-task2-evidence.log",
@@ -958,20 +1053,134 @@
       "/tmp/phase21-1-07-restart-counterexample.log",
       "/tmp/phase21-1-07-restart-last-iteration-xunit.xml",
       "/tmp/phase21-1-07-build-restart.log",
-      "/tmp/phase21-1-07-tidy-restart.log"
+      "/tmp/phase21-1-07-tidy-restart.log",
+      "/tmp/phase21-1-07-recovery-diagnostic.log",
+      "/tmp/phase21-1-07-callback-red-final.log",
+      "/tmp/phase21-1-07-callback-green.log",
+      "/tmp/phase21-1-07-recovery-postfix-repeat.log",
+      "/tmp/phase21-1-07-recovery-five-final.log",
+      "/tmp/phase21-1-07-recovery-five-final-xunit.xml",
+      "/tmp/phase21-1-07-recovery-regression-final.log",
+      "/tmp/phase21-1-07-recovery-green-build.log",
+      "/tmp/phase21-1-07-recovery-production-tidy.log"
     ],
     "recovery_gate": {
-      "status": "blocked",
+      "status": "passed_local",
       "canonical_conflict_reported": false,
       "second_payment_reported": false,
-      "complete_effects_convergence_proven": false,
-      "journal_state_captured": false,
-      "next_step": "Capture the existing certificate journal entry and per-node exact spender/output records at shutdown/reopen, then diagnose the owning application/recovery path.",
-      "hypotheses": [
-        "Processing callback lease survives immediate restart",
-        "Snapshotted weak-owner callback returns without applying while generic callback completion retires work"
-      ],
-      "hypotheses_proven": false
+      "complete_effects_convergence_proven": true,
+      "convergence_scope": "Final local repeated D/E and complete five-case gates, not deployed history.",
+      "postfix_boundary_journal_state_captured": true,
+      "historical_failed_run_state_captured": false,
+      "original_intermittent_run_sole_cause_proven": false,
+      "confirmed_defect": "Snapshotted outer Consensus callback skips receipt after weak owner expiry; generic completion retires unapplied certificate work.",
+      "fix": "Preserve receipt through captured existing journal MarkSeen and MarkStalled(0); replacement owner uses normal validated durable recovery.",
+      "processing_lease_policy_changed": false,
+      "historical_blocked_gate": {
+        "status": "blocked",
+        "canonical_conflict_reported": false,
+        "second_payment_reported": false,
+        "complete_effects_convergence_proven": false,
+        "journal_state_captured": false,
+        "next_step": "Capture the existing certificate journal entry and per-node exact spender/output records at shutdown/reopen, then diagnose the owning application/recovery path.",
+        "hypotheses": [
+          "Processing callback lease survives immediate restart",
+          "Snapshotted weak-owner callback returns without applying while generic callback completion retires work"
+        ],
+        "hypotheses_proven": false
+      },
+      "reopened_certificate_work_observations": [
+        {
+          "peer": "escrow-delay-0-validator-three",
+          "boundary": "database-reopened-before-manager",
+          "work": "2",
+          "attempts": "2",
+          "updated": "1795293454940",
+          "lease": "1795293454940",
+          "iteration": 1
+        },
+        {
+          "peer": "escrow-delay-1-validator-one",
+          "boundary": "database-reopened-before-manager",
+          "work": "2",
+          "attempts": "2",
+          "updated": "1795293463384",
+          "lease": "1795293463384",
+          "iteration": 1
+        },
+        {
+          "peer": "escrow-delay-1-validator-two",
+          "boundary": "database-reopened-before-manager",
+          "work": "-1",
+          "attempts": "0",
+          "updated": "0",
+          "lease": "0",
+          "iteration": 1
+        },
+        {
+          "peer": "escrow-delay-1-validator-three",
+          "boundary": "database-reopened-before-manager",
+          "work": "2",
+          "attempts": "2",
+          "updated": "1795293463381",
+          "lease": "1795293463381",
+          "iteration": 1
+        },
+        {
+          "peer": "escrow-delay-1-passive",
+          "boundary": "database-reopened-before-manager",
+          "work": "-1",
+          "attempts": "0",
+          "updated": "0",
+          "lease": "0",
+          "iteration": 1
+        },
+        {
+          "peer": "escrow-delay-0-validator-three",
+          "boundary": "database-reopened-before-manager",
+          "work": "2",
+          "attempts": "2",
+          "updated": "1795293475766",
+          "lease": "1795293475766",
+          "iteration": 2
+        },
+        {
+          "peer": "escrow-delay-1-validator-one",
+          "boundary": "database-reopened-before-manager",
+          "work": "2",
+          "attempts": "2",
+          "updated": "1795293484725",
+          "lease": "1795293484725",
+          "iteration": 2
+        },
+        {
+          "peer": "escrow-delay-1-validator-two",
+          "boundary": "database-reopened-before-manager",
+          "work": "2",
+          "attempts": "2",
+          "updated": "1795293484739",
+          "lease": "1795293484739",
+          "iteration": 2
+        },
+        {
+          "peer": "escrow-delay-1-validator-three",
+          "boundary": "database-reopened-before-manager",
+          "work": "-1",
+          "attempts": "0",
+          "updated": "0",
+          "lease": "0",
+          "iteration": 2
+        },
+        {
+          "peer": "escrow-delay-1-passive",
+          "boundary": "database-reopened-before-manager",
+          "work": "-1",
+          "attempts": "0",
+          "updated": "0",
+          "lease": "0",
+          "iteration": 2
+        }
+      ]
     }
   },
   "escrow_and_pending_disposition": {
@@ -1007,7 +1216,6 @@
   },
   "operator_decision": null,
   "missing_evidence": [
-    "Resolved local restart/catch-up recovery gate with exact certificate work-journal and per-node effect state across shutdown/reopen.",
     "Complete external participating validator/submitter/passive/offline roster and node identities.",
     "Deployed build/source/executable/configuration identities and all-validator fixed-build readiness.",
     "Authorized external registry CID/epoch/full weighted membership and genesis-rooted update ancestry.",

@@ -1,16 +1,16 @@
 ---
-status: verifying
+status: awaiting_human_verify
 trigger: "Plan 21.1-07 repeated restart recovery: canonical payout exists on every peer but one peer lacks complete payout ledger effects"
 created: 2026-11-21T20:27:31Z
-updated: 2026-11-21T20:36:00Z
+updated: 2026-11-21T20:42:40Z
 ---
 
 ## Current Focus
 
 hypothesis: A CRDT callback already snapshotted for delivery outlives Consensus, silently skips receipt through its expired weak pointer, and generic callback completion retires unapplied certificate work.
-test: Register an overlapping callback barrier before the real Consensus callback, destroy Consensus after snapshot, release delivery and inspect durable work plus replacement-manager handler calls.
-expecting: Unfixed code removes journal work and the replacement handler receives zero calls despite a valid durable certificate.
-next_action: Run post-fix D/E twice with boundary snapshots, then the five plan-07 cases and full callback lifecycle/fallback plus compatibility/ownership targets through registered CTest.
+test: Completed deterministic RED/GREEN, two post-fix D/E repetitions, final five-case network gate and full callback/application/smoke/ownership checks.
+expecting: Final end-of-phase confirmation retains exact canonical payout and complete once-only ledger effects in the real operator workflow.
+next_action: Continue plan 08 whole-phase verification and its existing final operator checkpoint; retain this debug record until human confirmation, without claiming sole historical E causality.
 
 reasoning_checkpoint:
   hypothesis: The expired Consensus callback returns without changing Processing, so generic completion removes unapplied durable certificate work.
@@ -36,6 +36,11 @@ started: Additional repetition after initial five-case passing plan-07 gate.
   timestamp: 2026-11-21T16:30:00Z
 
 ## Evidence
+
+- timestamp: 2026-11-21T20:42:40Z
+  checked: Final post-fix registered CTest gates at source 24aeca62b480f7388047299a1aaa0f8809b6641a.
+  found: Repeated D/E 2/2 passed in 43.69s; all five plan-07 cases passed in 62.96s; full Consensus 42/42 and fallback 45/45, smoke 1/1 and process ownership passed in combined 34.09s. Saved xUnit has zero failures/disabled/errors. Four affected targets built without compiler warnings/errors; Required changed-line lint and diff checks passed.
+  implication: Local plan-07 technical gate is complete; activation and real-environment confirmation remain pending at the existing end-of-phase operator checkpoint. Earlier failed E sole causality remains unproven.
 
 - timestamp: 2026-11-21T20:36:00Z
   checked: Same deterministic callback regression after the 11-line Consensus callback fix; four affected target build and changed-line clang-tidy.
@@ -73,5 +78,5 @@ started: Additional repetition after initial five-case passing plan-07 gate.
 
 root_cause: A previously snapshotted outer Consensus CRDT callback silently returns when its weak owner expires, allowing generic completion to retire a durable certificate before application. The original intermittent E run lacks sufficient state to establish this as its sole cause.
 fix: Capture the existing CRDTWorkJournal in the outer Consensus receipt callback; when its weak owner expired, preserve receipt with MarkSeen then MarkStalled(0) so normal durable recovery remains responsible for validation/application.
-verification: Deterministic RED before production edit (1.24s), GREEN after edit (0.96s); final network and regression checks in progress.
+verification: Deterministic RED before production edit (1.24s), GREEN after edit (0.96s); post-fix repeated D/E 2/2 (43.69s), five-case network 5/5 (62.96s), full callback/application 87/87 plus smoke and ownership (34.09s), Required lint/build/diff checks passed. Human real-workflow verification remains at plan 08 checkpoint.
 files_changed: [src/blockchain/Consensus.cpp, test/src/blockchain/consensus_pending_lifecycle_test.cpp, test/src/blockchain/multi_node_finality_fault_test.cpp]

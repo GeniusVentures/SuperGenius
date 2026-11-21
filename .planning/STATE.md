@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
 status: executing
-stopped_at: Plan 21.1-07 Task 2 blocked at repeated restart/catch-up verification
-last_updated: "2026-11-21T16:20:17.044Z"
-last_activity: 2026-11-21 -- Plan 21.1-07 Task 2 recovery gate unresolved; resume plan 07
+stopped_at: Plan 21.1-07 complete; ready for plan 08 final verification and operator checkpoint
+last_updated: "2026-11-21T20:42:40Z"
+last_activity: 2026-11-21 -- Plan 21.1-07 callback recovery fix and final network gates passed; next plan 08
 progress:
   total_phases: 33
   completed_phases: 5
   total_plans: 47
-  completed_plans: 39
+  completed_plans: 40
   percent: 15
 ---
 
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 7 of 8
-Status: Verification blocked at plan 07 Task 2 restart/catch-up gate
-Last activity: 2026-11-21 -- Plan 21.1-07 Task 2 recovery gate unresolved; resume plan 07
+Plan: 8 of 8 (next; 7/8 completed)
+Status: Plan 07 technically complete; ready for plan 08 whole-phase verification and operator checkpoint
+Last activity: 2026-11-21 -- Plan 21.1-07 callback recovery fix and final network gates passed; next plan 08
 
 Progress: [█████████░] 85%
 
@@ -85,8 +85,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 ## Session
 
 **Last session:** 2026-11-21T16:20:17.038Z
-**Stopped At:** Plan 21.1-07 Task 2 blocked at repeated restart/catch-up verification
-**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-07-PARTIAL.md
+**Stopped At:** Plan 21.1-07 complete; ready for plan 08 final verification and operator checkpoint
+**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-08-PLAN.md
 
 ## Accumulated Context
 
@@ -281,4 +281,4 @@ Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
 
 ### Blockers
 
-- Plan 21.1-07 Task 2 restart recovery gate is unresolved: repeated owned CTest retained canonical finality but one node lacked complete payout effects; see 21.1-07-PARTIAL.md.
+- Plan 21.1-07 local recovery gates pass at 24aeca62b after a deterministic expired-owner callback RED/GREEN fix; earlier intermittent E sole causality remains unproven and all failed runs are retained in 21.1-07-SUMMARY.md. Whole-phase verification, external historical evidence and operator acceptance remain plan 08 work; PAYSAFE stays pending.
