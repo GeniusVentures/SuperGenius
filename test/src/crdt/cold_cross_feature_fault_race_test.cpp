@@ -118,6 +118,9 @@
 #include <vector>
 
 #include <libp2p/multi/content_identifier_codec.hpp>
+#include <libp2p/multi/multiaddress.hpp>
+#include <libp2p/multi/multihash.hpp>
+#include <libp2p/peer/peer_id.hpp>
 
 #include <sgns-blockstore/Cid.hpp>
 #include <sgns-blockstore/LocalBlockStore.hpp>
@@ -705,6 +708,14 @@ namespace
             cold_read_service_->SetPruneEvidenceLookup(
                 [this]( const CID &cid ) -> PruneEvidenceClass
                 {
+                    if ( forge_pruned_.load( std::memory_order_acquire ) )
+                    {
+                        // FAULT-ARM ONLY (X7, SGNS_CROSS_RACE_RED_ARMS_ENABLE):
+                        // the consult verdict forged to Pruned regardless of
+                        // the store - the wrongly-exempted-gap injection the
+                        // fail-closed controls must never let through.
+                        return PruneEvidenceClass::Pruned;
+                    }
                     if ( evidence_suppressed_.load( std::memory_order_acquire ) )
                     {
                         // FAULT-ARM ONLY (SGNS_CROSS_RACE_RED_ARMS_ENABLE,
@@ -764,6 +775,7 @@ namespace
             sgns::crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
             sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
             evidence_suppressed_.store( false, std::memory_order_release );
+            forge_pruned_.store( false, std::memory_order_release );
 
             TeardownTxStack();
 
@@ -932,6 +944,33 @@ namespace
             return marker.has_value() && !marker.value().empty();
         }
 
+        /// X9: register @p count fresh FAILING routes for @p cid -
+        /// deterministic distinct peer ids from the salt; the fabricated
+        /// routes fail synchronously on the null-graphsync RequestNode
+        /// (each peer blacklists, the failover ladder advances, the
+        /// per-CID budget accounting counts).
+        void RegisterFailingRoutes( const CID &cid, uint32_t count, uint64_t salt )
+        {
+            for ( uint32_t i = 0; i < count; ++i )
+            {
+                std::array<uint8_t, 32> digest{};
+                for ( int byte = 0; byte < 8; ++byte )
+                {
+                    digest[byte] = static_cast<uint8_t>( salt >> ( 8 * ( 7 - byte ) ) );
+                }
+                digest[8] = static_cast<uint8_t>( i );
+                auto hash = libp2p::multi::Multihash::create(
+                    libp2p::multi::HashType::sha256,
+                    gsl::span<const uint8_t>( digest.data(), digest.size() ) );
+                ASSERT_TRUE( hash.has_value() );
+                auto peer = libp2p::peer::PeerId::fromHash( hash.value() );
+                ASSERT_TRUE( peer.has_value() );
+                auto address = libp2p::multi::Multiaddress::create( "/ip4/127.0.0.1/tcp/9" );
+                ASSERT_TRUE( address.has_value() );
+                dagsyncer_->AddRoute( cid, peer.value(), { address.value() } );
+            }
+        }
+
         /// Journal an ORPHAN block (no delta, no head, never reachable)
         /// through the decorator - the spill shape without CRDT presence
         /// (the 18-01 SetOrphan shape; X4's GC-eviction target, the only
@@ -997,7 +1036,8 @@ namespace
         BarrierRun RunServeVsEvidenceWriterBarrier( const CID &cid,
                                                     uint32_t    jitter_base_ms  = 0,
                                                     uint32_t    jitter_spread_ms = 0,
-                                                    uint64_t    iter_seed       = 0 )
+                                                    uint64_t    iter_seed       = 0,
+                                                    uint32_t    failover_budget = 0 )
         {
             BarrierRun      run;
             WindowGate      gate;
@@ -1010,8 +1050,10 @@ namespace
                                           iter_seed );
             }
 
-            std::thread serve_thread( [ this, cid, &run ] {
-                auto served       = dagsyncer_->getNode( cid );
+            std::thread serve_thread( [ this, cid, &run, failover_budget ] {
+                auto served = failover_budget > 0
+                                  ? dagsyncer_->getNode( cid, failover_budget )
+                                  : dagsyncer_->getNode( cid );
                 run.serve_ran     = true;
                 run.serve_refusal = served.has_error()
                                     && served.error()
@@ -1049,6 +1091,10 @@ namespace
         /// Fault-arm injection: blinds the installed lookup while the
         /// evidence row stays in the store (RED-ARMS knob only).
         std::atomic<bool> evidence_suppressed_{ false };
+
+        /// Fault-arm injection (X7): forges the consult verdict to Pruned
+        /// regardless of the store (RED-ARMS knob only).
+        std::atomic<bool> forge_pruned_{ false };
 
         // =================================================================
         // The GlobalDB tx-stack world (the cold_prune_gate_test recipe) -
@@ -3281,4 +3327,486 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_DowngradeArmsMidWalk_InterlockHolds
                      std::chrono::milliseconds( 30000 ) ) );
         GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
     }
+}
+
+// ---------------------------------------------------------------------------
+// X7 (plan 19-03 Task 2): the exemption consult x concurrent /prune writes.
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief X7: the exemption gap-site consult (R4) x concurrent /prune/blk
+ *        write (E4) - hazard: PARTIAL-HISTORY VALIDATION (a wrongly-
+ *        exempted gap).
+ *
+ * EMBEDDED FAIL-CLOSED CONTROLS (green-and-loud, run inside the case
+ * BEFORE and re-run AFTER the fault arm - green-and-stay-green is the
+ * assertion, not a citation): a NoEvidence gap still aborts the pass; a
+ * Malformed gap (value corrupted at a BuildPruneBlockMarkerKey-produced
+ * key ONLY) still aborts fail-closed.
+ *
+ * SEAM LEG: the GC pass parks INSIDE its walk - the head's cold read is
+ * forced across the S3 tier (hot + local cold evicted) where the
+ * TimingS3Client op-barrier parks the pass thread mid-walk, BEFORE the
+ * evidenced gap's consult. While parked, a REAL concurrent sanctioned
+ * /prune/blk write (SeedPruneEvidenceQuiet - the BuildPruneBlockMarkerKey
+ * writer) lands on a DIFFERENT cid. On release: the pass exempts EXACTLY
+ * the evidenced gap (counted-continue, gc_last_pass_exempted == 1),
+ * nominates the canary, aborts on nothing - the concurrent write changed
+ * neither control's outcome.
+ *
+ * BLOCK HYGIENE (the one-fixture-many-passes discipline this case needs:
+ * the GC's walk universe is EVERY topic's heads, so an unhealed gap from
+ * an earlier block would abort every later pass): each control block
+ * heals its gap (republish the element - same key/value, same cid, the
+ * hot bytes return; the journal record is monotone-Durable so the
+ * republish journals nothing new) and rejuvenates its canary
+ * (SetSpilledAt(now) - the age gate hides it from later passes).
+ *
+ * FAULT ARM (knob-gated): the NoEvidence gap WRONGLY EXEMPTED - the
+ * consult verdict forged to Pruned (forge_pruned_, the knob-scoped
+ * injection in the installed lookup): the pass that must abort instead
+ * exempts the gap and nominates the canary - the detector FAILS (teeth).
+ * The controls re-run green afterwards inside the same case body.
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_ExemptionConsultVsConcurrentPrune_FailClosedControlsStay )
+{
+    LogKnobs( "X7" );
+    const bool red_arms = red_arms_enabled_;
+
+    auto delete_cold_both_tiers = [this]( const CID &cid ) {
+        auto deleted = fake_->Delete( XDeriveTestKey( Cid( cid ) ) );
+        ASSERT_TRUE( deleted.has_value() );
+        auto evicted = shared_local_->EvictLocal( Cid( cid ) );
+        ASSERT_TRUE( evicted.has_value() );
+    };
+
+    // ---- CONTROL 1 (NoEvidence): a genuine gap still aborts the pass.
+    {
+        const CID d1     = PublishElement( "x7/noev/key1", "v1" );
+        const CID d2     = PublishElement( "x7/noev/key2", "v2" );
+        const Cid canary = SetOrphan( "x7 noevidence canary payload" );
+        auto manager     = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( d1 ), Cid( d2 ), canary } );
+        RemoveHotCopy( d1 );
+        delete_cold_both_tiers( d1 );
+        BackdateCid( canary, 60000 );
+
+        const auto candidates = manager->GcPassOnce();
+        EXPECT_TRUE( candidates.empty() )
+            << "X7 control 1: an unevidenced gap must abort the pass - the "
+               "exemption never opens on NoEvidence";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u )
+            << "X7 control 1: NoEvidence must never be counted as exemption";
+
+        // Block hygiene: heal the gap + rejuvenate the canary.
+        (void)PublishElement( "x7/noev/key1", "v1" );
+        BackdateCid( canary, 0 );
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- CONTROL 2 (Malformed): unreadable evidence still aborts.
+    {
+        const CID d1     = PublishElement( "x7/mal/key1", "v1" );
+        const CID d2     = PublishElement( "x7/mal/key2", "v2" );
+        const Cid canary = SetOrphan( "x7 malformed canary payload" );
+        auto manager     = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( d1 ), Cid( d2 ), canary } );
+        RemoveHotCopy( d1 );
+        SeedPruneEvidence( d1, /*corrupt=*/true );
+        BackdateCid( canary, 60000 );
+
+        const auto candidates = manager->GcPassOnce();
+        EXPECT_TRUE( candidates.empty() )
+            << "X7 control 2: a malformed evidence row must abort the pass - "
+               "fail closed, never exempted";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u )
+            << "X7 control 2: Malformed must never be counted as exemption";
+
+        (void)PublishElement( "x7/mal/key1", "v1" );
+        BackdateCid( canary, 0 );
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- SEAM LEG: parked mid-walk, concurrent sanctioned write on a
+    // different cid, exactly one exemption.
+    {
+        const CID e1     = PublishElement( "x7/seam/key1", "v1" );
+        const CID e2     = PublishElement( "x7/seam/key2", "v2" );
+        const CID other  = PublishElement( "x7/seam/other", "vo" );
+        const Cid canary = SetOrphan( "x7 seam canary payload" );
+        auto manager     = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( e1 ), Cid( e2 ), Cid( other ), canary } );
+
+        // The evidenced gap: evidence seeded, hot gone, cold bytes still
+        // present (the consult never needs the bytes - 18-01 LEG-1).
+        RemoveHotCopy( e1 );
+        SeedPruneEvidence( e1 );
+        // The head goes S3-only: the pass's walk read of e2 crosses the
+        // remote tier where the op-barrier parks it mid-walk.
+        RemoveHotCopy( e2 );
+        {
+            auto evicted = shared_local_->EvictLocal( Cid( e2 ) );
+            ASSERT_TRUE( evicted.has_value() );
+        }
+        BackdateCid( canary, 60000 );
+
+        WindowGate gate;
+        timing_->SetOnOp( S3Op::Get, [ &gate ] { gate.Enter(); } );
+        std::thread gc_thread( [ manager ] { (void)manager->GcPassOnce(); } );
+        const bool parked = gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !parked )
+        {
+            gate.Release();
+            gc_thread.join();
+            timing_->ClearTimings();
+        }
+        ASSERT_TRUE( parked )
+            << "X7 seam: the GC pass never parked inside its walk (the "
+               "head's S3 read; s3_get_count=" << timing_->OpCount( S3Op::Get ) << ")";
+
+        // THE CONCURRENT WRITE: a sanctioned /prune/blk row lands on a
+        // DIFFERENT cid while the pass sits mid-walk.
+        {
+            std::atomic<bool> writer_wrote{ false };
+            std::thread writer( [ this, &other, &writer_wrote ] {
+                writer_wrote.store( SeedPruneEvidenceQuiet( other ) );
+            } );
+            writer.join();
+            EXPECT_TRUE( writer_wrote.load() )
+                << "X7 seam: the concurrent sanctioned write landed";
+        }
+
+        gate.Release();
+        gc_thread.join();
+        timing_->ClearTimings();
+
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 1u )
+            << "X7 seam: the canary is nominated - the concurrent write "
+               "aborted nothing";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 1u )
+            << "X7 seam: the pass exempts EXACTLY the evidenced gap "
+               "(counted-continue; the concurrent write on the other cid "
+               "exempts nothing)";
+        EXPECT_FALSE( EvidenceInStore( e1 ) == false ) << "the gap evidence really holds";
+
+        BackdateCid( canary, 0 );
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- FAULT ARM (red-by-design, knob only): the NoEvidence gap
+    // wrongly exempted - the forged verdict.
+    if ( red_arms )
+    {
+        const CID g1     = PublishElement( "x7/fault/key1", "v1" );
+        const CID g2     = PublishElement( "x7/fault/key2", "v2" );
+        const Cid canary = SetOrphan( "x7 fault canary payload" );
+        auto manager     = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( g1 ), Cid( g2 ), canary } );
+        RemoveHotCopy( g1 );
+        delete_cold_both_tiers( g1 ); // the genuine NoEvidence gap
+        BackdateCid( canary, 60000 );
+
+        forge_pruned_.store( true, std::memory_order_release );
+        const auto candidates = manager->GcPassOnce();
+        forge_pruned_.store( false, std::memory_order_release );
+
+        // THE DETECTOR (fails by design under the knob): the gap must
+        // abort, never exempt; the canary must never be nominated on an
+        // unevidenced gap.
+        EXPECT_TRUE( candidates.empty() )
+            << "RED-BY-DESIGN (fault arm): the wrongly-exempted gap let "
+               "the pass complete and nominate - the fail-closed detector "
+               "must fail loudly here";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u )
+            << "RED-BY-DESIGN (fault arm): candidates on an unevidenced gap";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u )
+            << "RED-BY-DESIGN (fault arm): a NoEvidence gap counted as "
+               "exemption - the partial-history detector must fail loudly "
+               "here";
+
+        (void)PublishElement( "x7/fault/key1", "v1" );
+        BackdateCid( canary, 0 );
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- CONTROLS RE-RUN (green-and-stay-green): fresh cids, the
+    // fail-closed outcomes unchanged by everything above.
+    {
+        const CID d1     = PublishElement( "x7/rerun/noev/key1", "v1" );
+        const CID d2     = PublishElement( "x7/rerun/noev/key2", "v2" );
+        const Cid canary = SetOrphan( "x7 rerun canary payload" );
+        auto manager     = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( d1 ), Cid( d2 ), canary } );
+        RemoveHotCopy( d1 );
+        delete_cold_both_tiers( d1 );
+        BackdateCid( canary, 60000 );
+        const auto candidates = manager->GcPassOnce();
+        EXPECT_TRUE( candidates.empty() )
+            << "X7 re-run control 1: NoEvidence still aborts after the "
+               "fault arm - green-and-stay-green";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u );
+
+        (void)PublishElement( "x7/rerun/noev/key1", "v1" );
+        BackdateCid( canary, 0 );
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+    {
+        const CID d1     = PublishElement( "x7/rerun/mal/key1", "v1" );
+        const CID d2     = PublishElement( "x7/rerun/mal/key2", "v2" );
+        const Cid canary = SetOrphan( "x7 rerun malformed canary payload" );
+        auto manager     = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( d1 ), Cid( d2 ), canary } );
+        RemoveHotCopy( d1 );
+        SeedPruneEvidence( d1, /*corrupt=*/true );
+        BackdateCid( canary, 60000 );
+        const auto candidates = manager->GcPassOnce();
+        EXPECT_TRUE( candidates.empty() )
+            << "X7 re-run control 2: Malformed still aborts after the "
+               "fault arm - green-and-stay-green";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u );
+
+        (void)PublishElement( "x7/rerun/mal/key1", "v1" );
+        BackdateCid( canary, 0 );
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// X9 (plan 19-03 Task 2): failover budget x evidence terminality.
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief X9: failover-budget exhaustion (S5) x evidence terminality (S4)
+ *        - hazard: PARTIAL-HISTORY VALIDATION via misclassification.
+ *
+ * The budget constant is read BY SYMBOL (kForcedWalkPeerFailoverPerCid)
+ * - never a hard-coded literal (the flagged assumption).
+ *
+ * BUDGET-BOUNDARY legs: with the cid absent from every tier and
+ * M in {budget-1, budget, budget+1} fresh failing routes, getNode(cid,
+ * budget) classifies the terminal as ROUTE_NOT_FOUND at exactly the
+ * constant and one step either side - the budget-abort vocabulary, no
+ * reclassification past the boundary.
+ *
+ * EVIDENCE-TERMINALITY leg: an evidenced cid (the poisoned triangle -
+ * evidence row + cold bytes present) with the FULL budget of routes
+ * armed: the consult refuses HISTORY_PRUNED_LOCALLY before any cold I/O
+ * and any peer leg - terminal refusal outranks the budget, never
+ * not-found, never skip.
+ *
+ * STEP-3 OBSERVE leg: a healthy S3-resident cid with the full budget of
+ * routes, observed at kInterruptAfterColdFetch (the point where the
+ * refusal vocabulary must stay distinct): the resolved node SERVES - a
+ * found node never reaches the budget terminal.
+ *
+ * WALK-CLASSIFICATION leg: a sealed absent ancestor with the full budget
+ * of routes - the forced walk maps the exhaustion onto its distinct
+ * walk-gap vocabulary (walk_gaps >= 1, Incomplete, skipped_pruned == 0):
+ * budget-abort is never a skip.
+ *
+ * JITTER BARRIER legs (the X2-B iterated pattern, budget-armed through
+ * the barrier helper's failover parameter): seeded iterations of a real
+ * serve thread vs a real evidence-writer thread through the parked S3
+ * window - EVERY sampled interleaving ends in the terminal refusal.
+ *
+ * FAULT ARM (knob-gated): the blinded consult at the seam point - the
+ * evidenced S3-resident cid serves instead of refusing: the vocabulary
+ * is lost - the detector FAILS (teeth).
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_PeerBudgetVsEvidenceTerminality_RefusalNotNotfound )
+{
+    LogKnobs( "X9" );
+    const bool red_arms = red_arms_enabled_;
+
+    // Read by symbol, never the literal (the flagged assumption).
+    const uint32_t budget = GraphsyncDAGSyncer::kForcedWalkPeerFailoverPerCid;
+
+    auto manager = MakeManager();
+    manager->Start();
+    crdt_->AddTopicName( "topic" );
+
+    auto make_absent = [this]( const CID &cid ) {
+        RemoveHotCopy( cid );
+        auto evicted = shared_local_->EvictLocal( Cid( cid ) );
+        ASSERT_TRUE( evicted.has_value() );
+        auto deleted = fake_->Delete( XDeriveTestKey( Cid( cid ) ) );
+        ASSERT_TRUE( deleted.has_value() );
+    };
+    auto make_s3_only = [this]( const CID &cid ) {
+        RemoveHotCopy( cid );
+        auto evicted = shared_local_->EvictLocal( Cid( cid ) );
+        ASSERT_TRUE( evicted.has_value() );
+    };
+
+    // ---- (1) budget-boundary legs: one step either side of the constant.
+    for ( const uint32_t m : { budget - 1u, budget, budget + 1u } )
+    {
+        const CID cid = PublishElement( "x9/budget/key-" + std::to_string( m ), "v" );
+        WaitAllDurable( { Cid( cid ) } );
+        make_absent( cid );
+        RegisterFailingRoutes( cid, m, /*salt=*/1000 + m );
+
+        auto served = dagsyncer_->getNode( cid, budget );
+        ASSERT_TRUE( served.has_error() ) << "X9 budget M=" << m << ": the fetch must fail";
+        EXPECT_EQ( served.error(), sgns::crdt::GraphsyncDAGSyncer::Error::ROUTE_NOT_FOUND )
+            << "X9 budget M=" << m << ": the budget-abort classification (the "
+               "terminal vocabulary) at exactly the constant and one step "
+               "either side - no reclassification";
+    }
+
+    // ---- (2) evidence terminality outranks the full budget.
+    {
+        const CID cid = PublishElement( "x9/term/key", "v" );
+        WaitAllDurable( { Cid( cid ) } );
+        RemoveHotCopy( cid );
+        SeedPruneEvidence( cid ); // the poisoned triangle: evidence + cold bytes
+        RegisterFailingRoutes( cid, budget, /*salt=*/2000 );
+
+        auto served = dagsyncer_->getNode( cid, budget );
+        ASSERT_TRUE( served.has_error() );
+        EXPECT_EQ( served.error(), sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY )
+            << "X9 terminality: at the FULL budget the classification is the "
+               "terminal refusal - never not-found, never skip, never the "
+               "peer leg";
+    }
+
+    // ---- (3) step-3 observe: a resolved node outranks the budget path.
+    {
+        const CID cid = PublishElement( "x9/step3/key", "v" );
+        WaitAllDurable( { Cid( cid ) } );
+        make_s3_only( cid );
+        RegisterFailingRoutes( cid, budget, /*salt=*/3000 );
+
+        std::atomic<bool> step3_seen{ false };
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( [ & ]( int step ) {
+            if ( step == GraphsyncDAGSyncer::kInterruptAfterColdFetch )
+            {
+                step3_seen.store( true );
+            }
+            return false; // observe-and-continue at the seam point
+        } );
+        auto served = dagsyncer_->getNode( cid, budget );
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+
+        ASSERT_TRUE( served.has_value() )
+            << "X9 step-3: the resolved node serves - the budget terminal "
+               "is never reached by a found node";
+        EXPECT_TRUE( step3_seen.load() ) << "X9 step-3: the observation point fired";
+    }
+
+    // ---- (4) walk classification: budget exhaustion maps to a walk GAP,
+    // never a skip. Isolated chain on its own topic.
+    {
+        crdt_->AddTopicName( "x9walk" );
+        auto publish_walk = [this]( const std::string &key, const std::string &value ) {
+            auto delta = CrdtDatastore::CreateDeltaToAdd( key, value );
+            EXPECT_TRUE( delta.has_value() );
+            auto published = crdt_->Publish( delta.value(), { "x9walk" } );
+            EXPECT_TRUE( published.has_value() );
+            return published.value();
+        };
+        const CID c1 = publish_walk( "x9/walk/key1", "v1" );
+        const CID c2 = publish_walk( "x9/walk/key2", "v2" );
+        WaitAllDurable( { Cid( c1 ), Cid( c2 ) } );
+        ASSERT_TRUE( dagsyncer_->markResolved( c1 ).has_value() );
+        make_absent( c1 );
+        RegisterFailingRoutes( c1, budget, /*salt=*/4000 );
+
+        auto queued = crdt_->RequestForcedWalk(
+            { "x9walk" },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() );
+        ASSERT_TRUE( PollUntil( [&] {
+                         const auto state = crdt_->GetForcedWalkStatus().state;
+                         return state == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed
+                                || state == sgns::crdt::CrdtDatastore::ForcedWalkState::Incomplete;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X9 walk leg: the walk never reached a terminal state";
+
+        const auto status = crdt_->GetForcedWalkStatus();
+        EXPECT_EQ( status.state, sgns::crdt::CrdtDatastore::ForcedWalkState::Incomplete );
+        EXPECT_GE( status.walk_gaps, 1u )
+            << "X9 walk: budget exhaustion is the GAP vocabulary (the "
+               "distinct abort, never a deferred resolve)";
+        EXPECT_EQ( status.skipped_pruned, 0u )
+            << "X9 walk: budget exhaustion is NEVER the skip vocabulary - "
+               "the classifications stay distinct";
+    }
+
+    // ---- (5) jitter barrier legs: seeded iterations of the real serve
+    // vs the real evidence writer, the budget armed on the serve call.
+    for ( uint64_t iter = 0; iter < jitter_iters_; ++iter )
+    {
+        const CID cid = PublishElement( "x9/jitter/key/" + std::to_string( iter ),
+                                        "v-" + std::to_string( iter ) );
+        WaitAllDurable( { Cid( cid ) } );
+        make_s3_only( cid );
+        RegisterFailingRoutes( cid, budget, /*salt=*/5000 + iter );
+
+        const auto run = RunServeVsEvidenceWriterBarrier( cid,
+                                                          /*jitter_base_ms */ 25,
+                                                          /*jitter_spread_ms*/ 15,
+                                                          /*iter_seed */ effective_seed_ + iter,
+                                                          /*failover_budget */ budget );
+        ASSERT_TRUE( run.inside_window )
+            << "X9 jitter iter " << iter << ": the serve never parked inside "
+               "the S3-tier Get";
+        ASSERT_TRUE( run.writer_wrote )
+            << "X9 jitter iter " << iter << ": the evidence writer did not complete";
+        ASSERT_TRUE( run.serve_ran )
+            << "X9 jitter iter " << iter << ": the serve thread never completed";
+        EXPECT_TRUE( run.serve_refusal )
+            << "X9 jitter iter " << iter << ": the terminal refusal under "
+               "every sampled interleaving with the budget armed - the "
+               "vocabulary stays distinct";
+    }
+
+    // ---- FAULT ARM (red-by-design, knob only): the blinded consult at
+    // the seam point - the refusal vocabulary lost.
+    if ( red_arms )
+    {
+        const CID cid = PublishElement( "x9/fault/key", "v" );
+        WaitAllDurable( { Cid( cid ) } );
+        make_s3_only( cid );
+        SeedPruneEvidence( cid ); // evidence + S3 bytes (the seam-point state)
+        RegisterFailingRoutes( cid, budget, /*salt=*/6000 );
+
+        evidence_suppressed_.store( true, std::memory_order_release );
+        auto served = dagsyncer_->getNode( cid, budget );
+        evidence_suppressed_.store( false, std::memory_order_release );
+
+        EXPECT_TRUE( served.has_error() )
+            << "RED-BY-DESIGN (fault arm): the blinded consult let the "
+               "evidenced cid SERVE - the refusal vocabulary lost at the "
+               "seam point; the detector must fail loudly here";
+        if ( served.has_error() )
+        {
+            EXPECT_EQ( served.error(),
+                       sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY )
+                << "RED-BY-DESIGN (fault arm): the classification must be the "
+                   "terminal refusal";
+        }
+        EXPECT_FALSE( dagsyncer_->IsCIDInCache( cid ) )
+            << "RED-BY-DESIGN (fault arm): the evidenced cid re-warmed "
+               "through the blinded seam";
+    }
+
+    manager_->Stop();
+    manager_ = nullptr;
 }
