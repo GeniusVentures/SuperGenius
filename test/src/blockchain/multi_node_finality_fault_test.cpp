@@ -7,7 +7,11 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransactionV2.hpp"
+#include "account/EscrowTransaction.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
+#include "account/TransferTransaction.hpp"
 #include "transaction/TransactionManager.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
 #include "account/UTXOMerkle.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
@@ -36,6 +40,7 @@
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
+#include <map>
 #include <iostream>
 #include <mutex>
 #include <optional>
@@ -50,6 +55,30 @@ namespace sgns
     class MultiNodeFinalityFaultTestAccess
     {
     public:
+        /// @brief Applies real certified fixture producers through the manager's normal effects path.
+        static outcome::result<void> Confirm( TransactionManager                       &manager,
+                                              const std::shared_ptr<GeniusTransaction> &transaction )
+        {
+            return manager.ChangeTransactionState( transaction, TransactionManager::TransactionStatus::CONFIRMED );
+        }
+
+        /// @brief Reads a payout constructed by PayEscrow without replacing its signed bytes.
+        static std::shared_ptr<GeniusTransaction> QueuedPayment( TransactionManager &manager, const std::string &hash )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            for ( const auto &item : manager.tx_queue_m )
+            {
+                for ( const auto &entry : item.first )
+                {
+                    if ( entry.first && entry.first->GetHash() == hash )
+                    {
+                        return entry.first;
+                    }
+                }
+            }
+            return nullptr;
+        }
+
         static std::shared_ptr<ConsensusManager> Manager( const std::shared_ptr<Blockchain> &blockchain )
         {
             return blockchain ? blockchain->consensus_manager_ : nullptr;
@@ -1640,6 +1669,193 @@ namespace
             EXPECT_TRUE( HasBridgeMarker( peer, winner ) );
         }
 
+        /// @brief Creates the canonical nonce subject with the manager-owned commitment and witness builders.
+        static outcome::result<sgns::ConsensusManager::Proposal> EscrowProposal(
+            Peer                          &peer,
+            const sgns::GeniusTransaction &transaction )
+        {
+            sgns::TransactionConsensusHandler handler( *peer.transactions,
+                                                       sgns::base::createLogger( "EscrowNetwork" ) );
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                sgns::ConsensusManager::CreateNonceSubject( transaction.GetSrcAddress(),
+                                                            transaction.GetNonce(),
+                                                            transaction.GetHash(),
+                                                            transaction.SerializeToEmbeddedTransaction(),
+                                                            handler.BuildUTXOTransitionCommitment( transaction ),
+                                                            handler.BuildUTXOWitness( transaction ) ) );
+            const auto registry = peer.blockchain->GetValidatorRegistry();
+            return peer.consensus->CreateProposal( subject,
+                                                   peer.account->GetAddress(),
+                                                   registry->GetRegistryCid(),
+                                                   registry->GetRegistryEpoch() );
+        }
+
+        /// @brief Builds genuine quorum signatures against the configured authorized registry.
+        static outcome::result<sgns::ConsensusManager::Certificate> SignedCertificate(
+            Peer                          &peer,
+            const sgns::GeniusTransaction &transaction,
+            const std::vector<Peer *>     &voters,
+            std::optional<uint64_t>        timestamp = std::nullopt )
+        {
+            BOOST_OUTCOME_TRY( auto proposal, EscrowProposal( peer, transaction ) );
+            if ( timestamp )
+            {
+                proposal.set_timestamp( timestamp.value() );
+                proposal.clear_proposal_id();
+                BOOST_OUTCOME_TRY( auto id_bytes, sgns::ConsensusManager::ProposalSigningBytes( proposal ) );
+                const auto hash = sgns::crypto::sha2_256( id_bytes.data(), id_bytes.size() );
+                proposal.set_proposal_id(
+                    sgns::base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) ) );
+                BOOST_OUTCOME_TRY( auto signed_bytes, sgns::ConsensusManager::ProposalSigningBytes( proposal ) );
+                const auto signature = peer.account->Sign( std::move( signed_bytes ) );
+                proposal.set_signature( signature.data(), signature.size() );
+            }
+            std::vector<sgns::ConsensusManager::Vote> votes;
+            for ( auto *voter : voters )
+            {
+                BOOST_OUTCOME_TRY(
+                    auto vote,
+                    voter->consensus->CreateVote( proposal.proposal_id(),
+                                                  voter->account->GetAddress(),
+                                                  true,
+                                                  [account = voter->account]( std::vector<uint8_t> bytes )
+                                                  { return account->Sign( std::move( bytes ) ); } ) );
+                if ( timestamp )
+                {
+                    vote.set_timestamp( timestamp.value() );
+                    BOOST_OUTCOME_TRY( auto vote_bytes, sgns::ConsensusManager::VoteSigningBytes( vote ) );
+                    const auto signature = voter->account->Sign( std::move( vote_bytes ) );
+                    vote.set_signature( signature.data(), signature.size() );
+                }
+                votes.push_back( std::move( vote ) );
+            }
+            return peer.consensus->CreateCertificate( proposal, votes );
+        }
+
+        /// @brief The producer is a signed escrow transaction, never an escrow-release status marker.
+        static std::shared_ptr<sgns::EscrowTransaction> EscrowHold( Network &network, uint64_t discriminator = 0 )
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_source_addr( network.first.account->GetAddress() );
+            dag.set_nonce( discriminator );
+            dag.set_timestamp( static_cast<int64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                         std::chrono::system_clock::now().time_since_epoch() )
+                                                         .count() ) +
+                               static_cast<int64_t>( discriminator ) );
+            const auto lock = "0x" + std::string( 64, 'a' );
+            dag.set_uncle_hash( lock );
+            const auto funding_hash =
+                sgns::base::Hash256::fromHex( std::string( 63, 'f' ) + std::to_string( discriminator ) ).value();
+            const sgns::GeniusUTXO funding( funding_hash, 0, 10003, kToken, network.first.account->GetAddress() );
+            for ( auto *peer : Peers( network ) )
+            {
+                EXPECT_TRUE(
+                    peer->account->GetUTXOManager().PutUTXO( funding, funding.GetOwnerAddress() ).has_value() );
+            }
+            sgns::InputUTXOInfo input{ funding_hash, 0, {} };
+            input.signature_ = network.first.account->Sign( input.SerializeForSigning() );
+            auto hold        = std::make_shared<sgns::EscrowTransaction>(
+                sgns::EscrowTransaction::New( { { input }, { { 10003, lock, kToken } } }, 10003, std::move( dag ) ) );
+            hold->MakeSignature( *network.first.account );
+            return hold;
+        }
+
+        /// @brief Installs exact signed producer/certificate evidence and applies its real output on each fresh store.
+        static void EstablishEscrow( Network &network, const std::shared_ptr<sgns::EscrowTransaction> &hold )
+        {
+            for ( auto *peer : Peers( network ) )
+            {
+                const auto certificate = SignedCertificate( *peer,
+                                                            *hold,
+                                                            { &network.first, &network.second, &network.third } );
+                ASSERT_TRUE( certificate.has_value() );
+                sgns::base::Buffer bytes;
+                bytes.put( hold->SerializeByteVector() );
+                ASSERT_TRUE(
+                    peer->db->Put( { sgns::TransactionManager::GetTransactionPath( *hold ) }, bytes, {} ).has_value() );
+                sgns::base::Buffer cert;
+                cert.put( certificate.value().SerializeAsString() );
+                ASSERT_TRUE( peer->db->Put( { "/cert/" + hold->GetSlotID() }, cert, {} ).has_value() );
+                ASSERT_TRUE( peer->blockchain->GetCertificateBySlot( hold->GetSlotID() ).has_value() );
+                ASSERT_TRUE( sgns::MultiNodeFinalityFaultTestAccess::Confirm( *peer->transactions, hold ).has_value() );
+            }
+        }
+
+        /// @brief Constructs the complete entitled recipient set with the production payout owner.
+        static std::shared_ptr<sgns::EscrowReleaseTransactionV2> EscrowPayment( Peer &processor,
+                                                                                const sgns::EscrowTransaction &hold,
+                                                                                const std::string &recipient,
+                                                                                uint64_t = 0 )
+        {
+            SGProcessing::TaskResult results;
+            auto                    *result = results.add_subtask_results();
+            result->set_subtaskid( "complete-validated-result" );
+            result->set_node_address( recipient );
+            result->set_developer_address( hold.GetSrcAddress() );
+            result->set_developer_cut( 500000 );
+            const auto token = kToken.bytes();
+            result->set_token_id( token.data(), token.size() );
+            const auto submitted = processor.transactions->PayEscrow(
+                sgns::TransactionManager::GetTransactionPath( hold ),
+                results,
+                nullptr );
+            EXPECT_TRUE( submitted.has_value() );
+            return submitted.has_value()
+                       ? std::dynamic_pointer_cast<sgns::EscrowReleaseTransactionV2>(
+                             sgns::MultiNodeFinalityFaultTestAccess::QueuedPayment( *processor.transactions,
+                                                                                    submitted.value() ) )
+                       : nullptr;
+        }
+
+        /// @brief Checks the actual hold spender, every produced outpoint and exact aggregate recipient balances.
+        static bool HasEscrowPayment( const Peer                             &peer,
+                                      const sgns::EscrowTransaction          &hold,
+                                      const sgns::EscrowReleaseTransactionV2 &winner,
+                                      const sgns::EscrowReleaseTransactionV2 *loser      = nullptr,
+                                      uint64_t                                multiplier = 1 )
+        {
+            const auto &ledger    = peer.account->GetUTXOManager();
+            const auto  hold_hash = sgns::base::Hash256::fromHex( hold.GetHash() ).value();
+            const auto  spender   = ledger.GetOutPointSpender( hold_hash, 0 );
+            if ( !spender || spender->toReadableString() != winner.GetHash() ||
+                 !ledger.IsOutPointGenuinelyConsumed( hold_hash, 0 ) )
+            {
+                return false;
+            }
+            std::map<std::string, uint64_t> balances;
+            const auto                      outputs = winner.GetProducedUTXOs();
+            if ( !outputs )
+            {
+                return false;
+            }
+            for ( const auto &expected : *outputs )
+            {
+                balances[expected.GetOwnerAddress()] += expected.GetAmount();
+                const auto actual                     = ledger.GetUTXOs( expected.GetOwnerAddress() );
+                if ( std::none_of( actual.begin(),
+                                   actual.end(),
+                                   [&]( const auto &utxo )
+                                   {
+                                       return utxo.GetTxID() == expected.GetTxID() &&
+                                              utxo.GetOutputIdx() == expected.GetOutputIdx() &&
+                                              utxo.GetAmount() == expected.GetAmount() &&
+                                              utxo.GetTokenID() == expected.GetTokenID();
+                                   } ) ||
+                     ( loser && std::any_of( actual.begin(),
+                                             actual.end(),
+                                             [&]( const auto &utxo )
+                                             { return utxo.GetTxID().toReadableString() == loser->GetHash(); } ) ) )
+                {
+                    return false;
+                }
+            }
+            return std::all_of( balances.begin(),
+                                balances.end(),
+                                [&]( const auto &entry )
+                                { return ledger.GetBalance( kToken, entry.first ) == entry.second * multiplier; } );
+        }
+
         static void AssertOneLiveMintEffect( const Peer &peer )
         {
             ASSERT_TRUE( peer.transactions );
@@ -1647,6 +1863,246 @@ namespace
         }
     };
 } // namespace
+
+TEST_F( FinalityFaultNetwork, EscrowReleaseSameHoldCrossPeerContentionPaysOnce )
+{
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+
+    // Explicit incident-shaped local configurations; deployed staging membership is not inferred.
+    struct Membership
+    {
+        const char             *name;
+        std::array<uint64_t, 4> weights;
+        size_t                  genesis_count;
+    };
+
+    const std::array<Membership, 3> configurations{
+        { { "A", { 50000, 1, 1, 1 }, 1 }, { "B", { 50000, 50000, 1, 1 }, 2 }, { "C", { 1, 1, 1, 1 }, 0 } } };
+    for ( size_t leg = 0; leg < configurations.size(); ++leg )
+    {
+        const auto &configuration = configurations[leg];
+        SCOPED_TRACE( configuration.name );
+        auto                        network = StartNetwork( std::string( "escrow-contention-" ) + configuration.name,
+                                     static_cast<uint16_t>( 54801 + leg * 10 ) );
+        auto                        fourth  = StartPeer( std::string( "escrow-fourth-" ) + configuration.name,
+                                 static_cast<uint16_t>( 54805 + leg * 10 ) );
+        const std::array<Peer *, 5> peers{ &network.first, &network.second, &network.third, &fourth, &network.passive };
+        sgns::ValidatorRegistry::RegistryUpdate update;
+        update.mutable_registry()->set_epoch( 1 );
+        for ( size_t index = 0; index < configuration.weights.size(); ++index )
+        {
+            auto *entry = update.mutable_registry()->add_validators();
+            entry->set_validator_id( peers[index]->account->GetAddress() );
+            entry->set_weight( configuration.weights[index] );
+            entry->set_role( index < configuration.genesis_count ? sgns::ValidatorRegistry::Role::GENESIS
+                                                                 : sgns::ValidatorRegistry::Role::REGULAR );
+            entry->set_status( sgns::ValidatorRegistry::Status::ACTIVE );
+        }
+        sgns::validator::RegistrySigningPayload payload;
+        *payload.mutable_registry() = update.registry();
+        const auto serialized       = payload.SerializeAsString();
+        const auto signature        = network.first.account->Sign( { serialized.begin(), serialized.end() } );
+        auto      *signer           = update.add_signatures();
+        signer->set_validator_id( network.first.account->GetAddress() );
+        signer->set_signature( signature.data(), signature.size() );
+        for ( auto *peer : peers )
+        {
+            ASSERT_TRUE( peer->blockchain->GetValidatorRegistry()->StoreRegistryUpdate( update ).has_value() );
+            ASSERT_WAIT_FOR_CONDITION(
+                [&]
+                {
+                    const auto loaded = peer->blockchain->GetValidatorRegistry()->LoadCurrentRegistry();
+                    return loaded.has_value() &&
+                           loaded.value().SerializeAsString() == update.registry().SerializeAsString();
+                },
+                std::chrono::seconds( 5 ),
+                "configured authorized membership is active",
+                nullptr );
+        }
+        const auto hold = EscrowHold( network );
+        EstablishEscrow( network, hold );
+        // The fourth voter receives the same exact producer evidence and real hold output.
+        const auto producer_certificate = SignedCertificate( fourth,
+                                                             *hold,
+                                                             { &network.first, &network.second, &network.third } );
+        ASSERT_TRUE( producer_certificate.has_value() );
+        sgns::base::Buffer producer_bytes;
+        producer_bytes.put( hold->SerializeByteVector() );
+        ASSERT_TRUE( fourth.db->Put( { sgns::TransactionManager::GetTransactionPath( *hold ) }, producer_bytes, {} )
+                         .has_value() );
+        sgns::base::Buffer certificate_bytes;
+        certificate_bytes.put( producer_certificate.value().SerializeAsString() );
+        ASSERT_TRUE( fourth.db->Put( { "/cert/" + hold->GetSlotID() }, certificate_bytes, {} ).has_value() );
+        const auto producer_outputs = hold->GetProducedUTXOs();
+        if ( !producer_outputs )
+        {
+            FAIL() << "Certified hold has no outputs";
+        }
+        for ( const auto &output : producer_outputs.value() )
+        {
+            ASSERT_TRUE( fourth.account->GetUTXOManager().PutUTXO( output, output.GetOwnerAddress() ).has_value() );
+        }
+        const auto first  = EscrowPayment( network.second, *hold, network.passive.account->GetAddress() );
+        const auto second = EscrowPayment( network.third, *hold, network.passive.account->GetAddress() );
+        ASSERT_TRUE( first && second );
+        ASSERT_NE( first->GetSrcAddress(), second->GetSrcAddress() );
+        ASSERT_EQ( first->GetSlotID(), second->GetSlotID() );
+        ASSERT_NE( first->SerializeByteVector(), second->SerializeByteVector() );
+        const auto proposal  = EscrowProposal( network.second, *first );
+        const auto contender = EscrowProposal( network.third, *second );
+        ASSERT_TRUE( proposal.has_value() && contender.has_value() );
+        // Both real submitting peers publish before the real mesh barrier, without creating split votes.
+        ASSERT_TRUE( network.second.consensus->SubmitProposal( proposal.value(), false ).has_value() );
+        ASSERT_TRUE( network.third.consensus->SubmitProposal( contender.value(), false ).has_value() );
+        ASSERT_TRUE( network.second.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_TRUE( network.third.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                return sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.third.consensus,
+                                                                                            first->GetSlotID() ) ==
+                       proposal.value().proposal_id();
+            },
+            std::chrono::seconds( 5 ),
+            "a real validator durably locks the winner before competing admission",
+            nullptr );
+        ASSERT_TRUE( network.third.consensus->SubmitProposal( contender.value() ).has_value() );
+        EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.third.consensus,
+                                                                                        first->GetSlotID() ),
+                   proposal.value().proposal_id() );
+        ConnectAndWaitForPeers( peers );
+        ASSERT_TRUE( network.second.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION( [&]
+                                   { return network.first.consensus->CheckCertificateForSlot( first->GetSlotID() ); },
+                                   std::chrono::seconds( 25 ),
+                                   "conforming configured voters certify one exact payout",
+                                   nullptr );
+        const auto first_canonical = network.first.consensus->GetCertificateBySlot( first->GetSlotID() );
+        ASSERT_TRUE( first_canonical.has_value() );
+        const auto winner_hash = sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash(
+            first_canonical.value().proposal() );
+        ASSERT_TRUE( winner_hash == first->GetHash() || winner_hash == second->GetHash() );
+        const auto  winner          = winner_hash == first->GetHash() ? first : second;
+        const auto  loser           = winner_hash == first->GetHash() ? second : first;
+        const auto &winner_proposal = winner == first ? proposal.value() : contender.value();
+        ASSERT_TRUE( network.third.consensus->SubmitProposal( contender.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                return std::all_of( peers.begin(),
+                                    peers.end(),
+                                    [&]( const auto *peer )
+                                    {
+                                        return peer->consensus->CheckCertificateForSlot( first->GetSlotID() ) &&
+                                               HasEscrowPayment( *peer, *hold, *winner, loser.get() );
+                                    } );
+            },
+            std::chrono::seconds( 25 ),
+            "every validator and passive recipient retain one complete payment",
+            nullptr );
+        for ( auto *peer : peers )
+        {
+            const auto certificate = peer->consensus->GetCertificateBySlot( first->GetSlotID() );
+            ASSERT_TRUE( certificate.has_value() );
+            EXPECT_EQ( certificate.value().proposal_id(), first_canonical.value().proposal_id() );
+            EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( certificate.value().proposal() ),
+                       winner->GetHash() );
+            EXPECT_EQ( certificate.value().proposal().subject().SerializeAsString(),
+                       winner_proposal.subject().SerializeAsString() );
+            const auto shared_registry = peer->blockchain->GetValidatorRegistry()->LoadVerifiedRegistryByCid(
+                certificate.value().registry_cid() );
+            ASSERT_TRUE( shared_registry.has_value() );
+            EXPECT_EQ( shared_registry.value().SerializeAsString(), update.registry().SerializeAsString() );
+            EXPECT_TRUE( peer->blockchain->GetValidatorRegistry()->IsQuorum( certificate.value().approved_weight(),
+                                                                             certificate.value().total_weight() ) );
+            // Nonmembers may send signed votes; the owning tally excludes their weight.
+            EXPECT_TRUE( std::none_of( shared_registry.value().validators().begin(),
+                                       shared_registry.value().validators().end(),
+                                       [&]( const auto &member )
+                                       { return member.validator_id() == network.passive.account->GetAddress(); } ) );
+            std::cout << "ESCROW_EVIDENCE membership=" << configuration.name << " peer=" << peer->name
+                      << " registry=" << certificate.value().registry_cid()
+                      << " epoch=" << certificate.value().registry_epoch() << " hold=" << hold->GetHash()
+                      << ":0 slot=" << winner->GetSlotID() << " winner=" << winner->GetHash()
+                      << " loser=" << loser->GetHash() << " certificate=" << certificate.value().proposal_id()
+                      << " verdict=Approve ledger=once\n";
+            const auto outputs = winner->GetProducedUTXOs();
+            if ( !outputs )
+            {
+                FAIL() << "Certified winner has no outputs";
+            }
+            for ( const auto &output : outputs.value() )
+            {
+                std::cout << "ESCROW_OUTPUT membership=" << configuration.name << " peer=" << peer->name
+                          << " outpoint=" << output.GetTxID().toReadableString() << ':' << output.GetOutputIdx()
+                          << " owner=" << output.GetOwnerAddress() << " amount=" << output.GetAmount() << " balance="
+                          << peer->account->GetUTXOManager().GetBalance( kToken, output.GetOwnerAddress() ) << '\n';
+            }
+            if ( peer == &network.first )
+            {
+                for ( const auto &member : shared_registry.value().validators() )
+                {
+                    std::cout << "ESCROW_MEMBER membership=" << configuration.name << " id=" << member.validator_id()
+                              << " weight=" << member.weight() << " role=" << member.role() << '\n';
+                }
+                const auto                 hold_bytes   = hold->SerializeByteVector();
+                const auto                 winner_bytes = winner->SerializeByteVector();
+                const auto                 loser_bytes  = loser->SerializeByteVector();
+                const auto                 certified    = certificate.value().SerializeAsString();
+                const std::vector<uint8_t> certified_bytes( certified.begin(), certified.end() );
+                std::cout << "ESCROW_SIGNED membership=" << configuration.name
+                          << " hold=" << sgns::base::hex_lower( gsl::span<const uint8_t>( hold_bytes ) )
+                          << " winner=" << sgns::base::hex_lower( gsl::span<const uint8_t>( winner_bytes ) )
+                          << " loser=" << sgns::base::hex_lower( gsl::span<const uint8_t>( loser_bytes ) )
+                          << " certificate=" << sgns::base::hex_lower( gsl::span<const uint8_t>( certified_bytes ) )
+                          << '\n';
+            }
+        }
+        StopPeer( fourth );
+        StopNetwork( network );
+    }
+}
+
+TEST_F( FinalityFaultNetwork, EscrowReleaseDifferentHoldsRemainIndependent )
+{
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto network = StartNetwork( "escrow-independent", 54841 );
+    StoreRegistry( network );
+    const auto first_hold  = EscrowHold( network );
+    const auto second_hold = EscrowHold( network, 1 );
+    EstablishEscrow( network, first_hold );
+    EstablishEscrow( network, second_hold );
+    const auto first  = EscrowPayment( network.second, *first_hold, network.passive.account->GetAddress() );
+    const auto second = EscrowPayment( network.third, *second_hold, network.passive.account->GetAddress() );
+    ASSERT_TRUE( first && second );
+    ASSERT_NE( first->GetSlotID(), second->GetSlotID() );
+    ConnectPeers( Peers( network ) );
+    const auto first_proposal  = EscrowProposal( network.second, *first );
+    const auto second_proposal = EscrowProposal( network.third, *second );
+    ASSERT_TRUE( first_proposal.has_value() && second_proposal.has_value() );
+    ASSERT_TRUE( network.second.consensus->SubmitProposal( first_proposal.value() ).has_value() );
+    ASSERT_TRUE( network.third.consensus->SubmitProposal( second_proposal.value() ).has_value() );
+    const auto peers = Peers( network );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            return std::all_of( peers.begin(),
+                                peers.end(),
+                                [&]( const auto *peer )
+                                {
+                                    return peer->consensus->CheckCertificateForSlot( first->GetSlotID() ) &&
+                                           peer->consensus->CheckCertificateForSlot( second->GetSlotID() ) &&
+                                           HasEscrowPayment( *peer, *first_hold, *first, nullptr, 2 ) &&
+                                           HasEscrowPayment( *peer, *second_hold, *second, nullptr, 2 );
+                                } );
+        },
+        std::chrono::seconds( 25 ),
+        "different hold slots each produce their complete payment",
+        nullptr );
+    StopNetwork( network );
+}
 
 TEST_F( FinalityFaultNetwork, ProductionRouteAuditUsesOnlyPubSubCrdtPersistenceAndMintIngress )
 {
