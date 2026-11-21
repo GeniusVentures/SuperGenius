@@ -12,6 +12,8 @@
 #include "account/EscrowReleaseTransactionV2.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crypto/hasher.hpp"
+#include "base/hexutil.hpp"
+#include "escrow_release_legacy_fixture.hpp"
 
 namespace
 {
@@ -24,11 +26,16 @@ namespace
         return { bytes.begin(), bytes.end() };
     }
 
-    std::shared_ptr<GeniusTransaction> DecodeReleaseV2( const std::vector<uint8_t> &bytes )
+    std::shared_ptr<GeniusTransaction> DecodeRelease( const std::string &type, const std::vector<uint8_t> &bytes )
     {
         const auto &decoders = GeniusTransaction::GetDeSerializers();
-        const auto  decoder  = decoders.find( "escrow-release-v2" );
+        const auto  decoder  = decoders.find( type );
         return decoder == decoders.end() ? nullptr : decoder->second( bytes );
+    }
+
+    std::shared_ptr<GeniusTransaction> DecodeReleaseV2( const std::vector<uint8_t> &bytes )
+    {
+        return DecodeRelease( "escrow-release-v2", bytes );
     }
 
     SGTransaction::EscrowReleaseTxV2 SignedPaymentWire( GeniusAccount     &account,
@@ -284,5 +291,95 @@ namespace
         EXPECT_EQ( restored_dag.GetReflection()->GetString( restored_dag,
                                                             restored_dag.GetDescriptor()->FindFieldByName( "type" ) ),
                    "escrow-release-v2" );
+    }
+
+    TEST( LegacyEscrowReleaseCodecTest, FixedHistoricalBytesPreserveMarkerFields )
+    {
+        namespace fixture = escrow_release_legacy_fixture;
+        for ( const auto &expected : fixture::FIXTURES )
+        {
+            const auto raw = base::unhex( expected.raw_hex );
+            if ( !raw )
+            {
+                FAIL() << "Historical fixture hex must decode";
+            }
+            const auto marker = DecodeRelease( "escrow-release", raw.value() );
+            ASSERT_NE( marker, nullptr );
+            EXPECT_EQ( marker->SerializeByteVector(), raw.value() );
+            EXPECT_EQ( marker->GetType(), "escrow-release" );
+            EXPECT_EQ( marker->GetTransactionSpecificPath(), "escrow-release" );
+            EXPECT_EQ( marker->GetHash(), expected.hash );
+            EXPECT_TRUE( marker->CheckHash() );
+            EXPECT_TRUE( marker->CheckSignature() );
+            EXPECT_FALSE( marker->HasUTXOParameters() );
+            EXPECT_FALSE( marker->GetUTXOParametersOpt().has_value() );
+            EXPECT_FALSE( marker->GetProducedUTXOs().has_value() );
+
+            const auto &dag = marker->dag_st;
+            EXPECT_EQ( dag.type(), "escrow-release" );
+            EXPECT_EQ( dag.source_addr(), fixture::SOURCE );
+            EXPECT_EQ( dag.previous_hash(), std::string( 64, '1' ) );
+            EXPECT_EQ( dag.uncle_hash(), std::string( 64, '2' ) );
+            EXPECT_EQ( dag.nonce(), 17 );
+            EXPECT_EQ( dag.timestamp(), 1712345678 );
+            const std::vector<uint8_t> signature( dag.signature().begin(), dag.signature().end() );
+            EXPECT_EQ( base::hex_lower( signature ), expected.signature_hex );
+
+            SGTransaction::EscrowReleaseTx wire;
+            ASSERT_TRUE( wire.ParseFromArray( raw.value().data(), static_cast<int>( raw.value().size() ) ) );
+            EXPECT_EQ( wire.release_amount(), 123456789 );
+            EXPECT_EQ( wire.release_address(), "historical-release-address" );
+            EXPECT_EQ( wire.escrow_source(), std::string( 128, 'b' ) );
+            EXPECT_EQ( wire.original_escrow_hash(), std::string( 64, 'c' ) );
+            ASSERT_EQ( wire.utxo_params().inputs_size(), 1 );
+            EXPECT_EQ( wire.utxo_params().inputs( 0 ).tx_id_hash(), std::string( 64, 'a' ) );
+            EXPECT_EQ( wire.utxo_params().inputs( 0 ).output_index(), 3 );
+            EXPECT_EQ( wire.utxo_params().inputs( 0 ).signature(), std::string( "input\0signature", 15 ) );
+            ASSERT_EQ( wire.utxo_params().outputs_size(), 1 );
+            EXPECT_EQ( wire.utxo_params().outputs( 0 ).encrypted_amount(), 987654321 );
+            EXPECT_EQ( wire.utxo_params().outputs( 0 ).dest_addr(), "historical-output-destination" );
+            EXPECT_EQ( wire.utxo_params().outputs( 0 ).token_id().empty(), expected.omitted_token );
+            if ( !expected.omitted_token )
+            {
+                EXPECT_EQ( wire.utxo_params().outputs( 0 ).token_id(), std::string( 30, '\0' ) + "\x12\x34" );
+            }
+            const auto embedded_bytes = base::unhex( expected.embedded_hex );
+            if ( !embedded_bytes )
+            {
+                FAIL() << "Embedded historical fixture hex must decode";
+            }
+            EmbeddedTransaction embedded;
+            ASSERT_TRUE( embedded.ParseFromArray( embedded_bytes.value().data(),
+                                                  static_cast<int>( embedded_bytes.value().size() ) ) );
+            ASSERT_EQ( embedded.transaction_case(), EmbeddedTransaction::kEscrowRelease );
+            EXPECT_EQ( MessageBytes( marker->SerializeToEmbeddedTransaction() ), embedded_bytes.value() );
+            const auto restored = DecodeRelease( "escrow-release", MessageBytes( embedded.escrow_release() ) );
+            ASSERT_NE( restored, nullptr );
+            EXPECT_EQ( restored->SerializeByteVector(), raw.value() );
+            EXPECT_TRUE( restored->CheckSignature() );
+        }
+    }
+
+    TEST( LegacyEscrowReleaseCodecTest, LegacyAndV2RemainDistinct )
+    {
+        const auto raw = base::unhex( escrow_release_legacy_fixture::FIXTURES.front().raw_hex );
+        if ( !raw )
+        {
+            FAIL() << "Historical fixture hex must decode";
+        }
+        const auto legacy = DecodeRelease( "escrow-release", raw.value() );
+        ASSERT_NE( legacy, nullptr );
+        EXPECT_EQ( DecodeReleaseV2( raw.value() ), nullptr );
+        const auto account = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+        ASSERT_NE( account, nullptr );
+        const auto payment_bytes = MessageBytes( SignedPaymentWire( *account, 2 ) );
+        const auto payment       = DecodeReleaseV2( payment_bytes );
+        ASSERT_NE( payment, nullptr );
+        EXPECT_EQ( DecodeRelease( "escrow-release", payment_bytes ), nullptr );
+        EXPECT_NE( legacy->GetType(), payment->GetType() );
+        EXPECT_NE( legacy->GetType(), "escrow-hold" );
+        EXPECT_EQ( legacy->SerializeToEmbeddedTransaction().transaction_case(), EmbeddedTransaction::kEscrowRelease );
+        EXPECT_EQ( payment->SerializeToEmbeddedTransaction().transaction_case(),
+                   EmbeddedTransaction::kEscrowReleaseV2 );
     }
 }
