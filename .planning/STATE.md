@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
 status: executing
-stopped_at: Completed 21.1-06-PLAN.md; next plan 21.1-07
-last_updated: "2026-11-21T15:41:48.371Z"
-last_activity: 2026-11-21 -- Completed plan 21.1-06; next plan 07
+stopped_at: Completed 21.1-07-PLAN.md; next plan 21.1-08
+last_updated: "2026-11-21T16:06:32.480Z"
+last_activity: 2026-11-21 -- Completed plan 21.1-07; next plan 08
 progress:
   total_phases: 33
   completed_phases: 5
   total_plans: 47
-  completed_plans: 39
+  completed_plans: 40
   percent: 15
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
-Last activity: 2026-11-21 -- Completed plan 21.1-06; next plan 07
+Last activity: 2026-11-21 -- Completed plan 21.1-07; next plan 08
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 87%
 
 ## Historical v1.2 Roadmap Snapshot
 
@@ -84,8 +84,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-21T15:41:48.364Z
-**Stopped At:** Completed 21.1-06-PLAN.md; next plan 21.1-07
+**Last session:** 2026-11-21T16:06:32.474Z
+**Stopped At:** Completed 21.1-07-PLAN.md; next plan 21.1-08
 **Resume File:** None
 
 ## Accumulated Context
@@ -160,6 +160,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 21.1 P04 | 33m30s recorded verification window | 3 tasks | 6 files |
 | Phase 21.1 P05 | 19m04s | 2 tasks | 5 files |
 | Phase 21.1 P06 | 21m19s | 3 tasks | 11 files |
+| Phase 21.1 P07 | 21m16s | 3 tasks | 3 files |
 
 ## Decisions
 
@@ -258,6 +259,9 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 21.1]: Signature-only CONFIRMED is not finality without exact canonical certificate binding; retain existing certified BestHash arbitration and callback application-before-cleanup ordering.
 - [Phase 21.1]: Canonical nonce recovery reads existing CRDT certificate records through owning full validation; missing/storage and retryable authority remain distinct from rejection.
 - [Phase 21.1]: One manager predecessor resolver binds the original embedded source, nonce, hash and virtual slot; durable genuine own-spender evidence alone permits payout rebuild.
+- [Phase 21.1]: Capture the first validated canonical payout before redelivery and require its exact proposal and subject on every peer; ledger effects are checked separately.
+- [Phase 21.1]: Measured local memberships and signed artifacts are review evidence, not deployed inventory or historical activation authority.
+- [Phase 21.1]: Legacy source:nonce certificates outlive retry TTLs in a slot distinct from V2; activation remains pending the final operator checkpoint.
 
 ## Deferred Items
 
