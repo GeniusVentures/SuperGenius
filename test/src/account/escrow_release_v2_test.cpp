@@ -6,7 +6,16 @@
 #include <gtest/gtest.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/dynamic_message.h>
+#include <chrono>
 
+#include "account/GeniusInputValidator.hpp"
+#include "account/UTXOManager.hpp"
+#include "blockchain/Blockchain.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
+#include "transaction/TransactionManager.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
+#include "testutil/storage/base_crdt_test.hpp"
+#include "testutil/wait_condition.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
 #include "account/EscrowReleaseTransactionV2.hpp"
@@ -21,6 +30,208 @@
 namespace
 {
     using namespace sgns;
+
+    using Verdict = IInputValidator::WitnessVerdict;
+
+    class EscrowReleaseV2ValidationTest : public ::test::CRDTFixture
+    {
+    protected:
+        EscrowReleaseV2ValidationTest() : CRDTFixture( "escrow_release_v2_validation" )
+        {
+        }
+
+        void SetUp() override
+        {
+            account_   = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+            processor_ = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+            ASSERT_NE( account_, nullptr );
+            ASSERT_NE( processor_, nullptr );
+            ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
+            previous_authority_ = Blockchain::GetAuthorizedFullNodeAddress();
+            Blockchain::SetAuthorizedFullNodeAddress( account_->GetAddress() );
+            blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
+            ASSERT_NE( blockchain_, nullptr );
+            manager_ = TransactionManager::New( db_,
+                                                io_,
+                                                account_,
+                                                blockchain_,
+                                                NodeType::Light,
+                                                0,
+                                                std::chrono::minutes( 5 ),
+                                                std::chrono::minutes( 10 ) );
+            ASSERT_NE( manager_, nullptr );
+            const auto registry = blockchain_->GetValidatorRegistry();
+            ASSERT_TRUE( registry
+                             ->StoreGenesisRegistry( { account_->GetAddress() },
+                                                     [account = account_]( std::vector<uint8_t> bytes )
+                                                     { return account->Sign( std::move( bytes ) ); } )
+                             .has_value() );
+            ASSERT_TRUE( ::waitForCondition(
+                [&registry]()
+                { return registry->LoadCurrentRegistry().has_value() && !registry->GetRegistryCid().empty(); },
+                std::chrono::seconds( 2 ),
+                nullptr ) );
+        }
+
+        void TearDown() override
+        {
+            if ( blockchain_ )
+            {
+                (void) blockchain_->Stop();
+            }
+            manager_.reset();
+            blockchain_.reset();
+            account_.reset();
+            processor_.reset();
+            Blockchain::SetAuthorizedFullNodeAddress( previous_authority_ );
+        }
+
+        SGTransaction::DAGStruct Dag( const GeniusAccount &signer, uint64_t nonce = 0 ) const
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_source_addr( signer.GetAddress() );
+            dag.set_nonce( nonce );
+            dag.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::system_clock::now().time_since_epoch() )
+                                   .count() );
+            return dag;
+        }
+
+        std::shared_ptr<EscrowTransaction> Hold( const std::string &owner = "0x" + std::string( 64, 'a' ) )
+        {
+            auto hold = std::make_shared<EscrowTransaction>(
+                EscrowTransaction::New( { {}, { { 17, owner, TokenID::FromBytes( { 0 } ) } } },
+                                        17,
+                                        Dag( *account_ ) ) );
+            hold->MakeSignature( *account_ );
+            return hold;
+        }
+
+        EscrowReleaseTransactionV2 Release( const GeniusTransaction &producer,
+                                            GeniusAccount           &signer,
+                                            uint32_t                 index = 0 )
+        {
+            InputUTXOInfo input{ base::Hash256::fromHex( producer.GetHash() ).value(), index, {} };
+            input.signature_ = signer.Sign( input.SerializeForSigning() );
+            auto dag         = Dag( signer );
+            dag.set_uncle_hash( "untrusted-text" );
+            auto release = EscrowReleaseTransactionV2::New(
+                { input },
+                { { 17, account_->GetAddress(), TokenID::FromBytes( { 0 } ) } },
+                std::move( dag ) );
+            release.MakeSignature( signer );
+            return release;
+        }
+
+        void Persist( const GeniusTransaction &transaction, const std::string &path = {} )
+        {
+            base::Buffer value;
+            value.put( transaction.SerializeByteVector() );
+            ASSERT_TRUE(
+                db_->Put( { path.empty() ? TransactionManager::GetTransactionPath( transaction ) : path }, value, {} )
+                    .has_value() );
+        }
+
+        outcome::result<ConsensusCertificate> Certificate( const GeniusTransaction &transaction )
+        {
+            const auto                  registry = blockchain_->GetValidatorRegistry();
+            TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseValidationTest" ) );
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                ConsensusManager::CreateNonceSubject( transaction.GetSrcAddress(),
+                                                      transaction.GetNonce(),
+                                                      transaction.GetHash(),
+                                                      transaction.SerializeToEmbeddedTransaction(),
+                                                      handler.BuildUTXOTransitionCommitment( transaction ),
+                                                      std::nullopt ) );
+            const auto consensus = blockchain_->GetConsensusManager();
+            BOOST_OUTCOME_TRY( auto proposal,
+                               consensus->CreateProposal( subject,
+                                                          account_->GetAddress(),
+                                                          registry->GetRegistryCid(),
+                                                          registry->GetRegistryEpoch() ) );
+            BOOST_OUTCOME_TRY( auto vote,
+                               consensus->CreateVote( proposal.proposal_id(),
+                                                      account_->GetAddress(),
+                                                      true,
+                                                      [account = account_]( std::vector<uint8_t> bytes )
+                                                      { return account->Sign( std::move( bytes ) ); } ) );
+            return consensus->CreateCertificate( proposal, { vote } );
+        }
+
+        void PersistCertificate( const GeniusTransaction &transaction, const ConsensusCertificate &certificate )
+        {
+            base::Buffer value;
+            value.put( certificate.SerializeAsString() );
+            ASSERT_TRUE( db_->Put( { "/cert/" + transaction.GetSlotID() }, value, {} ).has_value() );
+        }
+
+        void Certify( const GeniusTransaction &transaction )
+        {
+            Persist( transaction );
+            const auto certificate = Certificate( transaction );
+            ASSERT_TRUE( certificate.has_value() );
+            PersistCertificate( transaction, certificate.value() );
+            ASSERT_TRUE( blockchain_->GetCertificateBySlot( transaction.GetSlotID() ).has_value() );
+        }
+
+        GeniusInputValidator                validator_;
+        std::shared_ptr<GeniusAccount>      account_;
+        std::shared_ptr<GeniusAccount>      processor_;
+        std::shared_ptr<Blockchain>         blockchain_;
+        std::shared_ptr<TransactionManager> manager_;
+        std::string                         previous_authority_;
+    };
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2ResolverBindsCertifiedHold )
+    {
+        const auto hold = Hold();
+        Certify( *hold );
+        const auto release  = Release( *hold, *processor_ );
+        const auto resolved = validator_.ResolveEscrowReleaseInput( release, *blockchain_ );
+        ASSERT_EQ( resolved.verdict, Verdict::kValid );
+        ASSERT_NE( resolved.producer, nullptr );
+        EXPECT_EQ( resolved.producer->GetHash(), hold->GetHash() );
+        EXPECT_EQ( resolved.producer->GetUTXOParameters().second.front().dest_address,
+                   hold->GetUTXOParameters().second.front().dest_address );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2ResolverRejectsFalseHold )
+    {
+        const auto normal = TransferTransaction::New(
+            {},
+            { { 17, "0x" + std::string( 64, 'a' ), TokenID::FromBytes( { 0 } ) } },
+            Dag( *account_ ) );
+        Persist( normal );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( Release( normal, *processor_ ), *blockchain_ ).verdict,
+                   Verdict::kInvalid );
+        const auto wrong_owner = Hold( account_->GetAddress() );
+        Persist( *wrong_owner );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( Release( *wrong_owner, *processor_ ), *blockchain_ ).verdict,
+                   Verdict::kInvalid );
+        const auto hold = Hold();
+        Certify( *hold );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( Release( *hold, *processor_, 1 ), *blockchain_ ).verdict,
+                   Verdict::kInvalid );
+        const auto release = Release( *hold, *processor_ );
+        auto       other   = Hold( "0x" + std::string( 64, 'b' ) );
+        Persist( *other, TransactionManager::GetTransactionPath( *hold ) );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kInvalid );
+        Persist( *hold );
+        const auto wrong_certificate = Certificate( *other );
+        ASSERT_TRUE( wrong_certificate.has_value() );
+        PersistCertificate( *hold, wrong_certificate.value() );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kInvalid );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2ResolverMissingEvidenceIsPending )
+    {
+        const auto hold    = Hold();
+        const auto release = Release( *hold, *processor_ );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kNotSynced );
+        Persist( *hold );
+        EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kNotSynced );
+    }
 
     template <typename Message>
     std::vector<uint8_t> MessageBytes( const Message &message )
