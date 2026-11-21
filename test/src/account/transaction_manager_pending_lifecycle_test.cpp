@@ -630,31 +630,34 @@ TEST_F( TransactionManagerRecoveryTest, AsyncOutgoingWaitTimesOutWithoutPollingT
 
 TEST_F( TransactionManagerPreviousHashTest, V2PredecessorResolvesAfterRestartAndValuePrune )
 {
-    const auto hold = MakeCertifiedHold();
+    const auto hold    = MakeCertifiedHold();
     const auto release = MakeRelease( *hold, { { hold->GetAmount(), account_->GetAddress(), kTokenId } } );
     StoreCertificate( release );
     StoreTransaction( release );
     ASSERT_TRUE( ConfirmPayment( release ).has_value() );
     ASSERT_EQ( manager_->GetTransactionStatusByTxId( release->GetHash() ),
                sgns::TransactionManager::TransactionStatus::CONFIRMED );
-    const auto topic = std::string( "CRDT.Datastore.TEST.Channel" );
+    const auto         topic = std::string( "CRDT.Datastore.TEST.Channel" );
     sgns::base::Buffer value;
     value.put( release->SerializeByteVector() );
     const auto persisted = db_->Put( { sgns::TransactionManager::GetTransactionPath( *release ) }, value, { topic } );
     ASSERT_TRUE( persisted.has_value() );
-    auto next = db_->BeginTransaction();
+    auto               next = db_->BeginTransaction();
     sgns::base::Buffer sentinel;
     sentinel.put( "retiring-frontier" );
     ASSERT_TRUE( next->Put( { "/predecessor/retiring-head" }, sentinel ) );
     ASSERT_TRUE( next->Commit( { topic } ).has_value() );
     ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::StoreTransactionCID(
-                     *manager_, sgns::TransactionManager::GetTransactionPath( *release ), persisted.value().toString().value() )
+                     *manager_,
+                     sgns::TransactionManager::GetTransactionPath( *release ),
+                     persisted.value().toString().value() )
                      .has_value() );
     ASSERT_TRUE( manager_->EraseTransactionEntryPruned( release->GetHash() ).has_value() );
     ASSERT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *release ) ).has_error() );
     RecreateManager();
-    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::CertificatePreviousHash(
-                   *manager_, release->GetNonce() + 1 ), release->GetHash() );
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::CertificatePreviousHash( *manager_,
+                                                                                            release->GetNonce() + 1 ),
+               release->GetHash() );
     const auto next_hash = manager_->MigrationFunds( 1, "after-pruned-v2", kTokenId );
     ASSERT_TRUE( next_hash.has_value() );
     const auto ordinary = FindOutgoingTransaction( next_hash.value() );
@@ -668,7 +671,7 @@ TEST_F( TransactionManagerPreviousHashTest, V2PredecessorResolvesAfterRestartAnd
 
 TEST_F( TransactionManagerPreviousHashTest, V2PredecessorRejectsWrongHashSourceNonceAndCertificate )
 {
-    const auto hold = MakeCertifiedHold();
+    const auto hold    = MakeCertifiedHold();
     const auto release = MakeRelease( *hold, { { hold->GetAmount(), account_->GetAddress(), kTokenId } } );
     StoreCertificate( release );
     StoreTransaction( release );
@@ -685,8 +688,8 @@ TEST_F( TransactionManagerPreviousHashTest, V2PredecessorRejectsWrongHashSourceN
     EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ReplayProtection( *manager_, valid ),
                sgns::ConsensusManager::Check::Approve );
     for ( const auto &invalid : { make_next( hold->GetHash(), release->GetNonce() + 1, account_->GetAddress() ),
-                                 make_next( release->GetHash(), release->GetNonce() + 1, "wrong-source" ),
-                                 make_next( release->GetHash(), release->GetNonce() + 2, account_->GetAddress() ) } )
+                                  make_next( release->GetHash(), release->GetNonce() + 1, "wrong-source" ),
+                                  make_next( release->GetHash(), release->GetNonce() + 2, account_->GetAddress() ) } )
     {
         EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ReplayProtection( *manager_, invalid ),
                    sgns::ConsensusManager::Check::Reject );
@@ -709,8 +712,9 @@ TEST_F( TransactionManagerPreviousHashTest, OrdinaryAndMintPredecessorsRetainNon
     for ( uint64_t nonce : { 0, 1 } )
     {
         const auto predecessor = nonce == 0
-            ? std::static_pointer_cast<sgns::GeniusTransaction>( MakeTransaction( nonce ) )
-            : std::static_pointer_cast<sgns::GeniusTransaction>( MakeSubmissionTransaction( nonce ) );
+                                     ? std::static_pointer_cast<sgns::GeniusTransaction>( MakeTransaction( nonce ) )
+                                     : std::static_pointer_cast<sgns::GeniusTransaction>(
+                                           MakeSubmissionTransaction( nonce ) );
         StoreCertificate( predecessor );
         StoreTransaction( predecessor );
         EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::CertificatePreviousHash( *manager_, nonce + 1 ),
@@ -1766,10 +1770,10 @@ TEST_F( TransactionManagerRecoveryTest, SyncingExitNormalSyncPathDoesNotDependOn
 
 namespace
 {
-    outcome::result<std::vector<sgns::OutputDestInfo>> RecoveryPayoutOutputs( uint64_t           amount,
-                                                                            const sgns::TokenID &token,
-                                                                            const std::string &peer,
-                                                                            const std::string &developer )
+    outcome::result<std::vector<sgns::OutputDestInfo>> RecoveryPayoutOutputs( uint64_t             amount,
+                                                                              const sgns::TokenID &token,
+                                                                              const std::string   &peer,
+                                                                              const std::string   &developer )
     {
         SGProcessing::TaskResult results;
         auto                    *result = results.add_subtask_results();
@@ -1781,50 +1785,54 @@ namespace
         return sgns::TransactionManagerPendingLifecycleTestAccess::PayoutOutputs( results, amount, token );
     }
 
-    void ExpectRecoveryPaymentOutputs( const sgns::UTXOManager      &ledger,
-                                       const sgns::GeniusTransaction &payment )
+    void ExpectRecoveryPaymentOutputs( const sgns::UTXOManager &ledger, const sgns::GeniusTransaction &payment )
     {
         const auto payment_hash = sgns::base::Hash256::fromHex( payment.GetHash() ).value();
         const auto parameters   = payment.GetUTXOParametersOpt();
-        ASSERT_TRUE( parameters.has_value() );
+        if ( !parameters )
+        {
+            FAIL() << "payment must expose its output parameters";
+        }
         for ( size_t index = 0; index < parameters->second.size(); ++index )
         {
             const auto &expected = parameters->second.at( index );
-            const auto actual = ledger.GetUnconsumedUTXO( payment_hash, static_cast<uint32_t>( index ) );
-            ASSERT_TRUE( actual.has_value() );
+            const auto  actual   = ledger.GetUnconsumedUTXO( payment_hash, static_cast<uint32_t>( index ) );
+            if ( !actual )
+            {
+                FAIL() << "payment must retain every expected output";
+            }
             EXPECT_EQ( actual->GetTxID(), payment_hash );
             EXPECT_EQ( actual->GetOutputIdx(), index );
             EXPECT_EQ( actual->GetAmount(), expected.encrypted_amount );
             EXPECT_EQ( actual->GetOwnerAddress(), expected.dest_address );
             EXPECT_EQ( actual->GetTokenID(), expected.token_id );
         }
-        EXPECT_FALSE( ledger.GetOutPointState( payment_hash,
-                                               static_cast<uint32_t>( parameters->second.size() ) )
-                          .has_value() );
+        EXPECT_FALSE(
+            ledger.GetOutPointState( payment_hash, static_cast<uint32_t>( parameters->second.size() ) ).has_value() );
     }
 } // namespace
 
 TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
 {
-    constexpr uint64_t kAmount = 10003;
-    const auto peer            = sgns::GeniusAccount::NewEphemeral( kTokenId );
-    const auto developer       = sgns::GeniusAccount::NewEphemeral( kTokenId );
-    const auto competitor      = sgns::GeniusAccount::NewEphemeral( kTokenId );
+    constexpr uint64_t AMOUNT     = 10003;
+    const auto         peer       = sgns::GeniusAccount::NewEphemeral( kTokenId );
+    const auto         developer  = sgns::GeniusAccount::NewEphemeral( kTokenId );
+    const auto         competitor = sgns::GeniusAccount::NewEphemeral( kTokenId );
     ASSERT_TRUE( peer );
     ASSERT_TRUE( developer );
     ASSERT_TRUE( competitor );
-    const auto hold    = MakeCertifiedHold( kAmount );
-    const auto outputs = RecoveryPayoutOutputs( kAmount, kTokenId, peer->GetAddress(), developer->GetAddress() );
+    const auto hold    = MakeCertifiedHold( AMOUNT );
+    const auto outputs = RecoveryPayoutOutputs( AMOUNT, kTokenId, peer->GetAddress(), developer->GetAddress() );
     ASSERT_TRUE( outputs.has_value() );
     ASSERT_EQ( outputs.value().size(), 3U );
-    const auto winner = MakeRelease( *hold, outputs.value() );
+    const auto winner    = MakeRelease( *hold, outputs.value() );
     auto       loser_dag = MakeDAG( 1 );
     loser_dag.set_source_addr( competitor->GetAddress() );
     auto loser_input       = winner->GetUTXOParameters().first.front();
     loser_input.signature_ = competitor->Sign( loser_input.SerializeForSigning() );
-    const auto loser = std::make_shared<sgns::EscrowReleaseTransactionV2>(
+    const auto loser       = std::make_shared<sgns::EscrowReleaseTransactionV2>(
         sgns::EscrowReleaseTransactionV2::New( { loser_input },
-                                               { { kAmount, competitor->GetAddress(), kTokenId } },
+                                                     { { AMOUNT, competitor->GetAddress(), kTokenId } },
                                                std::move( loser_dag ) ) );
     loser->MakeSignature( *competitor );
     ASSERT_NE( winner->GetSrcAddress(), loser->GetSrcAddress() );
@@ -1838,19 +1846,19 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
     EXPECT_FALSE( sgns::TransactionManager::CertificateMatchesTransaction( certificate.value(), *loser ) );
 
     // Seed the real CRDT value/CID and retire its topic head before the guarded prune.
-    const auto winner_path = sgns::TransactionManager::GetTransactionPath( *winner );
+    const auto                   winner_path = sgns::TransactionManager::GetTransactionPath( *winner );
     sgns::crdt::GlobalDB::Buffer value;
     value.put( winner->SerializeByteVector() );
     const auto stored = db_->Put( { winner_path }, value, { "CRDT.Datastore.TEST.Channel" } );
     ASSERT_TRUE( stored.has_value() );
-    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::StoreTransactionCID(
-                     *manager_, winner_path, stored.value().toString().value() )
-                     .has_value() );
+    ASSERT_TRUE(
+        sgns::TransactionManagerPendingLifecycleTestAccess::StoreTransactionCID( *manager_,
+                                                                                 winner_path,
+                                                                                 stored.value().toString().value() )
+            .has_value() );
     sgns::crdt::GlobalDB::Buffer retired;
     retired.put( "retire-" + winner->GetHash() );
-    ASSERT_TRUE( db_->Put( { "/recovery/retire/" + winner->GetHash() },
-                           retired,
-                           { "CRDT.Datastore.TEST.Channel" } )
+    ASSERT_TRUE( db_->Put( { "/recovery/retire/" + winner->GetHash() }, retired, { "CRDT.Datastore.TEST.Channel" } )
                      .has_value() );
     ASSERT_TRUE( ConfirmPayment( winner ).has_value() );
     auto      &ledger      = account_->GetUTXOManager();
@@ -1881,7 +1889,7 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
             EXPECT_EQ( ledger.GetBalance( output.token_id, output.dest_address ), output.encrypted_amount );
             EXPECT_EQ( ledger.GetUnconsumedUTXOs( output.dest_address ).size(), 1U );
         }
-        EXPECT_EQ( total, kAmount );
+        EXPECT_EQ( total, AMOUNT );
         EXPECT_EQ( ledger.GetBalance( competitor->GetAddress() ), 0U );
         EXPECT_FALSE( ledger.GetOutPointState( loser_hash, 0 ).has_value() );
     };
@@ -1907,24 +1915,32 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
     manager_->RegisterTopicNames();
     ASSERT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ winner_hash } );
     ASSERT_TRUE( db_->Get( winner_path ).has_error() );
+    std::vector<uint64_t> balances_before_loser;
+    for ( const auto &output : outputs.value() )
+    {
+        balances_before_loser.push_back( ledger.GetBalance( output.token_id, output.dest_address ) );
+    }
     // The surviving spender belongs to the other transaction: it cannot authorize this contender's rebuild.
     ASSERT_TRUE( ConfirmPayment( loser ).has_error() );
     EXPECT_FALSE( ledger.GetOutPointState( loser_hash, 0 ).has_value() );
     EXPECT_EQ( ledger.GetBalance( competitor->GetAddress() ), 0U );
-    for ( const auto &output : outputs.value() )
+    for ( size_t index = 0; index < outputs.value().size(); ++index )
     {
-        EXPECT_EQ( ledger.GetBalance( output.dest_address ), 0U );
+        const auto &output = outputs.value().at( index );
+        EXPECT_EQ( ledger.GetBalance( output.token_id, output.dest_address ), balances_before_loser.at( index ) );
     }
     const auto canonical = blockchain_->GetCertificateBySlot( winner->GetSlotID() );
     ASSERT_TRUE( canonical.has_value() );
     ASSERT_EQ( canonical.value().SerializeAsString(), certificate.value().SerializeAsString() );
     const auto replayed = sgns::TransactionManagerPendingLifecycleTestAccess::OnConsensusCertificate(
-        *manager_, winner->GetHash(), canonical.value() );
+        *manager_,
+        winner->GetHash(),
+        canonical.value() );
     ASSERT_TRUE( replayed.has_value() );
     EXPECT_EQ( replayed.value(), sgns::ConsensusManager::Check::Approve );
     expect_winner();
     const auto loser_state = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx( *manager_,
-                                                                                              loser->GetHash() );
+                                                                                               loser->GetHash() );
     if ( loser_state )
     {
         EXPECT_NE( loser_state->status, sgns::TransactionManager::TransactionStatus::CONFIRMED );
@@ -1932,8 +1948,9 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
     }
     for ( unsigned duplicate = 0; duplicate < 2; ++duplicate )
     {
-        ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::OnConsensusCertificate(
-                         *manager_, winner->GetHash(), canonical.value() )
+        ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::OnConsensusCertificate( *manager_,
+                                                                                                 winner->GetHash(),
+                                                                                                 canonical.value() )
                          .has_value() );
         ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *loser ).has_value() );
         expect_winner();
@@ -1943,24 +1960,27 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
 
 TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct )
 {
-    constexpr uint64_t kAmount = 10003;
-    const auto peer            = sgns::GeniusAccount::NewEphemeral( kTokenId );
-    const auto developer       = sgns::GeniusAccount::NewEphemeral( kTokenId );
+    constexpr uint64_t AMOUNT    = 10003;
+    const auto         peer      = sgns::GeniusAccount::NewEphemeral( kTokenId );
+    const auto         developer = sgns::GeniusAccount::NewEphemeral( kTokenId );
     ASSERT_TRUE( peer );
     ASSERT_TRUE( developer );
-    const auto outputs = RecoveryPayoutOutputs( kAmount, kTokenId, peer->GetAddress(), developer->GetAddress() );
+    const auto outputs = RecoveryPayoutOutputs( AMOUNT, kTokenId, peer->GetAddress(), developer->GetAddress() );
     ASSERT_TRUE( outputs.has_value() );
     ASSERT_EQ( outputs.value().size(), 3U );
-    const auto legacy_hold = MakeCertifiedHold( kAmount );
+    const auto legacy_hold      = MakeCertifiedHold( AMOUNT );
     const auto legacy_hold_hash = sgns::base::Hash256::fromHex( legacy_hold->GetHash() ).value();
-    auto      &ledger = account_->GetUTXOManager();
-    const auto funding = ledger.GetUnconsumedUTXO( legacy_hold_hash, 0 );
-    ASSERT_TRUE( funding.has_value() );
-    const auto historical = MakePaymentTransfer( funding.value(), outputs.value(), legacy_hold->GetUncleHash() );
+    auto      &ledger           = account_->GetUTXOManager();
+    const auto funding          = ledger.GetUnconsumedUTXO( legacy_hold_hash, 0 );
+    if ( !funding )
+    {
+        FAIL() << "legacy hold must retain its original funding";
+    }
+    const auto historical       = MakePaymentTransfer( funding.value(), outputs.value(), legacy_hold->GetUncleHash() );
     const auto historical_bytes = historical->SerializeByteVector();
-    const auto marker = std::make_shared<sgns::EscrowReleaseTransaction>(
+    const auto marker           = std::make_shared<sgns::EscrowReleaseTransaction>(
         sgns::EscrowReleaseTransaction::New( { historical->GetInputInfos(), historical->GetDstInfos() },
-                                             kAmount,
+                                             AMOUNT,
                                              peer->GetAddress(),
                                              legacy_hold->GetSrcAddress(),
                                              legacy_hold->GetHash(),
@@ -1983,10 +2003,19 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct 
     EXPECT_FALSE( ledger.IsOutPointConsumed( legacy_hold_hash, 0 ) );
     StoreCertificate( historical );
     StoreTransaction( historical );
+    const auto historical_certificate = blockchain_->GetCertificateBySlot( historical->GetSlotID() );
+    ASSERT_TRUE( historical_certificate.has_value() );
+    ASSERT_TRUE(
+        sgns::TransactionManager::CertificateMatchesTransaction( historical_certificate.value(), *historical ) );
+    const auto applied = sgns::TransactionManagerPendingLifecycleTestAccess::OnConsensusCertificate(
+        *manager_,
+        historical->GetHash(),
+        historical_certificate.value() );
+    ASSERT_TRUE( applied.has_value() );
+    EXPECT_EQ( applied.value(), sgns::ConsensusManager::Check::Approve );
     ProcessStoredTransaction( historical );
     EXPECT_EQ( historical->SerializeByteVector(), historical_bytes );
-    EXPECT_EQ( historical->GetSlotID(),
-               historical->GetSrcAddress() + ":" + std::to_string( historical->GetNonce() ) );
+    EXPECT_EQ( historical->GetSlotID(), historical->GetSrcAddress() + ":" + std::to_string( historical->GetNonce() ) );
     const auto historical_hash = sgns::base::Hash256::fromHex( historical->GetHash() ).value();
     EXPECT_EQ( ledger.GetOutPointSpender( legacy_hold_hash, 0 ), std::optional{ historical_hash } );
     ExpectRecoveryPaymentOutputs( ledger, *historical );
@@ -1995,7 +2024,7 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct 
         EXPECT_EQ( ledger.GetBalance( output.token_id, output.dest_address ), output.encrypted_amount );
     }
 
-    const auto v2_hold = MakeCertifiedHold( kAmount );
+    const auto v2_hold = MakeCertifiedHold( AMOUNT );
     const auto release = MakeRelease( *v2_hold, outputs.value() );
     ASSERT_NE( release->GetSlotID(), historical->GetSlotID() );
     StoreCertificate( release );
@@ -2012,9 +2041,8 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct 
     manager_ = sgns::TransactionManager::New( db_, io_, account_, blockchain_ );
     ASSERT_TRUE( manager_ );
     manager_->RegisterTopicNames();
-    for ( const auto &transaction : std::vector<std::shared_ptr<sgns::GeniusTransaction>>{ marker,
-                                                                                        historical,
-                                                                                        release } )
+    for ( const auto &transaction :
+          std::vector<std::shared_ptr<sgns::GeniusTransaction>>{ marker, historical, release } )
     {
         const auto certificate = blockchain_->GetCertificateBySlot( transaction->GetSlotID() );
         ASSERT_TRUE( certificate.has_value() );
@@ -2022,7 +2050,9 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct 
         for ( unsigned duplicate = 0; duplicate < 2; ++duplicate )
         {
             const auto replayed = sgns::TransactionManagerPendingLifecycleTestAccess::OnConsensusCertificate(
-                *manager_, transaction->GetHash(), certificate.value() );
+                *manager_,
+                transaction->GetHash(),
+                certificate.value() );
             ASSERT_TRUE( replayed.has_value() );
             EXPECT_EQ( replayed.value(), sgns::ConsensusManager::Check::Approve );
         }
@@ -2046,5 +2076,5 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct 
         EXPECT_EQ( ledger.GetBalance( output.token_id, output.dest_address ), 2 * output.encrypted_amount );
         EXPECT_EQ( ledger.GetUnconsumedUTXOs( output.dest_address ).size(), 2U );
     }
-    EXPECT_EQ( total, kAmount );
+    EXPECT_EQ( total, AMOUNT );
 }

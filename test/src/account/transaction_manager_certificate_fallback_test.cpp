@@ -227,6 +227,11 @@ namespace sgns
             utxo_manager.SetFailNextPutUTXOStoreForTest( fail );
         }
 
+        static std::string BurnAddress()
+        {
+            return std::string( TransactionManager::BURN_ADDRESS );
+        }
+
         static std::string UTXORecordPrefix( const std::string &owner )
         {
             return std::string( UTXOManager::DB_PREFIX ) + "/" + owner + "/";
@@ -2679,8 +2684,8 @@ void CertificateFallbackTest::RejectLocalTxThroughConsensus( const std::shared_p
  */
 TEST_F( CertificateFallbackTest, CanonicalNonceLookupFindsCustomSlotCertificate )
 {
-    const auto hold = base::Hash256::fromHex( std::string( 64, 'b' ) ).value();
-    const auto release = MakeRelease( *account_, hold, 91, { { 17, account_->GetAddress(), kTestTokenId } } );
+    const auto hold        = base::Hash256::fromHex( std::string( 64, 'b' ) ).value();
+    const auto release     = MakeRelease( *account_, hold, 91, { { 17, account_->GetAddress(), kTestTokenId } } );
     const auto certificate = BuildSignedCertificate( release );
     ASSERT_TRUE( certificate.has_value() );
     CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
@@ -2697,24 +2702,34 @@ TEST_F( CertificateFallbackTest, CanonicalNonceLookupRejectsInvalidBindings )
 {
     auto manager = CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ );
     CertificateFallbackTestAccess::ParkRoundTimer( manager );
-    const auto hold = base::Hash256::fromHex( std::string( 64, 'c' ) ).value();
-    const auto release = MakeRelease( *account_, hold, 92, { { 17, account_->GetAddress(), kTestTokenId } } );
+    const auto hold        = base::Hash256::fromHex( std::string( 64, 'c' ) ).value();
+    const auto release     = MakeRelease( *account_, hold, 92, { { 17, account_->GetAddress(), kTestTokenId } } );
     const auto certificate = BuildSignedCertificate( release );
     ASSERT_TRUE( certificate.has_value() );
     PersistCertificateAtSlot( release->GetSlotID(), certificate.value() );
-    for ( const auto &result : { blockchain_->FindCertificateByNonceSubject( "different-account", 92 ),
-                                blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 93 ),
-                                blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, "wrong-hash" ) } )
+    for ( const auto &result :
+          { blockchain_->FindCertificateByNonceSubject( "different-account", 92 ),
+            blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 93 ),
+            blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, "wrong-hash" ) } )
     {
         ASSERT_TRUE( result.has_error() );
         EXPECT_EQ( result.error(), storage::DatabaseError::NOT_FOUND );
     }
     auto corrupt = certificate.value();
     corrupt.mutable_votes( 0 )->set_signature( "invalid" );
-    PersistCertificateAtSlot( release->GetSlotID(), corrupt );
-    const auto invalid = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, release->GetHash() );
-    ASSERT_TRUE( invalid.has_error() );
-    EXPECT_EQ( invalid.error(), std::errc::invalid_argument );
+    auto wrong_quorum = certificate.value();
+    wrong_quorum.clear_votes();
+    auto wrong_registry = certificate.value();
+    wrong_registry.set_registry_epoch( wrong_registry.registry_epoch() + 1 );
+    for ( const auto &rejected : { corrupt, wrong_quorum, wrong_registry } )
+    {
+        PersistCertificateAtSlot( release->GetSlotID(), rejected );
+        const auto invalid = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(),
+                                                                         92,
+                                                                         release->GetHash() );
+        ASSERT_TRUE( invalid.has_error() );
+        EXPECT_EQ( invalid.error(), std::errc::invalid_argument );
+    }
     PersistCertificateAtSlot( release->GetSlotID(), certificate.value() );
     PersistCertificateAtSlot( "wrong-canonical-key", certificate.value() );
     const auto wrong_key = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92 );
@@ -2722,14 +2737,43 @@ TEST_F( CertificateFallbackTest, CanonicalNonceLookupRejectsInvalidBindings )
     EXPECT_EQ( wrong_key.error(), std::errc::invalid_argument );
     ASSERT_TRUE( db_->Remove( { "/cert/wrong-canonical-key" }, {} ).has_value() );
     const auto other_hold = base::Hash256::fromHex( std::string( 64, 'd' ) ).value();
-    const auto other = MakeRelease( *account_, other_hold, 92, { { 17, account_->GetAddress(), kTestTokenId } } );
+    const auto other      = MakeRelease( *account_, other_hold, 92, { { 17, account_->GetAddress(), kTestTokenId } } );
     const auto other_certificate = BuildSignedCertificate( other );
     ASSERT_TRUE( other_certificate.has_value() );
     PersistCertificateAtSlot( other->GetSlotID(), other_certificate.value() );
     const auto ambiguous = blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92 );
     ASSERT_TRUE( ambiguous.has_error() );
     EXPECT_EQ( ambiguous.error(), std::errc::invalid_argument );
-    EXPECT_TRUE( blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, release->GetHash() ).has_value() );
+    EXPECT_TRUE(
+        blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, release->GetHash() ).has_value() );
+    // A correctly signed record whose pinned registry has not arrived is retryable,
+    // unlike the definite rejection cases above.
+    const auto deferred_proposal = ConsensusManager::CreateProposal( certificate.value().proposal().subject(),
+                                                                     account_->GetAddress(),
+                                                                     "unavailable-registry",
+                                                                     0,
+                                                                     [this]( std::vector<uint8_t> bytes )
+                                                                     { return account_->Sign( std::move( bytes ) ); } );
+    ASSERT_TRUE( deferred_proposal.has_value() );
+    auto deferred                = certificate.value();
+    *deferred.mutable_proposal() = deferred_proposal.value();
+    deferred.set_proposal_id( deferred_proposal.value().proposal_id() );
+    deferred.set_registry_cid( deferred_proposal.value().registry_cid() );
+    deferred.set_registry_epoch( deferred_proposal.value().registry_epoch() );
+    auto *vote = deferred.mutable_votes( 0 );
+    vote->set_proposal_id( deferred.proposal_id() );
+    const auto bytes = ConsensusManager::VoteSigningBytes( *vote );
+    ASSERT_TRUE( bytes.has_value() );
+    const auto signature = account_->Sign( bytes.value() );
+    vote->set_signature( signature.data(), signature.size() );
+    PersistCertificateAtSlot( release->GetSlotID(), deferred );
+    for ( const auto &result :
+          { blockchain_->GetCertificateBySlot( release->GetSlotID() ),
+            blockchain_->FindCertificateByNonceSubject( account_->GetAddress(), 92, release->GetHash() ) } )
+    {
+        ASSERT_TRUE( result.has_error() );
+        EXPECT_EQ( result.error(), std::errc::resource_unavailable_try_again );
+    }
 }
 
 TEST_F( CertificateFallbackTest, BurnCleanup_LocalMintRejectedByConsensusRemovesBurnUtxoAndReservation )
@@ -2906,4 +2950,305 @@ TEST_F( CertificateFallbackTest, BurnCleanup_MintFundsCatchPathRemovesBurnUtxoAf
     // clean slate), so a relayer redelivery can re-mint instead of wedging.
     EXPECT_EQ( utxo_mgr.TryReserveOutpoint( burn, 0, "post-cleanup-probe", UTXOManager::UTXOType::UTXO_BRIDGE ),
                UTXOManager::OutpointClaim::kNotClaimable );
+}
+
+namespace
+{
+    /// @brief Checks exact durable winner authority and every recipient's single-payment effects.
+    void ExpectDurableReleasePayment( TransactionManager                             &manager,
+                                      Blockchain                                     &blockchain,
+                                      UTXOManager                                    &ledger,
+                                      const EscrowTransaction                        &hold,
+                                      const EscrowReleaseTransactionV2               &winner,
+                                      const EscrowReleaseTransactionV2               &loser,
+                                      const std::vector<std::pair<uint64_t, size_t>> &recipient_baselines )
+    {
+        const auto hold_hash   = base::Hash256::fromHex( hold.GetHash() ).value();
+        const auto winner_hash = base::Hash256::fromHex( winner.GetHash() ).value();
+        const auto loser_hash  = base::Hash256::fromHex( loser.GetHash() ).value();
+        const auto certificate = blockchain.GetCertificateBySlot( loser.GetSlotID() );
+        ASSERT_TRUE( certificate.has_value() );
+        const auto subject = ConsensusManager::DecodeNonceSubject( certificate.value().proposal().subject() );
+        ASSERT_TRUE( subject.has_value() );
+        EXPECT_EQ( subject.value().tx_hash(), winner.GetHash() );
+        EXPECT_EQ( certificate.value().proposal().subject().account_id(), winner.GetSrcAddress() );
+        EXPECT_EQ( subject.value().nonce(), winner.GetNonce() );
+        EXPECT_EQ( CertificateFallbackTestAccess::GetExpectedCertificateSlotKey( certificate.value() ),
+                   "/cert/" + winner.GetSlotID() );
+
+        const auto confirmed = CertificateFallbackTestAccess::GetTrackedTxByHash( manager, winner.GetHash() );
+        if ( !confirmed )
+        {
+            FAIL() << "the exact canonical winner must remain tracked";
+        }
+        EXPECT_EQ( confirmed->status, TransactionManager::TransactionStatus::CONFIRMED );
+        EXPECT_TRUE( confirmed->effects_applied );
+        const auto rejected = CertificateFallbackTestAccess::GetTrackedTxByHash( manager, loser.GetHash() );
+        if ( !rejected )
+        {
+            FAIL() << "the losing contender must remain tracked";
+        }
+        EXPECT_EQ( rejected->status, TransactionManager::TransactionStatus::FAILED );
+        EXPECT_FALSE( rejected->effects_applied );
+        EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ winner_hash } );
+        EXPECT_FALSE( ledger.GetUnconsumedUTXO( hold_hash, 0 ) );
+        const auto durable = ledger.ReadDurableSpendEvidence( hold_hash,
+                                                              0,
+                                                              hold.GetUTXOParameters().second.front().dest_address );
+        ASSERT_TRUE( durable.has_value() );
+        if ( !durable.value() )
+        {
+            FAIL() << "the consumed hold must retain its durable genuine spender";
+        }
+        EXPECT_TRUE( durable.value()->consumed );
+        EXPECT_TRUE( durable.value()->genuine );
+        EXPECT_EQ( durable.value()->spender, std::optional{ winner_hash } );
+
+        const auto outputs = winner.GetProducedUTXOs();
+        if ( !outputs )
+        {
+            FAIL() << "the payment must expose its entire payout distribution";
+        }
+        ASSERT_EQ( outputs->size(), recipient_baselines.size() );
+        uint64_t total = 0;
+        for ( size_t index = 0; index < outputs->size(); ++index )
+        {
+            const auto &expected = outputs->at( index );
+            const auto  actual   = ledger.GetUnconsumedUTXO( winner_hash, expected.GetOutputIdx() );
+            if ( !actual )
+            {
+                FAIL() << "every peer, developer and burn output must exist";
+            }
+            EXPECT_EQ( actual->GetOwnerAddress(), expected.GetOwnerAddress() );
+            EXPECT_EQ( actual->GetAmount(), expected.GetAmount() );
+            EXPECT_EQ( actual->GetTokenID(), expected.GetTokenID() );
+            EXPECT_EQ( ledger.GetBalance( expected.GetTokenID(), expected.GetOwnerAddress() ),
+                       recipient_baselines.at( index ).first + expected.GetAmount() );
+            EXPECT_EQ( ledger.GetUTXOs( expected.GetOwnerAddress() ).size(),
+                       recipient_baselines.at( index ).second + 1U );
+            total += actual->GetAmount();
+        }
+        EXPECT_EQ( total, hold.GetAmount() );
+        EXPECT_FALSE( ledger.GetOutPointState( winner_hash, static_cast<uint32_t>( outputs->size() ) ) );
+        for ( const auto &output : loser.GetDstInfos() )
+        {
+            EXPECT_EQ( ledger.GetBalance( output.token_id, output.dest_address ), 0U );
+            EXPECT_TRUE( ledger.GetUTXOs( output.dest_address ).empty() );
+        }
+        EXPECT_FALSE( ledger.GetOutPointState( loser_hash, 0 ) );
+    }
+} // namespace
+
+TEST_F( CertificateFallbackTest, V2ArrivalOrdersAndConcurrentRedeliveryPayOnce )
+{
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    constexpr uint64_t HOLD_NONCE_BASE       = 300;
+    constexpr uint64_t HOLD_NONCE_STEP       = 10;
+    constexpr uint64_t PEER_AMOUNT           = 7;
+    constexpr uint64_t DEVELOPER_AMOUNT      = 6;
+    constexpr uint64_t BURN_AMOUNT           = 4;
+    constexpr size_t   CONCURRENT_DELIVERIES = 3;
+    constexpr unsigned REDELIVERY_ROUNDS     = 3;
+    constexpr auto     BARRIER_TIMEOUT       = std::chrono::seconds( 30 );
+    auto              &ledger                = account_->GetUTXOManager();
+    uint64_t           hold_nonce            = HOLD_NONCE_BASE;
+    // Both arrival orders extend one fresh fixture history so burn balances also prove cumulative exactness.
+    for ( const bool transaction_first : { true, false } )
+    {
+        SCOPED_TRACE( transaction_first ? "transaction-first" : "certificate-first" );
+        const auto peer            = GeniusAccount::NewEphemeral( kTestTokenId );
+        const auto developer       = GeniusAccount::NewEphemeral( kTestTokenId );
+        const auto loser_recipient = GeniusAccount::NewEphemeral( kTestTokenId );
+        ASSERT_TRUE( peer );
+        ASSERT_TRUE( developer );
+        ASSERT_TRUE( loser_recipient );
+        const auto hold = SeedEscrowHold( hold_nonce );
+        ASSERT_TRUE( hold );
+        const auto                        hold_hash = base::Hash256::fromHex( hold->GetHash() ).value();
+        const std::vector<OutputDestInfo> outputs{
+            { PEER_AMOUNT, peer->GetAddress(), kTestTokenId },
+            { DEVELOPER_AMOUNT, developer->GetAddress(), kTestTokenId },
+            { BURN_AMOUNT, CertificateFallbackTestAccess::BurnAddress(), kTestTokenId } };
+        std::vector<std::pair<uint64_t, size_t>> baselines;
+        for ( const auto &output : outputs )
+        {
+            baselines.emplace_back( ledger.GetBalance( output.token_id, output.dest_address ),
+                                    ledger.GetUTXOs( output.dest_address ).size() );
+        }
+        const auto winner = MakeRelease( *peer, hold_hash, hold_nonce + 1, outputs );
+        const auto loser  = MakeRelease( *account_,
+                                        hold_hash,
+                                        hold_nonce + 2,
+                                         { { hold->GetAmount(), loser_recipient->GetAddress(), kTestTokenId } } );
+        ASSERT_NE( winner->GetSrcAddress(), loser->GetSrcAddress() );
+        ASSERT_NE( winner->GetHash(), loser->GetHash() );
+        ASSERT_EQ( winner->GetSlotID(), loser->GetSlotID() );
+        ASSERT_TRUE( FetchAndProcess( loser ).has_value() );
+        if ( transaction_first )
+        {
+            ASSERT_TRUE( FetchAndProcess( winner ).has_value() );
+        }
+        EXPECT_EQ( CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() ).has_value(),
+                   transaction_first );
+        const auto certificate = BuildSignedCertificate( winner );
+        ASSERT_TRUE( certificate.has_value() );
+        PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+
+        std::mutex                                                           barrier_mutex;
+        std::condition_variable                                              barrier_cv;
+        size_t                                                               ready   = 0;
+        bool                                                                 start   = false;
+        bool                                                                 stalled = false;
+        std::vector<std::optional<outcome::result<ConsensusManager::Check>>> results( CONCURRENT_DELIVERIES );
+        std::vector<std::thread>                                             workers;
+        for ( size_t index = 0; index < CONCURRENT_DELIVERIES; ++index )
+        {
+            workers.emplace_back(
+                [this,
+                 &barrier_mutex,
+                 &barrier_cv,
+                 &ready,
+                 &start,
+                 &stalled,
+                 &results,
+                 &winner,
+                 &loser,
+                 &certificate,
+                 index,
+                 BARRIER_TIMEOUT]
+                {
+                    {
+                        std::unique_lock lock( barrier_mutex );
+                        ++ready;
+                        barrier_cv.notify_all();
+                        if ( !barrier_cv.wait_for( lock, BARRIER_TIMEOUT, [&start] { return start; } ) )
+                        {
+                            stalled = true;
+                            return;
+                        }
+                    }
+                    const auto &transaction = index + 1 == CONCURRENT_DELIVERIES ? loser : winner;
+                    results.at( index )     = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                                 transaction->GetHash(),
+                                                                                                 certificate.value() );
+                } );
+        }
+        {
+            std::unique_lock lock( barrier_mutex );
+            EXPECT_TRUE(
+                barrier_cv.wait_for( lock, BARRIER_TIMEOUT, [&ready] { return ready == CONCURRENT_DELIVERIES; } ) );
+            start = true;
+        }
+        barrier_cv.notify_all();
+        for ( auto &worker : workers )
+        {
+            worker.join();
+        }
+        EXPECT_FALSE( stalled );
+        for ( const auto &result : results )
+        {
+            if ( !result )
+            {
+                FAIL() << "all bounded concurrent deliveries must complete";
+            }
+            ASSERT_TRUE( result->has_value() );
+            EXPECT_EQ( result->value(), ConsensusManager::Check::Approve );
+        }
+        ExpectDurableReleasePayment( *tm_, *blockchain_, ledger, *hold, *winner, *loser, baselines );
+        for ( unsigned delivery = 0; delivery < REDELIVERY_ROUNDS; ++delivery )
+        {
+            ASSERT_TRUE( FetchAndProcess( winner ).has_value() );
+            ASSERT_TRUE( FetchAndProcess( loser ).has_value() );
+            ASSERT_TRUE(
+                CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, loser->GetHash(), certificate.value() )
+                    .has_value() );
+            ASSERT_TRUE(
+                CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() )
+                    .has_value() );
+            ExpectDurableReleasePayment( *tm_, *blockchain_, ledger, *hold, *winner, *loser, baselines );
+        }
+        ASSERT_TRUE( ledger.LoadUTXOs( db_->GetDataStore() ).has_value() );
+        ExpectDurableReleasePayment( *tm_, *blockchain_, ledger, *hold, *winner, *loser, baselines );
+        hold_nonce += HOLD_NONCE_STEP;
+    }
+}
+
+TEST_F( CertificateFallbackTest, V2OutputStoreFailureRetriesFromDurableState )
+{
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    constexpr uint64_t HOLD_NONCE       = 350;
+    constexpr uint64_t PEER_AMOUNT      = 7;
+    constexpr uint64_t DEVELOPER_AMOUNT = 6;
+    constexpr uint64_t BURN_AMOUNT      = 4;
+    const auto         peer             = GeniusAccount::NewEphemeral( kTestTokenId );
+    const auto         developer        = GeniusAccount::NewEphemeral( kTestTokenId );
+    const auto         loser_recipient  = GeniusAccount::NewEphemeral( kTestTokenId );
+    ASSERT_TRUE( peer );
+    ASSERT_TRUE( developer );
+    ASSERT_TRUE( loser_recipient );
+    const auto hold = SeedEscrowHold( HOLD_NONCE );
+    ASSERT_TRUE( hold );
+    const auto                        hold_hash = base::Hash256::fromHex( hold->GetHash() ).value();
+    const std::vector<OutputDestInfo> outputs{
+        { PEER_AMOUNT, peer->GetAddress(), kTestTokenId },
+        { DEVELOPER_AMOUNT, developer->GetAddress(), kTestTokenId },
+        { BURN_AMOUNT, CertificateFallbackTestAccess::BurnAddress(), kTestTokenId } };
+    const auto winner = MakeRelease( *peer, hold_hash, HOLD_NONCE + 1, outputs );
+    const auto loser  = MakeRelease( *account_,
+                                    hold_hash,
+                                    HOLD_NONCE + 2,
+                                     { { hold->GetAmount(), loser_recipient->GetAddress(), kTestTokenId } } );
+    ASSERT_NE( winner->GetSrcAddress(), loser->GetSrcAddress() );
+    ASSERT_EQ( winner->GetSlotID(), loser->GetSlotID() );
+    ASSERT_TRUE( FetchAndProcess( loser ).has_value() );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+    auto      &ledger      = account_->GetUTXOManager();
+    const auto winner_hash = base::Hash256::fromHex( winner->GetHash() ).value();
+    CertificateFallbackTestAccess::SetFailNextPutUTXOStore( ledger, true );
+    const auto failed = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                               winner->GetHash(),
+                                                                               certificate.value() );
+    EXPECT_TRUE( failed.has_error() );
+    const auto pending = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, winner->GetHash() );
+    if ( !pending )
+    {
+        FAIL() << "failed output persistence must leave a retryable tracked payment";
+    }
+    EXPECT_EQ( pending->status, TransactionManager::TransactionStatus::VERIFYING );
+    EXPECT_FALSE( pending->effects_applied );
+    // Consumption is durable before the injected first-output store failure.
+    ASSERT_TRUE( ledger.LoadUTXOs( db_->GetDataStore() ).has_value() );
+    EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ winner_hash } );
+    const auto durable = ledger.ReadDurableSpendEvidence( hold_hash,
+                                                          0,
+                                                          hold->GetUTXOParameters().second.front().dest_address );
+    ASSERT_TRUE( durable.has_value() );
+    if ( !durable.value() )
+    {
+        FAIL() << "failed output persistence must preserve genuine consumed input evidence";
+    }
+    EXPECT_TRUE( durable.value()->consumed );
+    EXPECT_TRUE( durable.value()->genuine );
+    EXPECT_EQ( durable.value()->spender, std::optional{ winner_hash } );
+    for ( const auto &output : outputs )
+    {
+        EXPECT_EQ( ledger.GetBalance( output.token_id, output.dest_address ), 0U );
+        EXPECT_TRUE( ledger.GetUTXOs( output.dest_address ).empty() );
+    }
+    EXPECT_FALSE( ledger.GetOutPointState( winner_hash, 0 ) );
+    const auto retried = CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                                winner->GetHash(),
+                                                                                certificate.value() );
+    ASSERT_TRUE( retried.has_value() );
+    EXPECT_EQ( retried.value(), ConsensusManager::Check::Approve );
+    const std::vector<std::pair<uint64_t, size_t>> baselines( outputs.size(), { 0, 0 } );
+    ExpectDurableReleasePayment( *tm_, *blockchain_, ledger, *hold, *winner, *loser, baselines );
+    ASSERT_TRUE( ledger.LoadUTXOs( db_->GetDataStore() ).has_value() );
+    ASSERT_TRUE( FetchAndProcess( winner ).has_value() );
+    ASSERT_TRUE( FetchAndProcess( loser ).has_value() );
+    ASSERT_TRUE( CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() )
+                     .has_value() );
+    ExpectDurableReleasePayment( *tm_, *blockchain_, ledger, *hold, *winner, *loser, baselines );
 }
