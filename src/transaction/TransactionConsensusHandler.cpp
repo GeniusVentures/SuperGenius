@@ -61,7 +61,7 @@ namespace sgns
                      nonce.value().transaction().transaction_case() != EmbeddedTransaction::TRANSACTION_NOT_SET )
                 {
                     auto tx = TransactionManager::DeSerializeEmbeddedTransaction( nonce.value().transaction() );
-                    if ( tx.has_value() )
+                    if ( tx.has_value() && tx.value() != nullptr )
                     {
                         return tx.value()->GetSlotID();
                     }
@@ -282,7 +282,7 @@ namespace sgns
         }
 
         auto tx_result = TransactionManager::DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
-        if ( tx_result.has_error() )
+        if ( tx_result.has_error() || tx_result.value() == nullptr )
         {
             logger_->error( "{}: Failed to deserialize embedded tx for hash {}", __func__, tx_hash );
             return ConsensusManager::ValidationResult::Reject();

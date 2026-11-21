@@ -2408,17 +2408,32 @@ namespace sgns
         return GetBlockChainBase( version::GetNetworkID() );
     }
 
+    namespace
+    {
+        outcome::result<std::shared_ptr<GeniusTransaction>> DecodeTransactionBytes( const std::string          &type,
+                                                                                    const std::vector<uint8_t> &bytes )
+        {
+            const auto &decoders = GeniusTransaction::GetDeSerializers();
+            const auto  decoder  = decoders.find( type );
+            if ( decoder == decoders.end() )
+            {
+                return std::errc::invalid_argument;
+            }
+            auto transaction = decoder->second( bytes );
+            // Nullable codec results must not become successful manager decode outcomes.
+            if ( transaction == nullptr )
+            {
+                return std::errc::invalid_argument;
+            }
+            return transaction;
+        }
+    }
+
     outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeTransaction(
         std::string tx_data )
     {
         BOOST_OUTCOME_TRY( auto dag, GeniusTransaction::DeSerializeDAGStruct( tx_data ) );
-
-        auto it = GeniusTransaction::GetDeSerializers().find( dag.type() );
-        if ( it == GeniusTransaction::GetDeSerializers().end() )
-        {
-            return std::errc::invalid_argument;
-        }
-        return it->second( std::vector<uint8_t>( tx_data.begin(), tx_data.end() ) );
+        return DecodeTransactionBytes( dag.type(), std::vector<uint8_t>( tx_data.begin(), tx_data.end() ) );
     }
 
     outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeEmbeddedTransaction(
@@ -2443,71 +2458,63 @@ namespace sgns
         }();
         (void) registered;
 
-        // Dispatch on the oneof case — each branch calls the deserializer directly.
+        // Dispatch on the oneof case through the shared manager decode contract.
         switch ( embedded.transaction_case() )
         {
             case EmbeddedTransaction::kTransfer:
             {
                 std::string bytes;
                 embedded.transfer().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "transfer" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "transfer", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kMintV2:
             {
                 std::string bytes;
                 embedded.mint_v2().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "mint-v2" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "mint-v2", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kMint:
             {
                 std::string bytes;
                 embedded.mint().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "mint" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "mint", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kMigration:
             {
                 std::string bytes;
                 embedded.migration().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "migration" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "migration", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kEscrow:
             {
                 std::string bytes;
                 embedded.escrow().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "escrow-hold" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "escrow-hold", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kEscrowRelease:
             {
                 std::string bytes;
                 embedded.escrow_release().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "escrow-release", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kEscrowReleaseV2:
             {
                 std::string bytes;
                 embedded.escrow_release_v2().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "escrow-release-v2" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "escrow-release-v2",
+                                               std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kRegistration:
             {
                 std::string bytes;
                 embedded.registration().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "registration" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "registration", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kRevoke:
             {
                 std::string bytes;
                 embedded.revoke().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "revoke" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+                return DecodeTransactionBytes( "revoke", std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::TRANSACTION_NOT_SET:
             default:
@@ -2656,12 +2663,7 @@ namespace sgns
 
         BOOST_OUTCOME_TRY( auto dag, GeniusTransaction::DeSerializeDAGStruct( transaction_data_vector ) );
 
-        auto it = GeniusTransaction::GetDeSerializers().find( dag.type() );
-        if ( it == GeniusTransaction::GetDeSerializers().end() )
-        {
-            return std::errc::invalid_argument;
-        }
-        return it->second( transaction_data_vector );
+        return DecodeTransactionBytes( dag.type(), transaction_data_vector );
     }
 
     void TransactionManager::QueryTransactions()
