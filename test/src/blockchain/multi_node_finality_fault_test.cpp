@@ -2285,12 +2285,16 @@ TEST_F( FinalityFaultNetwork, EscrowReleaseDelayedDeliveryRestartAndCatchupPaysO
             ASSERT_TRUE( network.passive.consensus->SubmitCertificate( certificate.value() ).has_value() );
             ASSERT_TRUE( network.passive.consensus->SubmitProposal( contender.value() ).has_value() );
         }
-        RestartPeer( network.third );
         if ( leg == 1 )
         {
-            RestartPeer( network.passive );
+            // Recreate every owner before reconnecting, so surviving old hosts cannot cross-dial fresh listeners.
+            RestartAndReconnect( network );
         }
-        ConnectPeers( Peers( network ) );
+        else
+        {
+            RestartPeer( network.third );
+            ConnectPeers( Peers( network ) );
+        }
         const auto monitored = network.first.db->GetMonitoredTopics();
         ASSERT_TRUE( monitored.has_value() );
         ASSERT_TRUE(
