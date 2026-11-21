@@ -12,6 +12,7 @@
 
 #include "transaction/TransactionManager.hpp"
 #include "account/EscrowTransaction.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
@@ -104,6 +105,18 @@ namespace sgns
         {
             std::unique_lock lock( manager.tx_mutex_m );
             return manager.tx_processed_m.erase( TransactionManager::GetTransactionPath( tx_hash ) );
+        }
+
+        static outcome::result<void> Revert( TransactionManager &manager, const GeniusTransaction &tx )
+        {
+            return manager.RevertTransaction( tx );
+        }
+
+        static outcome::result<std::vector<OutputDestInfo>> PayoutOutputs( const SGProcessing::TaskResult &results,
+                                                                           uint64_t                        amount,
+                                                                           const TokenID                  &token )
+        {
+            return TransactionManager::BuildPayoutOutputs( results, amount, token, 100 );
         }
 
         static std::string QueryOutgoingPreviousHashFromCRDT( const TransactionManager &manager, uint64_t nonce )
@@ -390,6 +403,33 @@ namespace
     class TransactionDeletionRecoveryTest : public TransactionManagerPreviousHashTest
     {
     protected:
+        std::shared_ptr<sgns::EscrowTransaction> MakeCertifiedHold( uint64_t amount = 10003 )
+        {
+            auto              dag  = MakeDAG( account_->ReserveNextNonce() );
+            const std::string lock = "0x" + std::string( 64, 'a' );
+            dag.set_uncle_hash( lock );
+            auto hold = std::make_shared<sgns::EscrowTransaction>(
+                sgns::EscrowTransaction::New( { {}, { { amount, lock, kTokenId } } }, amount, std::move( dag ) ) );
+            hold->MakeSignature( *account_ );
+            StoreCertificate( hold );
+            StoreTransaction( hold );
+            EXPECT_TRUE( ConfirmPayment( hold ).has_value() );
+            return hold;
+        }
+
+        std::shared_ptr<sgns::EscrowReleaseTransactionV2> MakeRelease( const sgns::EscrowTransaction    &hold,
+                                                                       std::vector<sgns::OutputDestInfo> outputs )
+        {
+            sgns::InputUTXOInfo input{ sgns::base::Hash256::fromHex( hold.GetHash() ).value(), 0, {} };
+            input.signature_ = account_->Sign( input.SerializeForSigning() );
+            auto release     = std::make_shared<sgns::EscrowReleaseTransactionV2>(
+                sgns::EscrowReleaseTransactionV2::New( { input },
+                                                       std::move( outputs ),
+                                                       MakeDAG( account_->ReserveNextNonce() ) ) );
+            release->MakeSignature( *account_ );
+            return release;
+        }
+
         /// @brief Builds a signed transfer over a supplied input without bypassing the production parser.
         std::shared_ptr<sgns::TransferTransaction> MakePaymentTransfer( const sgns::GeniusUTXO           &input,
                                                                         std::vector<sgns::OutputDestInfo> outputs,
@@ -684,6 +724,133 @@ TEST_F( TransactionManagerPreviousHashTest, TrackedPreviousHashPrefersConfirmedC
     EXPECT_EQ( transaction->GetPreviousHash(), confirmed_transaction->GetHash() );
 }
 
+TEST_F( TransactionDeletionRecoveryTest, V2PaymentConsumesHoldAndCreditsExactDistribution )
+{
+    const auto               hold = MakeCertifiedHold();
+    SGProcessing::TaskResult results;
+    for ( int index = 0; index < 3; ++index )
+    {
+        auto *result = results.add_subtask_results();
+        result->set_subtaskid( std::to_string( index ) );
+        result->set_node_address( std::string( 128, static_cast<char>( '1' + index ) ) );
+        result->set_developer_address( std::string( 128, '4' ) );
+        result->set_developer_cut( 250000 );
+        const auto token = sgns::TokenID::FromBytes( { static_cast<uint8_t>( index ) } );
+        result->set_token_id( token.bytes().data(), token.size() );
+    }
+    const auto outputs = sgns::TransactionManagerPendingLifecycleTestAccess::PayoutOutputs( results,
+                                                                                            hold->GetAmount(),
+                                                                                            kTokenId );
+    ASSERT_TRUE( outputs.has_value() );
+    const auto release      = MakeRelease( *hold, outputs.value() );
+    auto      &ledger       = account_->GetUTXOManager();
+    const auto hold_hash    = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
+    const auto payment_hash = sgns::base::Hash256::fromHex( release->GetHash() ).value();
+    ASSERT_TRUE( ConfirmPayment( release ).has_value() );
+    EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ payment_hash } );
+    uint64_t total = 0;
+    for ( size_t index = 0; index < outputs.value().size(); ++index )
+    {
+        const auto &expected = outputs.value().at( index );
+        const auto  actual   = ledger.GetUnconsumedUTXO( payment_hash, static_cast<uint32_t>( index ) );
+        if ( !actual )
+        {
+            FAIL() << "payment must produce each distribution output";
+        }
+        EXPECT_EQ( actual->GetAmount(), expected.encrypted_amount );
+        EXPECT_EQ( actual->GetOwnerAddress(), expected.dest_address );
+        EXPECT_EQ( actual->GetTokenID(), expected.token_id );
+        total += actual->GetAmount();
+    }
+    EXPECT_EQ( total, hold->GetAmount() );
+    EXPECT_EQ( ledger.GetBalance( std::string( 128, '1' ) ), outputs.value().front().encrypted_amount );
+    EXPECT_EQ( manager_->WaitForEscrowRelease( hold->GetHash(), std::chrono::milliseconds( 10 ) ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::ForgetTrackedTx( *manager_, release->GetHash() ),
+               1U );
+    ASSERT_TRUE( ConfirmPayment( release ).has_value() );
+    const auto durable = ledger.ReadDurableSpendEvidence( hold_hash,
+                                                          0,
+                                                          hold->GetUTXOParameters().second.front().dest_address );
+    ASSERT_TRUE( durable.has_value() );
+    if ( !durable.value() )
+    {
+        FAIL() << "payment must retain durable spend evidence";
+    }
+    EXPECT_TRUE( durable.value()->genuine );
+    EXPECT_EQ( durable.value()->spender, std::optional{ payment_hash } );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, V2RevertRestoresOnlyOwnEffects )
+{
+    const auto hold        = MakeCertifiedHold( 17 );
+    const auto winner      = MakeRelease( *hold, { { 17, account_->GetAddress(), kTokenId } } );
+    const auto loser       = MakeRelease( *hold, { { 17, std::string( 128, 'b' ), kTokenId } } );
+    auto      &ledger      = account_->GetUTXOManager();
+    const auto hold_hash   = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
+    const auto winner_hash = sgns::base::Hash256::fromHex( winner->GetHash() ).value();
+    const auto loser_hash  = sgns::base::Hash256::fromHex( loser->GetHash() ).value();
+    ASSERT_TRUE( ConfirmPayment( winner ).has_value() );
+    // Existing loser outputs cannot turn a foreign spender into legitimate replay.
+    ASSERT_TRUE( ledger
+                     .PutUTXO( sgns::GeniusUTXO( loser_hash, 0, 17, kTokenId, std::string( 128, 'b' ) ),
+                               std::string( 128, 'b' ) )
+                     .has_value() );
+    ASSERT_TRUE( ConfirmPayment( loser ).has_error() );
+    const auto before = ledger.ReadDurableSpendEvidence( hold_hash,
+                                                         0,
+                                                         hold->GetUTXOParameters().second.front().dest_address );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *loser ).has_value() );
+    const auto after = ledger.ReadDurableSpendEvidence( hold_hash,
+                                                        0,
+                                                        hold->GetUTXOParameters().second.front().dest_address );
+    ASSERT_TRUE( before.has_value() );
+    ASSERT_TRUE( after.has_value() );
+    if ( !before.value() || !after.value() )
+    {
+        FAIL() << "loser cleanup must retain durable winner evidence";
+    }
+    EXPECT_EQ( before.value()->spender, after.value()->spender );
+    EXPECT_EQ( after.value()->spender, std::optional{ winner_hash } );
+    EXPECT_TRUE( after.value()->genuine );
+    EXPECT_TRUE( ledger.GetUnconsumedUTXO( winner_hash, 0 ).has_value() );
+    EXPECT_TRUE( ledger.GetUnconsumedUTXO( loser_hash, 0 ).has_value() );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *winner ).has_value() );
+    const auto restored = ledger.GetUnconsumedUTXO( hold_hash, 0 );
+    if ( !restored )
+    {
+        FAIL() << "own rollback must restore original hold";
+    }
+    EXPECT_EQ( restored->GetAmount(), 17U );
+    EXPECT_EQ( restored->GetOwnerAddress(), hold->GetUTXOParameters().second.front().dest_address );
+    EXPECT_FALSE( ledger.GetOutPointState( winner_hash, 0 ).has_value() );
+    EXPECT_TRUE( ledger.GetUnconsumedUTXO( loser_hash, 0 ).has_value() );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, V2UnappliedCleanupDoesNotRequireMissingHold )
+{
+    const auto hold    = MakeCertifiedHold( 17 );
+    const auto release = MakeRelease( *hold, { { 17, account_->GetAddress(), kTokenId } } );
+    ASSERT_TRUE( db_->Remove( sgns::crdt::HierarchicalKey( sgns::TransactionManager::GetTransactionPath( *hold ) ), {} )
+                     .has_value() );
+    EXPECT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *release ).has_value() );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, V2CompletionRequiresActualSpenderPayment )
+{
+    const auto hold    = MakeCertifiedHold( 17 );
+    auto      &ledger  = account_->GetUTXOManager();
+    const auto release = MakeRelease( *hold, { { 17, account_->GetAddress(), kTokenId } } );
+    ASSERT_TRUE( ledger
+                     .ConsumeUTXOs( release->GetUTXOParameters().first,
+                                    hold->GetUTXOParameters().second.front().dest_address,
+                                    sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                                    sgns::base::Hash256::fromHex( release->GetHash() ).value() )
+                     .has_value() );
+    EXPECT_EQ( manager_->WaitForEscrowRelease( hold->GetHash(), std::chrono::milliseconds( 10 ) ),
+               sgns::TransactionManager::TransactionStatus::INVALID );
+}
+
 TEST_F( TransactionDeletionRecoveryTest, SharedPaymentTransferApplyPreservesEffects )
 {
     auto                  &utxo_manager = account_->GetUTXOManager();
@@ -914,15 +1081,9 @@ TEST_F( TransactionManagerRecoveryTest, FundsAPIsFailClosedAfterStop )
     manager_->Stop();
 
     EXPECT_TRUE( manager_->TransferFunds( 1, account_->GetAddress(), kTokenId ).has_error() );
-    EXPECT_TRUE( manager_
-                     ->MintFunds( 1,
-                                  std::string( 64, '1' ),
-                                  "public",
-                                  kTokenId,
-                                  account_->GetAddress() )
-                     .has_error() );
     EXPECT_TRUE(
-        manager_->MigrationFunds( 1, "0.2.0", kTokenId, account_->GetAddress() ).has_error() );
+        manager_->MintFunds( 1, std::string( 64, '1' ), "public", kTokenId, account_->GetAddress() ).has_error() );
+    EXPECT_TRUE( manager_->MigrationFunds( 1, "0.2.0", kTokenId, account_->GetAddress() ).has_error() );
 }
 
 TEST_F( TransactionManagerRecoveryTest, PutConvergentImmutableFailsClosedAfterGlobalDBShutdown )

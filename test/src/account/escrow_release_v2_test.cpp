@@ -55,6 +55,20 @@ namespace sgns
         {
             return manager.RevertTransaction( tx );
         }
+
+        static std::vector<std::shared_ptr<GeniusTransaction>> Queued( TransactionManager &manager )
+        {
+            std::lock_guard                                 lock( manager.mutex_m );
+            std::vector<std::shared_ptr<GeniusTransaction>> result;
+            for ( const auto &item : manager.tx_queue_m )
+            {
+                for ( const auto &entry : item.first )
+                {
+                    result.push_back( entry.first );
+                }
+            }
+            return result;
+        }
     };
 }
 
@@ -356,6 +370,52 @@ namespace
         std::string                                                                  previous_authority_;
         std::unordered_map<std::string, GeniusTransaction::TransactionDeserializeFn> previous_decoders_;
     };
+
+    using EscrowReleaseV2PaymentTest = EscrowReleaseV2ValidationTest;
+
+    TEST_F( EscrowReleaseV2PaymentTest, PayEscrowCreatesOnePaymentAndNoMarker )
+    {
+        const auto hold = Hold();
+        Certify( *hold );
+        TrackOutputs( *hold );
+        const auto path = TransactionManager::GetTransactionPath( *hold );
+        EXPECT_TRUE( manager_->PayEscrow( path, {}, nullptr ).has_error() );
+        SGProcessing::TaskResult results;
+        auto                    *result = results.add_subtask_results();
+        result->set_subtaskid( "complete-subtask" );
+        result->set_node_address( processor_->GetAddress() );
+        result->set_developer_address( account_->GetAddress() );
+        result->set_developer_cut( 500000 );
+        const auto token = TokenID::FromBytes( { 0 } );
+        result->set_token_id( token.bytes().data(), token.size() );
+        const auto first = manager_->PayEscrow( path, results, nullptr );
+        ASSERT_TRUE( first.has_value() );
+        const auto queued = LegacyMintAdmissionTestAccess::Queued( *manager_ );
+        ASSERT_EQ( queued.size(), 1U );
+        const auto payment = std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( queued.front() );
+        ASSERT_NE( payment, nullptr );
+        EXPECT_EQ( payment->GetHash(), first.value() );
+        EXPECT_TRUE( payment->CheckHash() && payment->CheckSignature() );
+        const auto params = payment->GetUTXOParameters();
+        ASSERT_EQ( params.first.size(), 1U );
+        EXPECT_TRUE( GeniusAccount::VerifySignature( account_->GetAddress(),
+                                                     params.first.front().signature_,
+                                                     params.first.front().SerializeForSigning() ) );
+        EXPECT_EQ( params.first.front().txid_hash_.toReadableString(), hold->GetHash() );
+        EXPECT_EQ( payment->GetTopics().count( processor_->GetAddress() ), 1U );
+        EXPECT_EQ( payment->GetTopics().count( account_->GetAddress() ), 1U );
+        auto       other  = TransactionManager::New( db_, io_, processor_, blockchain_, NodeType::Light );
+        const auto second = other->PayEscrow( path, results, nullptr );
+        ASSERT_TRUE( second.has_value() );
+        const auto other_queued = LegacyMintAdmissionTestAccess::Queued( *other );
+        ASSERT_EQ( other_queued.size(), 1U );
+        const auto other_payment = std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( other_queued.front() );
+        ASSERT_NE( other_payment, nullptr );
+        EXPECT_NE( other_payment->GetSrcAddress(), payment->GetSrcAddress() );
+        EXPECT_EQ( other_payment->GetSlotID(), payment->GetSlotID() );
+        EXPECT_TRUE( other_payment->CheckSignature() );
+        other->Stop();
+    }
 
     TEST_F( EscrowReleaseV2ValidationTest, ManagerDispatchReconstructsPaymentType )
     {
