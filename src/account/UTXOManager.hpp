@@ -584,8 +584,9 @@ namespace sgns
         friend class UTXOManagerTestAccess;
 
         /** @brief Shares spend verification with utxos_mutex_ held by the caller; owner stays private. */
-        bool VerifyParametersForOwner( const UTXOTxParameters &params, const std::string &signer,
-                                       const std::string &expected_owner ) const;
+        bool VerifyParametersForOwner( const UTXOTxParameters &params,
+                                       const std::string      &signer,
+                                       const std::string      &expected_owner ) const;
 
         /// Prefix for UTXO-related keys in RocksDB
         static constexpr std::string_view DB_PREFIX = "/utxo";

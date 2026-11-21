@@ -38,8 +38,7 @@ namespace sgns
     public:
         static ConsensusManager::ValidationResult TypeRules( TransactionManager &manager, const GeniusTransaction &tx )
         {
-            return manager.consensus_m_->CheckTransactionTypeRules( tx ) ? ConsensusManager::ValidationResult::Approve()
-                                                                         : ConsensusManager::ValidationResult::Reject();
+            return manager.consensus_m_->CheckTransactionTypeRules( tx );
         }
 
         static bool Authorized( TransactionManager &manager, const GeniusTransaction &tx )
@@ -324,7 +323,7 @@ namespace
             funding.signature_ = account_->Sign( funding.SerializeForSigning() );
             auto producer      = TransferTransaction::New( { funding },
                                                            { { 17, owner, TokenID::FromBytes( { 0 } ) } },
-                                                      Dag( *account_ ) );
+                                                      Dag( *account_, 7 ) );
             producer.MakeSignature( *account_ );
             return producer;
         }

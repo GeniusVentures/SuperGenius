@@ -29,6 +29,25 @@ namespace sgns
         using utxo_merkle::HashLeaf;
         using utxo_merkle::OutPointKey;
         using utxo_merkle::SerializeUTXOLeafPayload;
+
+        ConsensusManager::ValidationResult PendingInputEvidence( const GeniusTransaction &tx )
+        {
+            std::vector<ConsensusManager::PendingDependencyKey> dependencies;
+            const auto                                          params = tx.GetUTXOParametersOpt();
+            if ( params )
+            {
+                for ( const auto &input : params->first )
+                {
+                    auto dependency = ConsensusManager::PendingDependencyKey::Certificate(
+                        input.txid_hash_.toReadableString() );
+                    if ( std::find( dependencies.begin(), dependencies.end(), dependency ) == dependencies.end() )
+                    {
+                        dependencies.push_back( std::move( dependency ) );
+                    }
+                }
+            }
+            return ConsensusManager::ValidationResult::Pending( std::move( dependencies ) );
+        }
     }
 
     void TransactionConsensusHandler::RegisterSlotKeyHandler()
@@ -496,6 +515,10 @@ namespace sgns
             logger_->error( "{}: Witness validation failed for hash {}", __func__, tx_hash );
             return reject_and_maybe_fail_local( "witness validation failed" );
         }
+        if ( witness_validation == WitnessValidationResult::PENDING )
+        {
+            return PendingInputEvidence( *tx );
+        }
 
         if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
         {
@@ -565,10 +588,11 @@ namespace sgns
         // MINT-03: value-carrying legacy-v1 mints fail CheckTransactionTypeRules
         // (legacy v1 mint admission disabled); zero-amount nonce fillers and
         // mint-v2 stay admitted.
-        if ( !CheckTransactionTypeRules( tx ) )
+        const auto type_result = CheckTransactionTypeRules( tx );
+        if ( type_result.check != ConsensusManager::Check::Approve )
         {
             logger_->error( "{}: Type rules failed tx={}", __func__, tx.GetHash() );
-            return ConsensusManager::ValidationResult::Reject();
+            return type_result;
         }
 
         logger_->debug( "{}: Transaction valid tx={}", __func__, tx.GetHash() );
@@ -820,7 +844,8 @@ namespace sgns
         return { ConsensusManager::ValidationResult::Approve() };
     }
 
-    bool TransactionConsensusHandler::CheckTransactionTypeRules( const GeniusTransaction &tx ) const
+    ConsensusManager::ValidationResult TransactionConsensusHandler::CheckTransactionTypeRules(
+        const GeniusTransaction &tx ) const
     {
         logger_->debug( "{}: Checking type rules", __func__ );
         if ( tx.HasUTXOParameters() )
@@ -829,12 +854,24 @@ namespace sgns
             if ( !params_opt.has_value() )
             {
                 logger_->error( "{}: Missing UTXO parameters for tx={}", __func__, tx.GetHash() );
-                return false;
+                return ConsensusManager::ValidationResult::Reject();
             }
             const auto &[_, validator] = owner_.SelectInputValidator( tx );
-            return validator.ValidateUTXOParameters( params_opt.value(),
-                                                     tx.GetSrcAddress(),
-                                                     owner_.account_m->GetUTXOManager() );
+            const auto verdict         = validator.ValidateTransactionUTXOParameters( tx,
+                                                                              params_opt.value(),
+                                                                              tx.GetSrcAddress(),
+                                                                              owner_.account_m->GetUTXOManager(),
+                                                                              *owner_.blockchain_ );
+            switch ( verdict )
+            {
+                case IInputValidator::WitnessVerdict::kValid:
+                    return ConsensusManager::ValidationResult::Approve();
+                case IInputValidator::WitnessVerdict::kNotSynced:
+                    return PendingInputEvidence( tx );
+                case IInputValidator::WitnessVerdict::kInvalid:
+                    return ConsensusManager::ValidationResult::Reject();
+            }
+            return ConsensusManager::ValidationResult::Reject();
         }
 
         // MINT-03 (T-21-0501): admission-side disable of legacy-v1 mints. A newly
@@ -848,10 +885,10 @@ namespace sgns
                             __func__,
                             tx.GetHash(),
                             tx.GetType() );
-            return false;
+            return ConsensusManager::ValidationResult::Reject();
         }
 
-        return true;
+        return ConsensusManager::ValidationResult::Approve();
     }
 
     TransactionConsensusHandler::WitnessValidationResult TransactionConsensusHandler::ValidateWitnessForConsensus(

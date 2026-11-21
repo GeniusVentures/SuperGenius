@@ -122,7 +122,8 @@ namespace sgns
         ConsensusManager::ValidationResult ValidateTransactionForConsensus( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool                               CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
-        bool                               CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
+        /// @brief Retains retryable input evidence as pending through transaction-type admission.
+        ConsensusManager::ValidationResult CheckTransactionTypeRules( const GeniusTransaction &tx ) const;
 
         TransactionManager &owner_;
         base::Logger        logger_;

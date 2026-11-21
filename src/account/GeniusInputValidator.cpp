@@ -126,8 +126,12 @@ namespace sgns
         const Blockchain                 &blockchain ) const
     {
         const auto &params = release.GetUTXOParameters();
-        if ( params.first.size() != 1 || params.second.empty() ||
-             params.first.front().output_idx_ != input_validator_constants::ESCROW_LOCK_OUTPUT_INDEX )
+        if ( !release.CheckHash() || !release.CheckSignature() || params.first.size() != 1 || params.second.empty() ||
+             params.first.front().output_idx_ != input_validator_constants::ESCROW_LOCK_OUTPUT_INDEX ||
+             std::any_of( params.second.begin(),
+                          params.second.end(),
+                          []( const OutputDestInfo &output )
+                          { return output.dest_address.empty() || output.token_id.size() == 0; } ) )
         {
             return {};
         }
@@ -199,10 +203,6 @@ namespace sgns
         }
         if ( const auto *release = dynamic_cast<const EscrowReleaseTransactionV2 *>( &tx ) )
         {
-            if ( !release->CheckHash() || !release->CheckSignature() )
-            {
-                return WitnessVerdict::kInvalid;
-            }
             const auto resolved = ResolveEscrowReleaseInput( *release, blockchain );
             if ( resolved.verdict != WitnessVerdict::kValid )
             {
@@ -254,11 +254,14 @@ namespace sgns
     }
 
     IInputValidator::WitnessVerdict GeniusInputValidator::ValidateWitness( const ConsensusSubject  &subject,
-                                                const GeniusTransaction &tx,
-                                                const UTXOTxParameters  &params,
-                                                const Blockchain        &blockchain ) const
+                                                                           const GeniusTransaction &tx,
+                                                                           const UTXOTxParameters  &supplied_params,
+                                                                           const Blockchain        &blockchain ) const
     {
-        auto logger = InputValidatorLogger();
+        const auto *release      = dynamic_cast<const EscrowReleaseTransactionV2 *>( &tx );
+        const auto  owned_params = release ? release->GetUTXOParametersOpt() : std::nullopt;
+        const auto &params       = owned_params ? *owned_params : supplied_params;
+        auto        logger       = InputValidatorLogger();
         logger->trace( "ValidateWitness(Genius): tx={} inputs={} outputs={}",
                        PreviewValue( tx.GetHash() ),
                        params.first.size(),
@@ -280,7 +283,7 @@ namespace sgns
                            PreviewValue( tx.GetHash() ) );
             return IInputValidator::WitnessVerdict::kInvalid;
         }
-        const auto tx_hash_result = base::Hash256::fromReadableString( tx.GetHash() );
+        const auto tx_hash_result = base::Hash256::fromHex( tx.GetHash() );
         if ( tx_hash_result.has_error() )
         {
             logger->error( "ValidateWitness(Genius) invalid tx hash encoding: tx={}",
@@ -448,6 +451,16 @@ namespace sgns
             }
         }
 
+        EscrowReleaseInput resolved;
+        if ( release )
+        {
+            resolved = ResolveEscrowReleaseInput( *release, blockchain );
+            if ( resolved.verdict != WitnessVerdict::kValid )
+            {
+                return resolved.verdict;
+            }
+        }
+
         const auto add_amount = []( uint64_t &total, uint64_t amount ) -> bool
         {
             if ( amount > std::numeric_limits<uint64_t>::max() - total )
@@ -538,11 +551,10 @@ namespace sgns
             }
             const std::string payload_owner( payload.data() + OWNER_ADDRESS_OFFSET,
                                              payload.data() + OWNER_ADDRESS_OFFSET + owner_len );
-            const bool delegated_escrow_spend =
-                payload_owner != tx.GetSrcAddress() && tx.GetType() == TRANSFER_TX_TYPE &&
-                input.output_idx_ == ESCROW_LOCK_OUTPUT_INDEX &&
-                utxo_address::IsEscrowLockAddress( payload_owner ) && tx.GetUncleHash() == payload_owner;
-            if ( payload_owner != tx.GetSrcAddress() && !delegated_escrow_spend )
+            const auto        expected_owner = resolved.producer
+                                                   ? resolved.producer->GetUTXOParameters().second.front().dest_address
+                                                   : tx.GetSrcAddress();
+            if ( payload_owner != expected_owner )
             {
                 logger->debug( "ValidateWitness(Genius) owner mismatch for tx={} owner={} src={}",
                                PreviewValue( tx.GetHash() ),
@@ -571,28 +583,43 @@ namespace sgns
 
             std::vector<uint8_t> payload_vec( payload.begin(), payload.end() );
 
-            const auto producer_hash               = input.txid_hash_.toReadableString();
-            auto       producer_transaction_result = TransactionManager::FetchTransaction(
-                *blockchain.GetGlobalDB(),
-                TransactionManager::GetTransactionPath( producer_hash ) );
-            if ( producer_transaction_result.has_error() || !producer_transaction_result.value() )
+            if ( resolved.producer )
             {
-                // The producer transaction has not CRDT-synced to this node yet:
-                // retryable, not invalid (certificate-first delivery order is
-                // unordered across deltas).
-                logger->debug( "ValidateWitness(Genius) producer transaction not yet synced for input tx={}",
-                               PreviewValue( producer_hash ) );
-                return IInputValidator::WitnessVerdict::kNotSynced;
+                const auto       hold_params = resolved.producer->GetUTXOParameters();
+                const auto      &locked      = hold_params.second.front();
+                const GeniusUTXO actual( base::Hash256::fromHex( resolved.producer->GetHash() ).value(),
+                                         ESCROW_LOCK_OUTPUT_INDEX,
+                                         locked.encrypted_amount,
+                                         locked.token_id,
+                                         locked.dest_address );
+                if ( input.txid_hash_ != actual.GetTxID() || input.output_idx_ != actual.GetOutputIdx() ||
+                     payload_vec != utxo_merkle::SerializeUTXOLeafPayload( actual ) )
+                {
+                    return WitnessVerdict::kInvalid;
+                }
             }
-            if ( producer_transaction_result.value()->GetHash() != producer_hash )
+
+            const auto                               producer_hash = input.txid_hash_.toReadableString();
+            std::shared_ptr<const GeniusTransaction> producer      = resolved.producer;
+            if ( !producer )
+            {
+                const auto fetched = TransactionManager::FetchTransaction(
+                    *blockchain.GetGlobalDB(),
+                    TransactionManager::GetTransactionPath( producer_hash ) );
+                if ( fetched.has_error() || !fetched.value() )
+                {
+                    return WitnessVerdict::kNotSynced;
+                }
+                producer = fetched.value();
+            }
+            if ( producer->GetHash() != producer_hash )
             {
                 logger->error( "ValidateWitness(Genius) producer transaction hash mismatch for input tx={}",
                                PreviewValue( producer_hash ) );
                 return IInputValidator::WitnessVerdict::kInvalid;
             }
 
-            auto producer_cert_result = blockchain.GetCertificateBySlot(
-                producer_transaction_result.value()->GetSlotID() );
+            auto producer_cert_result = blockchain.GetCertificateBySlot( producer->GetSlotID() );
             if ( producer_cert_result.has_error() )
             {
                 // The producer's certificate record has not synced yet (or the
@@ -601,8 +628,7 @@ namespace sgns
                                PreviewValue( producer_hash ) );
                 return IInputValidator::WitnessVerdict::kNotSynced;
             }
-            if ( !TransactionManager::CertificateMatchesTransaction( producer_cert_result.value(),
-                                                                     *producer_transaction_result.value() ) )
+            if ( !TransactionManager::CertificateMatchesTransaction( producer_cert_result.value(), *producer ) )
             {
                 logger->error( "ValidateWitness(Genius) producer certificate does not certify input tx={}",
                                PreviewValue( producer_hash ) );

@@ -50,7 +50,7 @@ namespace sgns
 
         static bool CheckTypeRules( TransactionManager &tm, const GeniusTransaction &tx )
         {
-            return tm.consensus_m_->CheckTransactionTypeRules( tx );
+            return tm.consensus_m_->CheckTransactionTypeRules( tx ).check == ConsensusManager::Check::Approve;
         }
 
         static outcome::result<void> SendItem( TransactionManager &tm, TransactionManager::TransactionItem &item )
