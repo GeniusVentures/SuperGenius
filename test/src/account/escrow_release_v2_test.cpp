@@ -9,6 +9,7 @@
 
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crypto/hasher.hpp"
 
@@ -90,6 +91,8 @@ namespace
             EXPECT_EQ( payment->dag_st.SerializeAsString(), wire.dag_struct().SerializeAsString() );
             EXPECT_TRUE( payment->CheckHash() );
             EXPECT_TRUE( payment->CheckSignature() );
+            const auto typed = std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( payment );
+            ASSERT_NE( typed, nullptr );
             EXPECT_TRUE( payment->HasUTXOParameters() );
             const auto params = payment->GetUTXOParametersOpt();
             if ( !params )
@@ -105,12 +108,21 @@ namespace
             EXPECT_EQ( params->second.front().dest_address, "recipient" );
             const auto &token_bytes = wire.utxo_params().outputs( 0 ).token_id();
             EXPECT_EQ( params->second.front().token_id, TokenID::FromBytes( token_bytes.data(), token_bytes.size() ) );
+            auto created = EscrowReleaseTransactionV2::New( typed->GetInputInfos(),
+                                                            typed->GetDstInfos(),
+                                                            payment->dag_st );
+            created.MakeSignature( *account );
+            EXPECT_EQ( created.SerializeByteVector(), bytes );
+            EXPECT_EQ( MessageBytes( created.SerializeToEmbeddedTransaction().escrow_release_v2() ), bytes );
+            EXPECT_EQ( typed->GetUTXOParameters().first.size(), 1 );
             EXPECT_EQ( payment->GetTopics(),
                        ( std::unordered_set<std::string>{ account->GetAddress(), "recipient" } ) );
             const auto embedded = payment->SerializeToEmbeddedTransaction();
             ASSERT_EQ( embedded.transaction_case(), EmbeddedTransaction::kEscrowReleaseV2 );
             EXPECT_EQ( MessageBytes( embedded.escrow_release_v2() ), bytes );
-            const auto restored = DecodeReleaseV2( MessageBytes( embedded.escrow_release_v2() ) );
+            EmbeddedTransaction restored_envelope;
+            ASSERT_TRUE( restored_envelope.ParseFromString( embedded.SerializeAsString() ) );
+            const auto restored = DecodeReleaseV2( MessageBytes( restored_envelope.escrow_release_v2() ) );
             ASSERT_NE( restored, nullptr );
             EXPECT_EQ( restored->SerializeByteVector(), bytes );
             EXPECT_EQ( restored->GetSlotID(), payment->GetSlotID() );
@@ -169,6 +181,15 @@ namespace
         invalid = good;
         invalid.mutable_utxo_params()->mutable_inputs( 0 )->set_tx_id_hash( "invalid-hash" );
         EXPECT_EQ( DecodeReleaseV2( MessageBytes( invalid ) ), nullptr );
+        for ( const auto &bad_hash : { std::string( 64, 'z' ),
+                                       std::string( 65, 'a' ),
+                                       "1g" + std::string( 62, 'a' ),
+                                       std::string( 64, 'A' ) } )
+        {
+            invalid = good;
+            invalid.mutable_utxo_params()->mutable_inputs( 0 )->set_tx_id_hash( bad_hash );
+            EXPECT_EQ( DecodeReleaseV2( MessageBytes( invalid ) ), nullptr );
+        }
         for ( const auto size : { 0, 1, 31, 33 } )
         {
             invalid = good;
@@ -181,6 +202,21 @@ namespace
         invalid = good;
         invalid.mutable_utxo_params()->mutable_outputs( 0 )->clear_dest_addr();
         EXPECT_EQ( DecodeReleaseV2( MessageBytes( invalid ) ), nullptr );
+        invalid = good;
+        invalid.GetReflection()->MutableUnknownFields( &invalid )->AddVarint( 99, 1 );
+        EXPECT_EQ( DecodeReleaseV2( MessageBytes( invalid ) ), nullptr );
+
+        const auto typed = EscrowReleaseTransactionV2::DeSerializeByteVector( MessageBytes( good ) );
+        ASSERT_NE( typed, nullptr );
+        auto inputs = typed->GetInputInfos();
+        EXPECT_TRUE( EscrowReleaseTransactionV2::New( {}, typed->GetDstInfos(), typed->dag_st ).GetSlotID().empty() );
+        inputs.push_back( inputs.front() );
+        EXPECT_TRUE(
+            EscrowReleaseTransactionV2::New( inputs, typed->GetDstInfos(), typed->dag_st ).GetSlotID().empty() );
+        inputs.pop_back();
+        inputs.front().output_idx_ = 1;
+        EXPECT_TRUE(
+            EscrowReleaseTransactionV2::New( inputs, typed->GetDstInfos(), typed->dag_st ).GetSlotID().empty() );
     }
 
     TEST( EscrowReleaseWireContractTest, AdditiveTagTenPreservesLegacyTagSeven )
