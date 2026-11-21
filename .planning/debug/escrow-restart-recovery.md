@@ -1,8 +1,8 @@
 ---
-status: fixing
+status: verifying
 trigger: "Plan 21.1-07 repeated restart recovery: canonical payout exists on every peer but one peer lacks complete payout ledger effects"
 created: 2026-11-21T20:27:31Z
-updated: 2026-11-21T20:34:00Z
+updated: 2026-11-21T20:36:00Z
 ---
 
 ## Current Focus
@@ -10,7 +10,7 @@ updated: 2026-11-21T20:34:00Z
 hypothesis: A CRDT callback already snapshotted for delivery outlives Consensus, silently skips receipt through its expired weak pointer, and generic callback completion retires unapplied certificate work.
 test: Register an overlapping callback barrier before the real Consensus callback, destroy Consensus after snapshot, release delivery and inspect durable work plus replacement-manager handler calls.
 expecting: Unfixed code removes journal work and the replacement handler receives zero calls despite a valid durable certificate.
-next_action: Capture the existing journal in Consensus's registered receipt callback and retain Seen/Stalled work when its weak owner has expired; rerun the deterministic test.
+next_action: Run post-fix D/E twice with boundary snapshots, then the five plan-07 cases and full callback lifecycle/fallback plus compatibility/ownership targets through registered CTest.
 
 reasoning_checkpoint:
   hypothesis: The expired Consensus callback returns without changing Processing, so generic completion removes unapplied durable certificate work.
@@ -36,6 +36,11 @@ started: Additional repetition after initial five-case passing plan-07 gate.
   timestamp: 2026-11-21T16:30:00Z
 
 ## Evidence
+
+- timestamp: 2026-11-21T20:36:00Z
+  checked: Same deterministic callback regression after the 11-line Consensus callback fix; four affected target build and changed-line clang-tidy.
+  found: GREEN in 0.96s CTest / 77ms gtest. After completed callback dispatch, retryable Stalled work exists; replacement handler applies once; a further recovery does not dispatch twice. Build passed and production Required lint is clear.
+  implication: The isolated expired-owner loss mechanism is fixed without changing validation, application, registry or lease policy.
 
 - timestamp: 2026-11-21T20:33:35Z
   checked: CertificateCallbackSnapshotSurvivesManagerShutdownAndRecoversOnce, registered CTest, before production edit.
@@ -67,6 +72,6 @@ started: Additional repetition after initial five-case passing plan-07 gate.
 ## Resolution
 
 root_cause: A previously snapshotted outer Consensus CRDT callback silently returns when its weak owner expires, allowing generic completion to retire a durable certificate before application. The original intermittent E run lacks sufficient state to establish this as its sole cause.
-fix:
-verification:
-files_changed: []
+fix: Capture the existing CRDTWorkJournal in the outer Consensus receipt callback; when its weak owner expired, preserve receipt with MarkSeen then MarkStalled(0) so normal durable recovery remains responsible for validation/application.
+verification: Deterministic RED before production edit (1.24s), GREEN after edit (0.96s); final network and regression checks in progress.
+files_changed: [src/blockchain/Consensus.cpp, test/src/blockchain/consensus_pending_lifecycle_test.cpp, test/src/blockchain/multi_node_finality_fault_test.cpp]

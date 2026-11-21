@@ -3416,11 +3416,20 @@ namespace sgns
         // and this manager's Close() would then unregister the survivor's filter.
         certificate_callback_registered_ = db_->RegisterNewElementCallback(
             pattern,
-            [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+            [weak_self, work_journal = certificate_work_journal_]( crdt::CRDTCallbackManager::NewDataPair new_data,
+                                                                   const std::string                     &cid )
             {
                 if ( auto strong = weak_self.lock() )
                 {
                     strong->CertificateReceived( std::move( new_data ), cid );
+                }
+                else
+                {
+                    // An unregistered callback may already be in a delivery snapshot.
+                    // Preserve receipt for the next owner instead of allowing generic
+                    // callback completion to retire a certificate that was never applied.
+                    work_journal->MarkSeen( new_data.first );
+                    work_journal->MarkStalled( new_data.first, std::chrono::milliseconds( 0 ) );
                 }
             } );
 
