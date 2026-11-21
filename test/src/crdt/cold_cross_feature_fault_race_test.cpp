@@ -789,11 +789,18 @@ namespace
         }
 
         /// Construct a manager directly over the fixture stores with the
-        /// fake admin and the dormant-cadence retention posture.
-        std::shared_ptr<ColdStorageManager> MakeManager()
+        /// fake admin and the dormant-cadence retention posture. @p
+        /// grace_ms: the eviction D-13 grace the deferred marks wait out.
+        /// NOTE (the 19-03 run3 find): grace 0 is NOT zero - the manager
+        /// rewrites it to kDefaultGraceMs (60000 ms, ColdStorageManager
+        /// ctor), so any leg that drives ProcessDueMarks must pass an
+        /// explicit small grace (the v1.1 evict-serve recipe's 1 ms).
+        std::shared_ptr<ColdStorageManager> MakeManager( uint32_t grace_ms = 0 )
         {
             auto remote_store_mutex = std::make_shared<std::mutex>();
-            manager_                = std::make_shared<ColdStorageManager>(
+            auto                     retention = RetentionDormant( 5000 );
+            retention.grace_ms                = grace_ms;
+            manager_                          = std::make_shared<ColdStorageManager>(
                 shared_local_,
                 remote_,
                 cold_store_mutex_,
@@ -801,7 +808,7 @@ namespace
                 FastOptions(),
                 FastDurability(),
                 fake_admin_,
-                RetentionDormant( 5000 ) );
+                retention );
             manager_->AttachGcDependencies( crdt_.get(), dagsyncer_.get(), real_hot_ );
             return manager_;
         }
@@ -923,6 +930,31 @@ namespace
             marker_key.put( key_string );
             auto marker = real_hot_->get( marker_key );
             return marker.has_value() && !marker.value().empty();
+        }
+
+        /// Journal an ORPHAN block (no delta, no head, never reachable)
+        /// through the decorator - the spill shape without CRDT presence
+        /// (the 18-01 SetOrphan shape; X4's GC-eviction target, the only
+        /// legally evictable block in the hermetic world - a linked
+        /// ancestor is reachability-pinned by the GC's walk).
+        Cid SetOrphan( const std::string &payload )
+        {
+            const auto cid = MakeCid( payload );
+            IpfsDatastore::Value value;
+            value.put( payload );
+            auto set = decorator_->set( CID( cid ), std::move( value ) );
+            EXPECT_TRUE( set.has_value() );
+            return cid;
+        }
+
+        /// Backdate a block's spill timestamp past the retention
+        /// threshold (the D-01 age evidence - the 18-01 Backdate shape,
+        /// under the shared cold-store mutex).
+        void BackdateCid( const Cid &cid, uint64_t age_ms )
+        {
+            std::lock_guard<std::mutex> lock( *cold_store_mutex_ );
+            auto written = shared_local_->SetSpilledAt( cid, UnixNowMs() - age_ms );
+            ASSERT_TRUE( written.has_value() );
         }
 
         /// Flags captured by the barrier choreography (no gtest macros
@@ -2601,5 +2633,652 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseMidWalkVisit_EvidenceSkipsNeve
         ASSERT_TRUE( restorable.has_value() );
         EXPECT_FALSE( restorable.value() )
             << "RED-BY-DESIGN (fault arm): the erased element became restorable";
+    }
+}
+
+// ---------------------------------------------------------------------------
+// X4 (plan 19-03 Task 1): GC eviction x the walk's restore fetch.
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief X4: GC eviction of the cold-resident ancestor (R4) x the walk's
+ *        restore fetch (R2) - hazard: PARTIAL-HISTORY VALIDATION.
+ *
+ * LAYER POSTURE (seam, D-03 layer one): the walk's restore fetch of a
+ * sealed, cold-resident, NoEvidence ancestor parks at the serve seam
+ * (step 1 - provably mid-restore) while a REAL GC pass runs to
+ * completion on the same fixture: pass 1 nominates the orphan canary
+ * (the only legally evictable block - the LINKED ancestor is
+ * reachability-pinned by the GC's own walk, the safety property this
+ * case proves rather than defeats), pass 2 parks BETWEEN HALVES on a
+ * real GC thread (SetGcBetweenHalvesHookForTesting - the D-16 split-
+ * phase window: the library-atomic cold half committed, the hot cleanup
+ * half not started). On release the dichotomy holds:
+ *
+ * COMPLETE arm: the ancestor's bytes survived everywhere they must -
+ * the restore finishes whole (walk Completed, fetched >= 1, the
+ * ancestor hot again, zero gaps, zero errors) and every CID ends in a
+ * legal state (ancestor hot+Durable, head hot+Durable, canary
+ * GC-evicted: hot rows reclaimed, journal consumed).
+ *
+ * ABORT arm (the cleanly-aborted half, fail-closed control embedded):
+ * a MALFORMED evidence row at the ancestor's sanctioned-builder key
+ * (value corrupted, never the key - the 18-01 ControlMalformed
+ * grammar) makes the walk's consult fail closed: the restore is
+ * refused BEFORE any fetch, the walk ends Incomplete with errors,
+ * the ancestor never lands hot, nothing partially validated.
+ *
+ * FAULT ARM (knob-gated): the mid-eviction state forced as if valid -
+ * with the restore fetch parked mid-flight, the /prune marker lands
+ * AND the lookup is blinded (the established evidence_suppressed_
+ * injection): the restore is accepted on the now-evidenced ancestor,
+ * the history validates partially - the detector FAILS (teeth).
+ *
+ * DEVATION FROM PLAN SHAPE (Rule 1, recorded for the SUMMARY): the
+ * plan's S3 op-barrier park for the walk's fetch collides with the GC
+ * pass's own WalkReachable reads of the same cold-resident CID (both
+ * cross the S3 tier); the entered-once serve-seam park separates them
+ * exactly (GetNodeWithRouteBudget fires the seam; the GC's
+ * GetNodeWithoutRequest path passes through after the first firing).
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_GcEvictionMidWalkRestore_RestoreCompletesOrAborts )
+{
+    LogKnobs( "X4" );
+    const bool red_arms = red_arms_enabled_;
+
+    // ---- COMPLETE arm: the restore finishes whole across a real GC pass.
+    {
+        const CID    a1     = PublishElement( "x4/complete/key1", "v1" );
+        const CID    a2     = PublishElement( "x4/complete/key2", "v2" );
+        const Cid    canary = SetOrphan( "x4 complete canary payload" );
+        // grace 1 ms (the run3 find): grace 0 is the zero-sentinel that
+        // becomes kDefaultGraceMs = 60000 - the mark would never come
+        // due inside a test's lifetime.
+        auto manager = MakeManager( /*grace_ms=*/1 );
+        manager->Start();
+        WaitAllDurable( { Cid( a1 ), Cid( a2 ), canary } );
+
+        // Seal the ancestor, make it cold-resident (hot + LRU gone), age
+        // the canary past retention.
+        ASSERT_TRUE( dagsyncer_->markResolved( a1 ).has_value() );
+        RemoveHotCopy( a1 );
+        BackdateCid( canary, 60000 );
+
+        // Park the walk's restore fetch at the serve seam (entered-once:
+        // later firings - the GC pass's own WalkReachable reads of the
+        // same CID - pass straight through, the separation guard).
+        WindowGate        walk_gate;
+        std::atomic<bool> walk_entered{ false };
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [ & ]( int step ) {
+                if ( step == GraphsyncDAGSyncer::kInterruptAfterEvidenceConsult
+                     && !walk_entered.exchange( true ) )
+                {
+                    walk_gate.Enter();
+                }
+                return false;
+            } );
+        // Enroll the publish topic (the walk's topic guard consults
+        // GetTopicNames - the hermetic fixture never enrolled it).
+        crdt_->AddTopicName( "topic" );
+        auto queued = crdt_->RequestForcedWalk(
+            { "topic" },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() ) << "X4: walk failed to queue";
+        const bool walk_parked = walk_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !walk_parked )
+        {
+            walk_gate.Release();
+            GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        }
+        ASSERT_TRUE( walk_parked )
+            << "X4: the walk's restore fetch never parked at the serve seam";
+
+        // GC pass 1 (the evaluate half): the canary is nominated, the
+        // linked ancestor is provably pinned (never a candidate). Then
+        // the 1 ms grace provably elapses (the v1.1 evict-serve recipe)
+        // so the deferred mark is due on pass 2's later tick (D-13).
+        const auto pass1 = manager->GcPassOnce();
+        ASSERT_EQ( pass1.size(), 1u )
+            << "X4: exactly the canary is nominated - the linked ancestor is "
+               "reachability-pinned (the safety property)";
+        EXPECT_TRUE( pass1[0] == canary );
+        EXPECT_EQ( manager->GetStatus().gc_evicting_count, 1u )
+            << "X4: the deferred mark exists after pass 1";
+        const auto grace_early = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3 );
+        ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= grace_early; },
+                                std::chrono::milliseconds( 1000 ) ) );
+
+        // GC pass 2 on a REAL GC thread, parked between the halves while
+        // the walk's restore is still mid-flight.
+        WindowGate        gc_gate;
+        std::atomic<bool> gc_done{ false };
+        sgns::crdt::SetGcBetweenHalvesHookForTesting( manager, [ &gc_gate ] { gc_gate.Enter(); } );
+        std::thread gc_thread( [ manager, &gc_done ] {
+            (void)manager->GcPassOnce();
+            gc_done.store( true );
+        } );
+        const bool gc_parked = gc_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !gc_parked )
+        {
+            gc_gate.Release();
+            sgns::crdt::SetGcBetweenHalvesHookForTesting( manager, nullptr );
+            gc_thread.join();
+        }
+        ASSERT_TRUE( gc_parked ) << "X4: the GC pass never parked between halves"
+                                 << " [evicting=" << manager->GetStatus().gc_evicting_count
+                                 << " reclaimed_last=" << manager->GetStatus().gc_last_pass_reclaimed_count
+                                 << " candidates_last=" << manager->GetStatus().gc_last_pass_candidates
+                                 << "]";
+
+        // Release the walk FIRST (the restore completes on its own terms
+        // while the GC sits mid-eviction), then the GC.
+        walk_gate.Release();
+        ASSERT_TRUE( PollUntil( [&] {
+                         return crdt_->GetForcedWalkStatus().state
+                                == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X4: the walk never completed after release";
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+
+        gc_gate.Release();
+        gc_thread.join();
+        sgns::crdt::SetGcBetweenHalvesHookForTesting( manager, nullptr );
+        ASSERT_TRUE( gc_done.load() );
+
+        // The dichotomy's COMPLETE half + every-CID-legal-state audit.
+        const auto status = crdt_->GetForcedWalkStatus();
+        EXPECT_EQ( status.state, sgns::crdt::CrdtDatastore::ForcedWalkState::Completed );
+        EXPECT_EQ( status.walk_gaps, 0u ) << "X4: no gap on the completed arm";
+        EXPECT_EQ( status.errors, 0u ) << "X4: no error on the completed arm";
+        EXPECT_GE( status.fetched, 1u ) << "X4: the ancestor's restore really fetched";
+        EXPECT_TRUE( HotBytesPresent( a1 ) )
+            << "X4 COMPLETE: the ancestor restored whole (bytes survived everywhere)";
+        EXPECT_TRUE( HotBytesPresent( a2 ) ) << "X4 COMPLETE: the head stays hot";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_reclaimed_count, 1u )
+            << "X4: the GC's destructive half really completed (canary evicted)";
+        EXPECT_FALSE( HotBytesPresent( CID( canary ) ) )
+            << "X4: the canary's hot rows reclaimed by half 2 (legal GC-evicted state)";
+
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- ABORT arm (cleanly aborted, fail-closed control embedded): a
+    // Malformed row at the ancestor's sanctioned key refuses the restore.
+    {
+        const CID    b1     = PublishElement( "x4/abort/key1", "v1" );
+        const CID    b2     = PublishElement( "x4/abort/key2", "v2" );
+        auto manager = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( b1 ), Cid( b2 ) } );
+        ASSERT_TRUE( dagsyncer_->markResolved( b1 ).has_value() );
+        RemoveHotCopy( b1 );
+        SeedPruneEvidence( b1, /*corrupt=*/true );
+
+        crdt_->AddTopicName( "topic" );
+        auto queued = crdt_->RequestForcedWalk(
+            { "topic" },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() );
+        ASSERT_TRUE( PollUntil( [&] {
+                         const auto state = crdt_->GetForcedWalkStatus().state;
+                         return state == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed
+                                || state == sgns::crdt::CrdtDatastore::ForcedWalkState::Incomplete;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X4 abort arm: the walk never reached a terminal state";
+
+        const auto status = crdt_->GetForcedWalkStatus();
+        EXPECT_EQ( status.state, sgns::crdt::CrdtDatastore::ForcedWalkState::Incomplete )
+            << "X4 ABORT: the malformed consult fails the walk closed";
+        EXPECT_GE( status.errors, 1u ) << "X4 ABORT: the refusal is counted, never silent";
+        EXPECT_FALSE( HotBytesPresent( b1 ) )
+            << "X4 ABORT: the ancestor never lands hot - nothing partially "
+               "validated";
+
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+
+    // ---- FAULT ARM (red-by-design, knob only): the mid-eviction state
+    // forced as if valid - the restore accepted on the evidenced ancestor.
+    if ( red_arms )
+    {
+        const CID    c1 = PublishElement( "x4/fault/key1", "v1" );
+        const CID    c2 = PublishElement( "x4/fault/key2", "v2" );
+        auto manager = MakeManager();
+        manager->Start();
+        WaitAllDurable( { Cid( c1 ), Cid( c2 ) } );
+        ASSERT_TRUE( dagsyncer_->markResolved( c1 ).has_value() );
+        RemoveHotCopy( c1 );
+        // The half-evicted posture: hot + local-cold gone, remote present
+        // (the GC's own eviction end-state vocabulary - remote is never
+        // deleted in v1).
+        auto evicted = shared_local_->EvictLocal( Cid( c1 ) );
+        ASSERT_TRUE( evicted.has_value() );
+
+        WindowGate        walk_gate;
+        std::atomic<bool> walk_entered{ false };
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [ & ]( int step ) {
+                if ( step == GraphsyncDAGSyncer::kInterruptAfterEvidenceConsult
+                     && !walk_entered.exchange( true ) )
+                {
+                    walk_gate.Enter();
+                }
+                return false;
+            } );
+        crdt_->AddTopicName( "topic" );
+        auto queued = crdt_->RequestForcedWalk(
+            { "topic" },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() );
+        const bool walk_parked = walk_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !walk_parked )
+        {
+            walk_gate.Release();
+            GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        }
+        ASSERT_TRUE( walk_parked ) << "X4 fault: the restore fetch never parked";
+
+        // The mid-flight erase-side marker lands inside the parked window,
+        // then the lookup is blinded - the restore proceeds as if the
+        // mid-eviction state were valid.
+        SeedPruneEvidence( c1 );
+        evidence_suppressed_.store( true, std::memory_order_release );
+        walk_gate.Release();
+        ASSERT_TRUE( PollUntil( [&] {
+                         return crdt_->GetForcedWalkStatus().state
+                                == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X4 fault: the blinded walk never completed";
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        evidence_suppressed_.store( false, std::memory_order_release );
+
+        // THE DETECTOR (fails by design under the knob): the evidenced
+        // ancestor must be skipped, never restored.
+        EXPECT_TRUE( EvidenceInStore( c1 ) )
+            << "X4 fault precondition: the evidence row really landed mid-window";
+        const auto status = crdt_->GetForcedWalkStatus();
+        EXPECT_GE( status.skipped_pruned, 1u )
+            << "RED-BY-DESIGN (fault arm): the evidenced ancestor was not "
+               "skipped - the partial-history detector must fail loudly here";
+        EXPECT_FALSE( HotBytesPresent( c1 ) )
+            << "RED-BY-DESIGN (fault arm): the evidenced ancestor was "
+               "restored hot - the partial-history detector must fail loudly "
+               "here";
+
+        manager_->Stop();
+        manager_ = nullptr;
+    }
+}
+
+/**
+ * @brief X4 layer two (D-03): the real GC pass thread racing the real
+ *        walk-restore thread under seeded jitter (the X2-B iterated
+ *        pattern transplanted to the eviction boundary - per-iteration
+ *        seeds via SGNS_CROSS_RACE_JITTER_SEED/_ITERS, effective seed
+ *        printed by LogKnobs).
+ *
+ * Per iteration: a fresh chain whose ancestor is S3-ONLY (hot + local
+ * cold gone - the fetch really crosses the remote tier where the
+ * seeded jitter stretches the in-flight window) + a fresh canary; the
+ * walk's restore fetch parks at the serve seam; GC pass 1 nominates,
+        // pass 2 parks between halves on its own real thread; the walk
+ * releases first, then the GC. Every iteration must hold the COMPLETE
+ * dichotomy invariants.
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_GcEvictionMidWalkRestore_RestoreCompletesOrAborts_LegB )
+{
+    LogKnobs( "X4-B" );
+
+    // grace 1 ms (the run3 zero-sentinel find) so the deferred marks
+    // come due on the next tick inside the iteration cadence.
+    auto manager = MakeManager( /*grace_ms=*/1 );
+    manager->Start();
+    crdt_->AddTopicName( "topic" );
+
+    for ( uint64_t iter = 0; iter < jitter_iters_; ++iter )
+    {
+        const CID a1 = PublishElement( "x4/barrier/key1/" + std::to_string( iter ),
+                                       "v1-" + std::to_string( iter ) );
+        const CID a2 = PublishElement( "x4/barrier/key2/" + std::to_string( iter ),
+                                       "v2-" + std::to_string( iter ) );
+        const Cid canary
+            = SetOrphan( "x4 barrier canary " + std::to_string( iter ) );
+        WaitAllDurable( { Cid( a1 ), Cid( a2 ), canary } );
+        ASSERT_TRUE( dagsyncer_->markResolved( a1 ).has_value() );
+        RemoveHotCopy( a1 );
+        auto evicted = shared_local_->EvictLocal( Cid( a1 ) );
+        ASSERT_TRUE( evicted.has_value() ) << "iter " << iter << ": local cold evicted";
+        BackdateCid( canary, 60000 );
+        timing_->SetSeededJitter( S3Op::Get, 25, 15, effective_seed_ + iter );
+
+        WindowGate        walk_gate;
+        std::atomic<bool> walk_entered{ false };
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [ & ]( int step ) {
+                if ( step == GraphsyncDAGSyncer::kInterruptAfterEvidenceConsult
+                     && !walk_entered.exchange( true ) )
+                {
+                    walk_gate.Enter();
+                }
+                return false;
+            } );
+        auto queued = crdt_->RequestForcedWalk(
+            { "topic" },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() ) << "iter " << iter << ": walk failed to queue";
+        const bool walk_parked = walk_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !walk_parked )
+        {
+            walk_gate.Release();
+            GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        }
+        ASSERT_TRUE( walk_parked )
+            << "X4-B iter " << iter << ": the restore fetch never parked";
+
+        const auto pass1 = manager->GcPassOnce();
+        ASSERT_EQ( pass1.size(), 1u ) << "iter " << iter << ": only the canary nominated";
+        EXPECT_TRUE( pass1[0] == canary );
+        const auto grace_early
+            = std::chrono::steady_clock::now() + std::chrono::milliseconds( 3 );
+        ASSERT_TRUE( PollUntil( [&] { return std::chrono::steady_clock::now() >= grace_early; },
+                                std::chrono::milliseconds( 1000 ) ) )
+            << "iter " << iter << ": the 1 ms grace never elapsed";
+
+        WindowGate        gc_gate;
+        std::atomic<bool> gc_done{ false };
+        sgns::crdt::SetGcBetweenHalvesHookForTesting( manager, [ &gc_gate ] { gc_gate.Enter(); } );
+        std::thread gc_thread( [ manager, &gc_done ] {
+            (void)manager->GcPassOnce();
+            gc_done.store( true );
+        } );
+        const bool gc_parked = gc_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !gc_parked )
+        {
+            gc_gate.Release();
+            sgns::crdt::SetGcBetweenHalvesHookForTesting( manager, nullptr );
+            gc_thread.join();
+        }
+        ASSERT_TRUE( gc_parked ) << "X4-B iter " << iter << ": the GC never parked between halves";
+
+        walk_gate.Release();
+        ASSERT_TRUE( PollUntil( [&] {
+                         return crdt_->GetForcedWalkStatus().state
+                                == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X4-B iter " << iter << ": the walk never completed";
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        gc_gate.Release();
+        gc_thread.join();
+        sgns::crdt::SetGcBetweenHalvesHookForTesting( manager, nullptr );
+        ASSERT_TRUE( gc_done.load() );
+        timing_->ClearTimings();
+
+        const auto status = crdt_->GetForcedWalkStatus();
+        EXPECT_EQ( status.walk_gaps, 0u ) << "X4-B iter " << iter << ": no gap";
+        EXPECT_EQ( status.errors, 0u ) << "X4-B iter " << iter << ": no error";
+        EXPECT_TRUE( HotBytesPresent( a1 ) )
+            << "X4-B iter " << iter << ": the ancestor restored whole";
+        EXPECT_GE( timing_->OpCount( S3Op::Get ), 1u )
+            << "X4-B iter " << iter << ": the fetch really crossed the S3 tier";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_reclaimed_count, 1u )
+            << "X4-B iter " << iter << ": the canary's eviction completed";
+    }
+
+    manager_->Stop();
+    manager_ = nullptr;
+}
+
+// ---------------------------------------------------------------------------
+// X6 (plan 19-03 Task 1): the Phase 18 downgrade interlock x the walk.
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief X6: role-downgrade ack/arming (the Phase 18 interlock) x walk
+ *        start/visit (R1/R2) - hazard: PARTIAL-HISTORY VALIDATION.
+ *
+ * LAYER POSTURE (seam-only - the flagged assumption, a decision not an
+ * accident): the downgrade-ack-write vs walk claim is a state-ordering
+ * claim at the interlock surface; the true-concurrency residue for the
+ * downgrade itself was already proven by the 18-02/18-03 timeline
+ * suites (E2E on the t0-t3 timeline).
+ *
+ * SEAM LEG: the tx-stack walk's restore fetch of the cold-resident
+ * victim (SeedX5Graph's twin-eviction posture - NoEvidence, sealed by
+ * consumption) parks at the serve seam (step 1, provably BETWEEN walk
+ * visits). While parked, the FULL interlock timeline runs through the
+ * sanctioned 18-02 writer (RoleFingerprint::CheckAndRewrite - the
+ * persisted fingerprint + the downgrade_acknowledged ack surface):
+ *   (a) the unacknowledged check FIRES (DowngradeUnacknowledged) and
+ *       PRESERVES the archive-era record - the armed-role protection;
+ *   (b) zero /prune markers anywhere (nothing was erased while the
+ *       interlock holds the timeline - the t1 observable);
+ *   (c) the ack lands (DowngradeAcknowledged) - the only consent
+ *       transition;
+ * then the walk releases and completes whole (the crossing changed
+ * nothing the walk validates), and post-walk the start-normally disarm
+ * is the only transition left (a fresh unacknowledged check returns
+ * NoDowngrade, never a re-fire).
+ *
+ * FAULT ARM (knob-gated): the in-flight ack treated as disarmed before
+ * commit - a TORN record landing (the value zeroed at the production
+ * PRUNE_ROLE_FINGERPRINT_KEY constant only, the 18-01 corrupt-value
+ * grammar; the key itself is never hand-built). The mid-walk
+ * unacknowledged check can no longer see the prior posture: the
+ * verdict flips off the armed timeline - the detector FAILS (teeth;
+ * the 18-REVIEW F-1 laundering class caught at the walk boundary).
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_DowngradeArmsMidWalk_InterlockHoldsTimeline )
+{
+    LogKnobs( "X6" );
+    const bool red_arms = red_arms_enabled_;
+
+    auto interlock_cfg = []( bool ack ) {
+        sgns::PruningConfig config;
+        config.enabled              = true;
+        config.finality_window      = kXWindow;
+        config.downgrade_acknowledged = ack;
+        return config;
+    };
+    const std::string fingerprint_key( sgns::PruneEligibility::PRUNE_ROLE_FINGERPRINT_KEY );
+
+    // ---- SEAM LEG: the interlock timeline across a mid-flight walk.
+    {
+        BuildTxStack();
+        std::string path, cid, twin_path;
+        SeedX5Graph( 91, &path, &cid, &twin_path );
+
+        // t0: the archive-era posture is recorded (FirstRun on the fresh
+        // stack; the record now parses as Archive).
+        {
+            auto seeded = sgns::RoleFingerprint::CheckAndRewrite(
+                *gw_db_, interlock_cfg( false ), sgns::NodeType::Archive, /*cold=*/true );
+            ASSERT_TRUE( seeded.has_value() );
+            EXPECT_EQ( seeded.value(), sgns::RoleFingerprint::Verdict::FirstRun );
+            auto recorded = SnapshotXMapEntry( fingerprint_key );
+            ASSERT_NE( recorded, "absent" );
+            SGTransaction::RoleFingerprintRecord record;
+            ASSERT_TRUE( record.ParseFromArray( recorded.data(),
+                                                static_cast<int>( recorded.size() ) ) );
+            EXPECT_EQ( static_cast<sgns::NodeType>( record.node_type() ), sgns::NodeType::Archive );
+        }
+
+        // The walk parks mid-restore (entered-once at the serve seam -
+        // provably BETWEEN walk visits).
+        WindowGate        walk_gate;
+        std::atomic<bool> walk_entered{ false };
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [ & ]( int step ) {
+                if ( step == GraphsyncDAGSyncer::kInterruptAfterEvidenceConsult
+                     && !walk_entered.exchange( true ) )
+                {
+                    walk_gate.Enter();
+                }
+                return false;
+            } );
+        auto queued = gw_db_->RequestForcedWalk(
+            { std::string( kXSeedTopic ) },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() ) << "X6: walk failed to queue";
+        const bool walk_parked = walk_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !walk_parked )
+        {
+            walk_gate.Release();
+            GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        }
+        ASSERT_TRUE( walk_parked ) << "X6: the walk never parked mid-restore";
+
+        // (a) MID-WALK, UNACKNOWLEDGED: the interlock fires and preserves
+        // the archive prior (the armed-role protection).
+        {
+            auto unacked = sgns::RoleFingerprint::CheckAndRewrite(
+                *gw_db_, interlock_cfg( false ), sgns::NodeType::Light, /*cold=*/true );
+            ASSERT_TRUE( unacked.has_value() );
+            EXPECT_EQ( unacked.value(), sgns::RoleFingerprint::Verdict::DowngradeUnacknowledged )
+                << "X6 (a): the mid-walk check arms - consent not yet given";
+            auto recorded = SnapshotXMapEntry( fingerprint_key );
+            ASSERT_NE( recorded, "absent" );
+            SGTransaction::RoleFingerprintRecord record;
+            ASSERT_TRUE( record.ParseFromArray( recorded.data(),
+                                                static_cast<int>( recorded.size() ) ) );
+            EXPECT_EQ( static_cast<sgns::NodeType>( record.node_type() ), sgns::NodeType::Archive )
+                << "X6 (a): the unacknowledged arm PRESERVES the archive prior";
+        }
+        // (b) zero markers while the timeline is armed.
+        {
+            auto marker = sgns::PruneEligibility::LookupPrunedBlockEntry( *gw_db_, cid );
+            ASSERT_TRUE( marker.has_value() );
+            EXPECT_EQ( marker.value().first, sgns::PrunedBlockLookup::NOT_FOUND )
+                << "X6 (b): nothing erased across the armed timeline";
+        }
+        // (c) the ack lands mid-walk (the only consent transition).
+        {
+            auto acked = sgns::RoleFingerprint::CheckAndRewrite(
+                *gw_db_, interlock_cfg( /*ack=*/true ), sgns::NodeType::Light, /*cold=*/true );
+            ASSERT_TRUE( acked.has_value() );
+            EXPECT_EQ( acked.value(), sgns::RoleFingerprint::Verdict::DowngradeAcknowledged )
+                << "X6 (c): the ack write lands at the walk step";
+        }
+
+        // Release: the walk completes whole - the crossing changed
+        // nothing the walk validates.
+        walk_gate.Release();
+        ASSERT_TRUE( PollUntil( [&] {
+                         return gw_db_->GetForcedWalkStatus().state
+                                == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X6: the walk never completed after the interlock timeline";
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        {
+            const auto status = gw_db_->GetForcedWalkStatus();
+            EXPECT_EQ( status.walk_gaps, 0u ) << "X6: no gap across the interlock timeline";
+            EXPECT_EQ( status.errors, 0u ) << "X6: no error across the interlock timeline";
+        }
+
+        // (d) post-walk: the start-normally disarm is the only transition
+        // left - a fresh unacknowledged check NEVER re-fires.
+        {
+            auto recheck = sgns::RoleFingerprint::CheckAndRewrite(
+                *gw_db_, interlock_cfg( false ), sgns::NodeType::Light, /*cold=*/true );
+            ASSERT_TRUE( recheck.has_value() );
+            EXPECT_EQ( recheck.value(), sgns::RoleFingerprint::Verdict::NoDowngrade )
+                << "X6 (d): post-ack the disarm latches - no re-fire on the walk's "
+                   "far side";
+        }
+    }
+
+    // ---- FAULT ARM (red-by-design, knob only): the torn-ack landing -
+    // the in-flight ack treated as disarmed before commit.
+    if ( red_arms )
+    {
+        // Fresh graph on the ONE per-case stack (the shared-stack
+        // restructure - mid-test GlobalDB rebuild deadlocks).
+        std::string path, cid, twin_path;
+        SeedX5Graph( 92, &path, &cid, &twin_path );
+
+        // Re-seed the archive posture (post-ack the record reads Light;
+        // an upgrade re-arm writes Archive back - NoDowngrade verdict).
+        {
+            auto reseed = sgns::RoleFingerprint::CheckAndRewrite(
+                *gw_db_, interlock_cfg( false ), sgns::NodeType::Archive, /*cold=*/true );
+            ASSERT_TRUE( reseed.has_value() );
+            EXPECT_EQ( reseed.value(), sgns::RoleFingerprint::Verdict::NoDowngrade );
+            auto recorded = SnapshotXMapEntry( fingerprint_key );
+            ASSERT_NE( recorded, "absent" );
+            SGTransaction::RoleFingerprintRecord record;
+            ASSERT_TRUE( record.ParseFromArray( recorded.data(),
+                                                static_cast<int>( recorded.size() ) ) );
+            EXPECT_EQ( static_cast<sgns::NodeType>( record.node_type() ), sgns::NodeType::Archive );
+        }
+
+        WindowGate        walk_gate;
+        std::atomic<bool> walk_entered{ false };
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest(
+            [ & ]( int step ) {
+                if ( step == GraphsyncDAGSyncer::kInterruptAfterEvidenceConsult
+                     && !walk_entered.exchange( true ) )
+                {
+                    walk_gate.Enter();
+                }
+                return false;
+            } );
+        auto queued = gw_db_->RequestForcedWalk(
+            { std::string( kXSeedTopic ) },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() );
+        const bool walk_parked = walk_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !walk_parked )
+        {
+            walk_gate.Release();
+            GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        }
+        ASSERT_TRUE( walk_parked ) << "X6 fault: the walk never parked mid-restore";
+
+        // THE TORN LANDING (knob only): the in-flight ack's non-atomic
+        // write leaves the record value unparseable at the PRODUCTION key
+        // constant (the 18-01 corrupt-value grammar - the value, never
+        // the key). The prior posture is gone from the interlock's sight.
+        {
+            sgns::crdt::GlobalDB::Buffer key_buffer;
+            key_buffer.put( fingerprint_key );
+            sgns::crdt::GlobalDB::Buffer value_buffer;
+            value_buffer.put( std::string( "\x80\x80\x80\x80\x80", 5 ) );
+            ASSERT_TRUE( gw_db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+        }
+
+        // THE DETECTOR (fails by design under the knob): the mid-walk
+        // unacknowledged check must still fire on the armed timeline.
+        {
+            auto unacked = sgns::RoleFingerprint::CheckAndRewrite(
+                *gw_db_, interlock_cfg( false ), sgns::NodeType::Light, /*cold=*/true );
+            ASSERT_TRUE( unacked.has_value() );
+            EXPECT_EQ( unacked.value(), sgns::RoleFingerprint::Verdict::DowngradeUnacknowledged )
+                << "RED-BY-DESIGN (fault arm): the torn-ack landing flipped the "
+                   "verdict off the armed timeline - the downgrade launders "
+                   "through the walk boundary; the interlock detector must "
+                   "fail loudly here";
+        }
+
+        walk_gate.Release();
+        ASSERT_TRUE( PollUntil( [&] {
+                         const auto state = gw_db_->GetForcedWalkStatus().state;
+                         return state == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed
+                                || state == sgns::crdt::CrdtDatastore::ForcedWalkState::Incomplete;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) );
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
     }
 }
