@@ -27,6 +27,7 @@
 #include "testutil/wait_condition.hpp"
 
 #include <string>
+#include <map>
 #include <vector>
 
 namespace sgns
@@ -748,7 +749,8 @@ TEST_F( TransactionDeletionRecoveryTest, V2PaymentConsumesHoldAndCreditsExactDis
     const auto payment_hash = sgns::base::Hash256::fromHex( release->GetHash() ).value();
     ASSERT_TRUE( ConfirmPayment( release ).has_value() );
     EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ payment_hash } );
-    uint64_t total = 0;
+    uint64_t                        total = 0;
+    std::map<std::string, uint64_t> balances;
     for ( size_t index = 0; index < outputs.value().size(); ++index )
     {
         const auto &expected = outputs.value().at( index );
@@ -760,9 +762,14 @@ TEST_F( TransactionDeletionRecoveryTest, V2PaymentConsumesHoldAndCreditsExactDis
         EXPECT_EQ( actual->GetAmount(), expected.encrypted_amount );
         EXPECT_EQ( actual->GetOwnerAddress(), expected.dest_address );
         EXPECT_EQ( actual->GetTokenID(), expected.token_id );
-        total += actual->GetAmount();
+        total                           += actual->GetAmount();
+        balances[expected.dest_address] += expected.encrypted_amount;
     }
     EXPECT_EQ( total, hold->GetAmount() );
+    for ( const auto &[address, expected] : balances )
+    {
+        EXPECT_EQ( ledger.GetBalance( address ), expected );
+    }
     EXPECT_EQ( ledger.GetBalance( std::string( 128, '1' ) ), outputs.value().front().encrypted_amount );
     EXPECT_EQ( manager_->WaitForEscrowRelease( hold->GetHash(), std::chrono::milliseconds( 10 ) ),
                sgns::TransactionManager::TransactionStatus::CONFIRMED );

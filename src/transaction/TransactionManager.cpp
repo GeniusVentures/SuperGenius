@@ -1390,14 +1390,16 @@ namespace sgns
                 lock_id );
         }
 
-        auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct( lock_id ) ) );
+        auto payment = std::make_shared<EscrowReleaseTransactionV2>(
+            EscrowReleaseTransactionV2::New( std::vector{ escrow_utxo_input },
+                                             payout_peers,
+                                             FillDAGStruct( lock_id ) ) );
 
-        transfer_transaction->MakeSignature( *account_m );
+        payment->MakeSignature( *account_m );
 
-        EnqueueTransaction( TransactionItem{ TransactionBatch{ { transfer_transaction, std::nullopt } },
-                                             std::move( crdt_transaction ) } );
-        return transfer_transaction->GetHash();
+        EnqueueTransaction(
+            TransactionItem{ TransactionBatch{ { payment, std::nullopt } }, std::move( crdt_transaction ) } );
+        return payment->GetHash();
     }
 
     void TransactionManager::AsyncPayEscrow( std::string                              escrow_path,
@@ -3145,9 +3147,25 @@ namespace sgns
         {
             return std::errc::invalid_argument;
         }
+        const auto params = release->GetUTXOParameters();
+        if ( params.first.size() != 1 )
+        {
+            return outcome::success();
+        }
+        BOOST_OUTCOME_TRY( auto own_hash, base::Hash256::fromHex( tx.GetHash() ) );
+        const auto &input   = params.first.front();
+        const auto  spender = account_m->GetUTXOManager().GetOutPointSpender( input.txid_hash_, input.output_idx_ );
+        if ( spender && spender != std::optional{ own_hash } )
+        {
+            return outcome::success();
+        }
         const auto resolved = genius_input_validator_.ResolveEscrowReleaseInput( *release, *blockchain_ );
         if ( resolved.verdict != IInputValidator::WitnessVerdict::kValid || resolved.producer == nullptr )
         {
+            if ( !spender )
+            {
+                return outcome::success();
+            }
             return std::errc::invalid_argument;
         }
         return RevertEscrowPayment( tx, resolved.producer->GetUTXOParameters().second.front().dest_address );
@@ -3166,11 +3184,15 @@ namespace sgns
         BOOST_OUTCOME_TRY( auto durable,
                            ledger.ReadDurableSpendEvidence( input.txid_hash_, input.output_idx_, owner ) );
         BOOST_OUTCOME_TRY( auto own_hash, base::Hash256::fromHex( tx.GetHash() ) );
-        if ( !durable || !durable->genuine || durable->spender != std::optional{ own_hash } ||
-             ledger.GetOutPointSpender( input.txid_hash_, input.output_idx_ ) != std::optional{ own_hash } )
+        if ( !durable || !durable->genuine || durable->spender != std::optional{ own_hash } )
         {
             // A never-applied loser owns no effects. This check must remain read-only.
             return outcome::success();
+        }
+        if ( !ledger.IsOutPointConsumed( input.txid_hash_, input.output_idx_ ) ||
+             ledger.GetOutPointSpender( input.txid_hash_, input.output_idx_ ) != std::optional{ own_hash } )
+        {
+            return std::errc::state_not_recoverable;
         }
         return RevertUTXOPayment( tx, owner );
     }
@@ -3402,7 +3424,7 @@ namespace sgns
         std::chrono::milliseconds timeout ) const
     {
         auto start              = std::chrono::steady_clock::now();
-        auto escrow_hash_result = base::Hash256::fromReadableString( originalEscrowId );
+        auto escrow_hash_result = base::Hash256::fromHex( originalEscrowId );
         if ( escrow_hash_result.has_error() )
         {
             m_logger->warn( "Invalid original escrow tx id while waiting release: {}", originalEscrowId );
@@ -3410,48 +3432,58 @@ namespace sgns
         }
         const auto escrow_hash = escrow_hash_result.value();
 
-        auto is_escrow_spent_by_confirmed_transfer = [this, &escrow_hash]() -> bool
+        auto has_confirmed_payment = [this, &escrow_hash]() -> bool
         {
-            std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-            for ( const auto &[_, tracked] : tx_processed_m )
+            const auto &ledger  = account_m->GetUTXOManager();
+            const auto  spender = ledger.GetOutPointSpender( escrow_hash, 0 );
+            if ( !ledger.IsOutPointConsumed( escrow_hash, 0 ) || !spender )
             {
-                if ( tracked.status != TransactionStatus::CONFIRMED || !tracked.tx || !tracked.tx->HasUTXOParameters() )
+                return false;
+            }
+            std::shared_ptr<GeniusTransaction> payment;
+            {
+                std::shared_lock tx_lock( tx_mutex_m );
+                const auto       tracked = tx_processed_m.find( GetTransactionPath( spender->toReadableString() ) );
+                if ( tracked != tx_processed_m.end() )
                 {
-                    continue;
-                }
-
-                const auto params_opt = tracked.tx->GetUTXOParametersOpt();
-                if ( !params_opt.has_value() )
-                {
-                    continue;
-                }
-
-                const auto &inputs                 = params_opt->first;
-                const bool  spends_original_escrow = std::any_of(
-                    inputs.begin(),
-                    inputs.end(),
-                    [&escrow_hash]( const InputUTXOInfo &input )
-                    { return input.txid_hash_ == escrow_hash && input.output_idx_ == 0; } );
-
-                if ( spends_original_escrow )
-                {
-                    return true;
+                    if ( tracked->second.status != TransactionStatus::CONFIRMED || !tracked->second.effects_applied )
+                    {
+                        return false;
+                    }
+                    payment = tracked->second.tx;
                 }
             }
-            return false;
+            if ( payment == nullptr )
+            {
+                const auto persisted = FetchExactTransactionFromCRDT( spender->toReadableString() );
+                if ( persisted.has_error() || !persisted.value() )
+                {
+                    return false;
+                }
+                payment                = persisted.value().value();
+                const auto certificate = GetTransactionCertificate( *payment );
+                if ( certificate.has_error() || !CertificateMatchesTransaction( certificate.value(), *payment ) )
+                {
+                    return false;
+                }
+            }
+            if ( payment == nullptr ||
+                 ( payment->GetType() != "escrow-release-v2" && payment->GetType() != "transfer" ) )
+            {
+                return false;
+            }
+            const auto params = payment->GetUTXOParametersOpt();
+            return params && std::any_of( params->first.begin(),
+                                          params->first.end(),
+                                          [&escrow_hash]( const InputUTXOInfo &input )
+                                          { return input.txid_hash_ == escrow_hash && input.output_idx_ == 0; } );
         };
 
         while ( std::chrono::steady_clock::now() - start < timeout )
         {
-            if ( account_m->GetUTXOManager().IsOutPointConsumed( escrow_hash, 0 ) )
+            if ( has_confirmed_payment() )
             {
-                m_logger->debug( "Escrow hold ({},0) is consumed", originalEscrowId );
-                return TransactionStatus::CONFIRMED;
-            }
-
-            if ( is_escrow_spent_by_confirmed_transfer() )
-            {
-                m_logger->debug( "Escrow release confirmed via tracked transfer spend for {}", originalEscrowId );
+                m_logger->debug( "Escrow release confirmed via actual payment spender for {}", originalEscrowId );
                 return TransactionStatus::CONFIRMED;
             }
 
