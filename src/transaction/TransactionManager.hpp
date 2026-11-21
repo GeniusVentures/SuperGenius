@@ -896,6 +896,13 @@ namespace sgns
         outcome::result<void> ParseMintTransaction( const GeniusTransaction &tx );
         outcome::result<void> ParseEscrowTransaction( const GeniusTransaction &tx );
         outcome::result<void> RevertTransferTransaction( const GeniusTransaction &tx );
+        /**
+         * @brief Deletes payment outputs and restores inputs to their original owner.
+         * @param[in] payment Transaction supplying UTXO payment parameters.
+         * @param[in] input_owner Resolved owner to restore the consumed inputs to.
+         * @return Success after deletion and restoration, or the original ledger error.
+         */
+        outcome::result<void> RevertUTXOPayment( const GeniusTransaction &payment, const std::string &input_owner );
         outcome::result<void> RevertMintTransaction( const GeniusTransaction &tx );
         outcome::result<void> RevertEscrowTransaction( const GeniusTransaction &tx );
         outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );

@@ -767,6 +767,79 @@ TEST_F( TransactionDeletionRecoveryTest, SharedPaymentTransferApplyPreservesEffe
     expect_outputs();
 }
 
+TEST_F( TransactionDeletionRecoveryTest, SharedPaymentTransferRevertPreservesEffects )
+{
+    auto      &utxo_manager = account_->GetUTXOManager();
+    const auto mint         = MakeTransaction( 0 );
+    StoreCertificate( mint );
+    StoreTransaction( mint );
+    ProcessStoredTransaction( mint );
+
+    const std::string escrow_lock   = "0x" + std::string( 64, '1' );
+    auto              escrow_params = utxo_manager.CreateTxParameter( 1, escrow_lock, kTokenId );
+    ASSERT_TRUE( escrow_params.has_value() );
+    auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), mint->GetHash() );
+    escrow_dag.set_uncle_hash( escrow_lock );
+    const auto escrow = std::make_shared<sgns::EscrowTransaction>(
+        sgns::EscrowTransaction::New( std::move( escrow_params.value() ), 1, std::move( escrow_dag ) ) );
+    escrow->MakeSignature( *account_ );
+    StoreCertificate( escrow );
+    StoreTransaction( escrow );
+    ProcessStoredTransaction( escrow );
+
+    const auto escrow_hash = sgns::base::Hash256::fromReadableString( escrow->GetHash() ).value();
+    const auto funding     = utxo_manager.GetUnconsumedUTXO( escrow_hash, 0 );
+    if ( !funding.has_value() )
+    {
+        FAIL() << "certified escrow must produce its funding output";
+    }
+    ASSERT_EQ( funding->GetOwnerAddress(), escrow_lock );
+    const auto transfer      = MakePaymentTransfer( funding.value(),
+                                                    { { 1, account_->GetAddress(), kTokenId } },
+                                               escrow_lock );
+    const auto transfer_hash = sgns::base::Hash256::fromReadableString( transfer->GetHash() ).value();
+    StoreCertificate( transfer );
+    StoreTransaction( transfer );
+    ProcessStoredTransaction( transfer );
+    ASSERT_TRUE( utxo_manager.GetUnconsumedUTXO( transfer_hash, 0 ).has_value() );
+    ASSERT_TRUE( utxo_manager.IsOutPointConsumed( escrow_hash, 0 ) );
+    ASSERT_EQ( utxo_manager.GetOutPointSpender( escrow_hash, 0 ), std::optional{ transfer_hash } );
+
+    // An unrelated output owned by the same recipient must survive payment deletion.
+    const auto             sentinel_hash = sgns::base::Hash256::fromReadableString( std::string( 64, '5' ) ).value();
+    const sgns::GeniusUTXO sentinel( sentinel_hash, 0, 7, kTokenId, account_->GetAddress() );
+    ASSERT_TRUE( utxo_manager.PutUTXO( sentinel, sentinel.GetOwnerAddress() ).has_value() );
+    ASSERT_EQ( utxo_manager.GetBalance(), 8U );
+
+    DeleteStoredTransaction( transfer );
+
+    EXPECT_FALSE( utxo_manager.GetOutPointState( transfer_hash, 0 ).has_value() );
+    EXPECT_EQ( utxo_manager.GetOutPointState( escrow_hash, 0 ),
+               std::optional{ sgns::UTXOManager::UTXOState::UTXO_READY } );
+    EXPECT_FALSE( utxo_manager.GetOutPointSpender( escrow_hash, 0 ).has_value() );
+    const auto restored = utxo_manager.GetUnconsumedUTXO( escrow_hash, 0 );
+    if ( !restored.has_value() )
+    {
+        FAIL() << "deleted transfer must restore its original escrow input";
+    }
+    EXPECT_EQ( restored->GetTxID(), escrow_hash );
+    EXPECT_EQ( restored->GetOutputIdx(), 0U );
+    EXPECT_EQ( restored->GetOwnerAddress(), escrow_lock );
+    EXPECT_EQ( restored->GetTokenID(), kTokenId );
+    EXPECT_EQ( restored->GetAmount(), 1U );
+    EXPECT_EQ( utxo_manager.GetBalance( escrow_lock ), 1U );
+    EXPECT_EQ( utxo_manager.GetBalance(), sentinel.GetAmount() );
+    const auto retained = utxo_manager.GetUnconsumedUTXO( sentinel_hash, 0 );
+    if ( !retained.has_value() )
+    {
+        FAIL() << "payment deletion must retain unrelated recipient outputs";
+    }
+    EXPECT_EQ( retained->GetOwnerAddress(), sentinel.GetOwnerAddress() );
+    EXPECT_EQ( retained->GetTokenID(), sentinel.GetTokenID() );
+    EXPECT_EQ( retained->GetAmount(), sentinel.GetAmount() );
+    EXPECT_EQ( utxo_manager.GetUnconsumedUTXOs( account_->GetAddress() ).size(), 1U );
+}
+
 TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsumedInputs )
 {
     auto previous_transaction = MakeTransaction( 0 );

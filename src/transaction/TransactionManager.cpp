@@ -3063,16 +3063,26 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        auto dest_infos = transfer_tx->GetDstInfos();
+        return RevertUTXOPayment( *transfer_tx, TransferInputOwner( *transfer_tx ) );
+    }
 
-        BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *transfer_tx ) );
+    outcome::result<void> TransactionManager::RevertUTXOPayment( const GeniusTransaction &payment,
+                                                                 const std::string       &input_owner )
+    {
+        const auto params = payment.GetUTXOParametersOpt();
+        if ( !params )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto &dest_infos = params->second;
+
+        BOOST_OUTCOME_TRY( DeleteProducedUTXOs( payment ) );
         for ( const auto &dest_info : dest_infos )
         {
             m_logger->debug( "Notify {} of deletion of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
         }
 
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().RestoreConsumedUTXOs( transfer_tx->GetInputInfos(),
-                                                                             TransferInputOwner( *transfer_tx ) ) );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().RestoreConsumedUTXOs( params->first, input_owner ) );
 
         return outcome::success();
     }
