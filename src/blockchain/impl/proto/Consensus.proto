@@ -86,6 +86,7 @@ message EmbeddedTransaction {
     SGTransaction.EscrowReleaseTx escrow_release = 7;
     SGTransaction.RegistrationTx registration = 8;
     SGTransaction.RevokeTx revoke = 9;
+    SGTransaction.EscrowReleaseTxV2 escrow_release_v2 = 10;
   }
 }
 

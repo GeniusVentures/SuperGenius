@@ -145,6 +145,13 @@ message EscrowReleaseTx
   string original_escrow_hash = 6; 
 }
 
+// Dedicated funds-moving release protocol; legacy EscrowReleaseTx remains a status marker.
+message EscrowReleaseTxV2
+{
+  DAGStruct dag_struct = 1;
+  UTXOTxParams utxo_params = 2;
+}
+
 message RegistrationMetadata
 {
     string game_id = 1;

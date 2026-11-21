@@ -22,11 +22,12 @@ namespace
                                                          "escrow_source",
                                                          "original_escrow_hash" };
         ASSERT_EQ( legacy->field_count(), legacy_fields.size() );
-        for ( size_t index = 0; index < legacy_fields.size(); ++index )
+        int field_number = 0;
+        for ( const auto &name : legacy_fields )
         {
-            const auto *field = legacy->FindFieldByName( legacy_fields[index] );
+            const auto *field = legacy->FindFieldByName( name );
             ASSERT_NE( field, nullptr );
-            EXPECT_EQ( field->number(), index + 1 );
+            EXPECT_EQ( field->number(), ++field_number );
         }
 
         const auto                    *embedded  = sgns::EmbeddedTransaction::descriptor();
@@ -39,10 +40,12 @@ namespace
                                                      "escrow_release",
                                                      "registration",
                                                      "revoke" };
-        for ( size_t index = 0; index < old_cases.size(); ++index )
+        field_number                             = 0;
+        for ( const auto &name : old_cases )
         {
-            ASSERT_NE( embedded->FindFieldByName( old_cases[index] ), nullptr );
-            EXPECT_EQ( embedded->FindFieldByName( old_cases[index] )->number(), index + 1 );
+            const auto *field = embedded->FindFieldByName( name );
+            ASSERT_NE( field, nullptr );
+            EXPECT_EQ( field->number(), ++field_number );
         }
         const auto *v2_case = embedded->FindFieldByName( "escrow_release_v2" );
         ASSERT_NE( v2_case, nullptr );
