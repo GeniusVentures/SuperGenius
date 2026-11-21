@@ -754,11 +754,13 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyReplayContextCannotBeForged )
         if ( backdated )
         {
             transfer->dag_st.set_timestamp( 1 );
+            transfer->dag_st.set_uncle_hash( "0x" + std::string( 64, 'f' ) );
             transfer->FillHash();
             transfer->MakeSignature( *account_ );
         }
         EXPECT_TRUE( ConfirmPayment( transfer ).has_error() );
         EXPECT_FALSE( account_->GetUTXOManager().IsOutPointConsumed( hash, 0 ) );
+        EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
         EXPECT_FALSE( account_->GetUTXOManager()
                           .GetOutPointState( sgns::base::Hash256::fromHex( transfer->GetHash() ).value(), 0 )
                           .has_value() );

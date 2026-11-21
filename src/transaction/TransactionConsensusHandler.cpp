@@ -169,7 +169,10 @@ namespace sgns
                 return ConsensusManager::Check::Approve;
             }
 
-            auto result = owner_.ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
+            auto evidence = owner_.GetCertifiedApplicationEvidence( *tx );
+            auto result   = owner_.ChangeTransactionState( tx,
+                                                         TransactionStatus::CONFIRMED,
+                                                         evidence.has_value() ? &evidence.value() : nullptr );
             if ( result.has_error() )
             {
                 logger_->error( "{}: Failed to confirm certificate-deserialized tx for hash {}: {}",
@@ -200,7 +203,10 @@ namespace sgns
 
             // TRACK-01: Confirm via ChangeTransactionState lifecycle (promote temp embedded-tx entry)
             {
-                auto result = owner_.ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
+                auto evidence = owner_.GetCertifiedApplicationEvidence( *tx );
+                auto result   = owner_.ChangeTransactionState( tx,
+                                                             TransactionStatus::CONFIRMED,
+                                                             evidence.has_value() ? &evidence.value() : nullptr );
                 if ( result.has_error() )
                 {
                     logger_->error( "{}: Failed to change transaction state to CONFIRMED for hash {}: {}",

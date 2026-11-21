@@ -508,6 +508,29 @@ namespace sgns
         void SetMutabilityWindowMs( uint64_t mutability_window );
 
     private:
+        /// @brief Immutable application authority bound to this manager and exact canonical certificate bytes.
+        class CertifiedApplicationEvidence
+        {
+        public:
+            // Copying preserves authority; no move operation may copy const payloads inside noexcept.
+            CertifiedApplicationEvidence( const CertifiedApplicationEvidence & ) = default;
+
+        private:
+            friend class TransactionManager;
+
+            CertifiedApplicationEvidence( const TransactionManager *owner,
+                                          std::string               slot,
+                                          std::vector<uint8_t>      bytes ) :
+                owner_( owner ), slot_( std::move( slot ) ), bytes_( std::move( bytes ) )
+            {
+            }
+
+            // Evidence is a value token that must never be reassigned or retargeted.
+            const TransactionManager *const owner_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+            const std::string               slot_;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+            const std::vector<uint8_t>      bytes_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+        };
+
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
         /// Destination of the burned fraction of an escrow payout.
@@ -649,7 +672,8 @@ namespace sgns
         /**
          * @brief Dispatches to the type-specific parser registered in transaction_parsers.
          */
-        outcome::result<void> ParseTransaction( const GeniusTransaction &tx );
+        outcome::result<void> ParseTransaction( const GeniusTransaction            &tx,
+                                                const CertifiedApplicationEvidence *evidence = nullptr );
 
         /**
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
@@ -886,6 +910,8 @@ namespace sgns
         static constexpr std::string_view kBridgeKeySeparator   = ":";
 
         outcome::result<void> ParseTransferTransaction( const GeniusTransaction &tx );
+        /// @brief Resolves historical escrow ownership from the actual certified hold, never uncle text alone.
+        outcome::result<std::optional<std::string>> ResolveHistoricalEscrowOwner( const GeniusTransaction &tx ) const;
         /**
          * @brief Applies payment inputs and outputs with the existing replay contract.
          * @param[in] payment Transaction supplying UTXO payment parameters.
@@ -1134,7 +1160,8 @@ namespace sgns
         outcome::result<void> EraseTransactionEntryPruned( const std::string &tx_hash );
 
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                      TransactionStatus                         new_status );
+                                                      TransactionStatus                         new_status,
+                                                      const CertifiedApplicationEvidence       *evidence = nullptr );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
@@ -1154,6 +1181,10 @@ namespace sgns
          * Callers must still pass the result through CertificateMatchesTransaction.
          */
         outcome::result<ConsensusCertificate> GetTransactionCertificate( const GeniusTransaction &transaction ) const;
+
+        /// @brief Creates evidence only from the validated canonical slot and exact signed embedded bytes.
+        outcome::result<CertifiedApplicationEvidence> GetCertifiedApplicationEvidence(
+            const GeniusTransaction &transaction ) const;
 
         /**
          * @brief Obtains the public-chain input validator for RPC endpoint wiring.

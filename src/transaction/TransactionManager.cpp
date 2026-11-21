@@ -81,12 +81,6 @@ namespace sgns
 
         using utxo_merkle::OutPointKey;
 
-        std::string TransferInputOwner( const TransferTransaction &transaction )
-        {
-            return utxo_address::IsEscrowLockAddress( transaction.GetUncleHash() ) ? transaction.GetUncleHash()
-                                                                                   : transaction.GetSrcAddress();
-        }
-
         base::Logger TransactionManagerLogger()
         {
             // Always call base::createLogger to get the current logger
@@ -1914,6 +1908,28 @@ namespace sgns
         return blockchain_->GetCertificateBySlot( transaction.GetSlotID() );
     }
 
+    outcome::result<TransactionManager::CertifiedApplicationEvidence> TransactionManager::
+        GetCertifiedApplicationEvidence( const GeniusTransaction &transaction ) const
+    {
+        BOOST_OUTCOME_TRY( auto certificate, GetTransactionCertificate( transaction ) );
+        if ( !CertificateMatchesTransaction( certificate, transaction ) )
+        {
+            return std::errc::invalid_argument;
+        }
+        BOOST_OUTCOME_TRY( auto subject, ConsensusManager::DecodeNonceSubject( certificate.proposal().subject() ) );
+        BOOST_OUTCOME_TRY( auto embedded, DeSerializeEmbeddedTransaction( subject.transaction() ) );
+        const auto bytes = transaction.SerializeByteVector();
+        if ( !embedded || embedded->SerializeByteVector() != bytes ||
+             subject.transaction().SerializeAsString() !=
+                 transaction.SerializeToEmbeddedTransaction().SerializeAsString() )
+        {
+            return std::errc::invalid_argument;
+        }
+        // This proves exact canonical binding, not pre-activation eligibility. The
+        // operator boundary checkpoint must establish the eligible historical set.
+        return CertifiedApplicationEvidence( this, transaction.GetSlotID(), bytes );
+    }
+
     std::string TransactionManager::GetPersistedOutgoingPreviousHash( uint64_t nonce ) const
     {
         if ( nonce == 0 )
@@ -2457,7 +2473,8 @@ namespace sgns
         }
     }
 
-    outcome::result<void> TransactionManager::ParseTransaction( const GeniusTransaction &tx )
+    outcome::result<void> TransactionManager::ParseTransaction( const GeniusTransaction            &tx,
+                                                                const CertifiedApplicationEvidence *evidence )
     {
         auto it = transaction_parsers.find( tx.GetType() );
         if ( it == transaction_parsers.end() )
@@ -2466,7 +2483,28 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        BOOST_OUTCOME_TRY( ( this->*it->second.first )( tx ) );
+        if ( evidence != nullptr && ( evidence->owner_ != this || evidence->slot_ != tx.GetSlotID() ||
+                                      evidence->bytes_ != tx.SerializeByteVector() ) )
+        {
+            return std::errc::invalid_argument;
+        }
+        if ( evidence != nullptr && tx.GetType() == "transfer" &&
+             utxo_address::IsEscrowLockAddress( tx.GetUncleHash() ) )
+        {
+            BOOST_OUTCOME_TRY( auto owner, ResolveHistoricalEscrowOwner( tx ) );
+            if ( owner )
+            {
+                BOOST_OUTCOME_TRY( ApplyEscrowPayment( tx, *owner ) );
+            }
+            else
+            {
+                BOOST_OUTCOME_TRY( ( this->*it->second.first )( tx ) );
+            }
+        }
+        else
+        {
+            BOOST_OUTCOME_TRY( ( this->*it->second.first )( tx ) );
+        }
         UpdateAccountUTXOState( tx, true );
         return outcome::success();
     }
@@ -2655,12 +2693,15 @@ namespace sgns
 
         m_logger->debug( "Checking if the transaction has a valid certificate to be confirmed {}", tx_key );
 
-        auto next_tx_state      = TransactionStatus::VERIFYING;
-        auto certificate_result = GetTransactionCertificate( *transaction );
+        auto                                        next_tx_state      = TransactionStatus::VERIFYING;
+        auto                                        certificate_result = GetTransactionCertificate( *transaction );
+        std::optional<CertifiedApplicationEvidence> evidence;
 
         if ( certificate_result.has_value() &&
              CertificateMatchesTransaction( certificate_result.value(), *transaction ) )
         {
+            BOOST_OUTCOME_TRY( auto exact, GetCertifiedApplicationEvidence( *transaction ) );
+            evidence.emplace( std::move( exact ) );
             m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", tx_key );
             next_tx_state = TransactionStatus::CONFIRMED;
         }
@@ -2668,7 +2709,7 @@ namespace sgns
         {
             fetch_and_process_before_state_change_hook_for_test_();
         }
-        BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
+        BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state, evidence ? &*evidence : nullptr ) );
 
         return outcome::success();
     }
@@ -2713,7 +2754,73 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        return ApplyUTXOPayment( *transfer_tx, TransferInputOwner( *transfer_tx ) );
+        // ConsumeUTXOs records absent inputs even when it returns false. Reject
+        // known foreign owners before entering those intentional replay mechanics.
+        const auto &ledger = account_m->GetUTXOManager();
+        for ( const auto &input : transfer_tx->GetInputInfos() )
+        {
+            const auto original = ledger.GetUnconsumedUTXO( input.txid_hash_, input.output_idx_ );
+            if ( original && original->GetOwnerAddress() != transfer_tx->GetSrcAddress() )
+            {
+                return std::errc::invalid_argument;
+            }
+            if ( !original && utxo_address::IsEscrowLockAddress( transfer_tx->GetUncleHash() ) )
+            {
+                BOOST_OUTCOME_TRY( auto source,
+                                   ledger.ReadDurableSpendEvidence( input.txid_hash_,
+                                                                    input.output_idx_,
+                                                                    transfer_tx->GetSrcAddress() ) );
+                if ( !source || !source->genuine )
+                {
+                    return std::errc::invalid_argument;
+                }
+            }
+        }
+        return ApplyUTXOPayment( *transfer_tx, transfer_tx->GetSrcAddress() );
+    }
+
+    outcome::result<std::optional<std::string>> TransactionManager::ResolveHistoricalEscrowOwner(
+        const GeniusTransaction &tx ) const
+    {
+        const auto params = tx.GetUTXOParametersOpt();
+        if ( !params )
+        {
+            return std::errc::invalid_argument;
+        }
+        if ( params->first.size() != 1 ||
+             params->first.front().output_idx_ != input_validator_constants::ESCROW_LOCK_OUTPUT_INDEX )
+        {
+            return std::optional<std::string>{};
+        }
+        const auto &input    = params->first.front();
+        const auto &ledger   = account_m->GetUTXOManager();
+        const auto  original = ledger.GetUnconsumedUTXO( input.txid_hash_, input.output_idx_ );
+        BOOST_OUTCOME_TRY( auto source_evidence,
+                           ledger.ReadDurableSpendEvidence( input.txid_hash_, input.output_idx_, tx.GetSrcAddress() ) );
+        if ( ( original && original->GetOwnerAddress() == tx.GetSrcAddress() ) ||
+             ( source_evidence && source_evidence->genuine ) )
+        {
+            return std::optional<std::string>{};
+        }
+        const auto hash = params->first.front().txid_hash_.toReadableString();
+        BOOST_OUTCOME_TRY( auto bytes, globaldb_m->Get( GetTransactionPath( hash ) ) );
+        BOOST_OUTCOME_TRY( auto producer, DeSerializeTransaction( bytes ) );
+        if ( !producer || producer->GetHash() != hash || !producer->CheckHash() )
+        {
+            return std::errc::invalid_argument;
+        }
+        const auto hold = std::dynamic_pointer_cast<const EscrowTransaction>( producer );
+        if ( !hold )
+        {
+            return std::optional<std::string>{};
+        }
+        BOOST_OUTCOME_TRY( GetCertifiedApplicationEvidence( *hold ) );
+        const auto outputs = hold->GetUTXOParameters().second;
+        if ( outputs.empty() || !utxo_address::IsEscrowLockAddress( outputs.front().dest_address ) )
+        {
+            return std::errc::invalid_argument;
+        }
+        return std::optional{ outputs.front().dest_address };
     }
 
     outcome::result<void> TransactionManager::ApplyUTXOPayment( const GeniusTransaction &payment,
@@ -3210,7 +3317,15 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        return RevertUTXOPayment( *transfer_tx, TransferInputOwner( *transfer_tx ) );
+        if ( utxo_address::IsEscrowLockAddress( transfer_tx->GetUncleHash() ) )
+        {
+            BOOST_OUTCOME_TRY( auto owner, ResolveHistoricalEscrowOwner( *transfer_tx ) );
+            if ( owner )
+            {
+                return RevertEscrowPayment( *transfer_tx, *owner );
+            }
+        }
+        return RevertUTXOPayment( *transfer_tx, transfer_tx->GetSrcAddress() );
     }
 
     outcome::result<void> TransactionManager::RevertUTXOPayment( const GeniusTransaction &payment,
@@ -5080,9 +5195,12 @@ namespace sgns
         auto certificate_result = GetTransactionCertificate( *new_tx );
         auto has_cert           = certificate_result.has_value() &&
                         CertificateMatchesTransaction( certificate_result.value(), *new_tx );
+        std::optional<CertifiedApplicationEvidence> evidence;
 
         if ( has_cert )
         {
+            BOOST_OUTCOME_TRY( auto exact, GetCertifiedApplicationEvidence( *new_tx ) );
+            evidence.emplace( std::move( exact ) );
             m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", key );
             next_tx_state = TransactionStatus::CONFIRMED;
             for ( const auto &conflict : conflicting_txs )
@@ -5113,7 +5231,7 @@ namespace sgns
             }
         }
 
-        return ChangeTransactionState( new_tx, next_tx_state );
+        return ChangeTransactionState( new_tx, next_tx_state, evidence ? &*evidence : nullptr );
     }
 
     void TransactionManager::ProcessDeletion( std::string key )
@@ -5524,7 +5642,8 @@ namespace sgns
     }
 
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                                      TransactionStatus new_status )
+                                                                      TransactionStatus                   new_status,
+                                                                      const CertifiedApplicationEvidence *evidence )
     {
         static constexpr std::string_view FUNC = __func__;
         m_logger->debug( "{}: Changing transaction state to {} for transaction {}",
@@ -5638,7 +5757,7 @@ namespace sgns
 
                     if ( apply_effects )
                     {
-                        auto parse_result = ParseTransaction( *tx );
+                        auto parse_result = ParseTransaction( *tx, evidence );
                         if ( parse_result.has_error() )
                         {
                             // Release the reservation so a certificate-work retry re-applies
@@ -5709,7 +5828,7 @@ namespace sgns
 
                 if ( apply_effects )
                 {
-                    auto parse_result = ParseTransaction( *tx );
+                    auto parse_result = ParseTransaction( *tx, evidence );
                     if ( parse_result.has_error() )
                     {
                         // Nothing durably changed for this entry yet; keep it

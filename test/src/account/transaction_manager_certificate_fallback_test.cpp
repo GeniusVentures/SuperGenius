@@ -512,7 +512,8 @@ public:
     }
 
     outcome::result<ConsensusCertificate> BuildSignedCertificate(
-        const std::shared_ptr<GeniusTransaction> &transaction )
+        const std::shared_ptr<GeniusTransaction> &transaction,
+        std::optional<EmbeddedTransaction>        embedded_override = std::nullopt )
     {
         if ( !transaction )
         {
@@ -550,12 +551,13 @@ public:
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        const auto subject = ConsensusManager::CreateNonceSubject( account_->GetAddress(),
-                                                                   transaction->GetNonce(),
-                                                                   transaction->GetHash(),
-                                                                   transaction->SerializeToEmbeddedTransaction(),
-                                                                   std::nullopt,
-                                                                   std::nullopt );
+        const auto subject = ConsensusManager::CreateNonceSubject(
+            account_->GetAddress(),
+            transaction->GetNonce(),
+            transaction->GetHash(),
+            embedded_override.value_or( transaction->SerializeToEmbeddedTransaction() ),
+            std::nullopt,
+            std::nullopt );
         if ( subject.has_error() )
         {
             signing_manager->Close();
@@ -963,6 +965,8 @@ TEST_F( CertificateFallbackTest, LegacyTransferPayoutReplaysOnlyWithExactCanonic
                                                                         uncertified_certificate.value() )
                      .has_error() );
     EXPECT_FALSE( ledger.IsOutPointConsumed( uncertified->GetInputInfos().front().txid_hash_, 0 ) );
+    EXPECT_FALSE( ledger.GetUnconsumedUTXO( base::Hash256::fromHex( uncertified->GetHash() ).value(), 0 ) );
+    EXPECT_EQ( ledger.GetBalance(), 0U );
 
     // A borrowed producer certificate stored under the payment's old slot also grants no authority.
     const auto borrowed             = payment();
@@ -975,6 +979,8 @@ TEST_F( CertificateFallbackTest, LegacyTransferPayoutReplaysOnlyWithExactCanonic
         CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, borrowed->GetHash(), exact_borrowed.value() )
             .has_error() );
     EXPECT_FALSE( ledger.IsOutPointConsumed( borrowed->GetInputInfos().front().txid_hash_, 0 ) );
+    EXPECT_FALSE( ledger.GetUnconsumedUTXO( base::Hash256::fromHex( borrowed->GetHash() ).value(), 0 ) );
+    EXPECT_EQ( ledger.GetBalance(), 0U );
 
     // DAG signatures are excluded from CheckHash, so exact embedded bytes must also bind evidence.
     const auto tampered = payment();
@@ -985,16 +991,64 @@ TEST_F( CertificateFallbackTest, LegacyTransferPayoutReplaysOnlyWithExactCanonic
     ASSERT_TRUE( tampered->CheckHash() );
     EXPECT_TRUE( FetchAndProcess( tampered ).has_error() );
     EXPECT_FALSE( ledger.IsOutPointConsumed( tampered->GetInputInfos().front().txid_hash_, 0 ) );
+    EXPECT_FALSE( ledger.GetUnconsumedUTXO( base::Hash256::fromHex( tampered->GetHash() ).value(), 0 ) );
+    EXPECT_EQ( ledger.GetBalance(), 0U );
 
-    for ( const bool fallback : { false, true } )
+    const auto tracked_tampered = payment();
+    const auto tracked_exact    = BuildSignedCertificate( tracked_tampered );
+    ASSERT_TRUE( tracked_exact.has_value() );
+    tracked_tampered->dag_st.set_signature( "altered-signature" );
+    ASSERT_TRUE( FetchAndProcess( tracked_tampered ).has_value() );
+    PersistCertificateAtSlot( tracked_tampered->GetSlotID(), tracked_exact.value() );
+    EXPECT_TRUE( CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
+                                                                        tracked_tampered->GetHash(),
+                                                                        tracked_exact.value() )
+                     .has_error() );
+    EXPECT_FALSE( ledger.IsOutPointConsumed( tracked_tampered->GetInputInfos().front().txid_hash_, 0 ) );
+    EXPECT_FALSE( ledger.GetUnconsumedUTXO( base::Hash256::fromHex( tracked_tampered->GetHash() ).value(), 0 ) );
+    EXPECT_EQ( ledger.GetBalance(), 0U );
+
+    // Unknown fields must not disappear through decode/re-encode before the exact-byte comparison.
+    const auto noncanonical  = payment();
+    auto       with_unknown  = noncanonical->SerializeToEmbeddedTransaction();
+    const auto unknown_bytes = with_unknown.transfer().SerializeAsString() + std::string( "\xA0\x06\x01", 3 );
+    ASSERT_TRUE( with_unknown.mutable_transfer()->ParseFromString( unknown_bytes ) );
+    const auto noncanonical_certificate = BuildSignedCertificate( noncanonical, with_unknown );
+    ASSERT_TRUE( noncanonical_certificate.has_value() );
+    PersistCertificateAtSlot( noncanonical->GetSlotID(), noncanonical_certificate.value() );
+    ASSERT_TRUE( blockchain_->GetCertificateBySlot( noncanonical->GetSlotID() ).has_value() );
+    EXPECT_TRUE( FetchAndProcess( noncanonical ).has_error() );
+    EXPECT_FALSE( ledger.IsOutPointConsumed( noncanonical->GetInputInfos().front().txid_hash_, 0 ) );
+    EXPECT_FALSE( ledger.GetUnconsumedUTXO( base::Hash256::fromHex( noncanonical->GetHash() ).value(), 0 ) );
+    EXPECT_EQ( ledger.GetBalance(), 0U );
+
+    enum class Ingress : uint8_t
+    {
+        FETCH,
+        FALLBACK,
+        TRACKED
+    };
+    for ( const auto ingress : { Ingress::FETCH, Ingress::FALLBACK, Ingress::TRACKED } )
     {
         const auto historical  = payment();
         const auto original    = historical->SerializeByteVector();
+        const auto balance     = ledger.GetBalance();
         const auto certificate = BuildSignedCertificate( historical );
         ASSERT_TRUE( certificate.has_value() );
+        if ( ingress == Ingress::TRACKED )
+        {
+            ASSERT_TRUE( FetchAndProcess( historical ).has_value() );
+            const auto tracked = CertificateFallbackTestAccess::GetTrackedTxByHash( *tm_, historical->GetHash() );
+            if ( !tracked )
+            {
+                FAIL() << "historical transfer must be tracked before its certificate arrives";
+            }
+            EXPECT_EQ( tracked->status, TransactionManager::TransactionStatus::VERIFYING );
+            EXPECT_FALSE( ledger.IsOutPointConsumed( historical->GetInputInfos().front().txid_hash_, 0 ) );
+        }
         PersistCertificateAtSlot( historical->GetSlotID(), certificate.value() );
         ASSERT_TRUE( blockchain_->GetCertificateBySlot( historical->GetSlotID() ).has_value() );
-        if ( fallback )
+        if ( ingress != Ingress::FETCH )
         {
             ASSERT_TRUE( CertificateFallbackTestAccess::OnConsensusCertificate( *tm_,
                                                                                 historical->GetHash(),
@@ -1011,7 +1065,15 @@ TEST_F( CertificateFallbackTest, LegacyTransferPayoutReplaysOnlyWithExactCanonic
         const auto hash  = base::Hash256::fromHex( historical->GetHash() ).value();
         const auto input = historical->GetInputInfos().front();
         EXPECT_EQ( ledger.GetOutPointSpender( input.txid_hash_, 0 ), std::optional{ hash } );
-        EXPECT_TRUE( ledger.GetUnconsumedUTXO( hash, 0 ).has_value() );
+        const auto output = ledger.GetUnconsumedUTXO( hash, 0 );
+        if ( !output )
+        {
+            FAIL() << "the certified historical payment must create its real output";
+        }
+        EXPECT_EQ( output->GetAmount(), 17U );
+        EXPECT_EQ( output->GetOwnerAddress(), account_->GetAddress() );
+        EXPECT_EQ( output->GetTokenID(), kTestTokenId );
+        EXPECT_EQ( ledger.GetBalance(), balance + 17U );
     }
 }
 
