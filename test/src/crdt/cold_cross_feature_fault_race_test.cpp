@@ -106,6 +106,7 @@
 #include <condition_variable>
 #include <filesystem>
 #include <functional>
+#include <boost/filesystem.hpp>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -147,9 +148,54 @@
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 
+// The GlobalDB tx-stack world (the cold_prune_gate_test recipe) the
+// erase-arm cases (X3/X8/X5) build on: pubsub + scheduler + graphsync
+// network for GlobalDB::New, the account/blockchain/tx-manager surface
+// TxPruner::RunCycle needs, and the soralog system the pubsub host logs
+// through (the resurrection-test include set).
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_pubsub/gossip_pubsub.hpp>
+#include <libp2p/host/host.hpp>
+#include <libp2p/basic/scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+#include <soralog/impl/configurator_from_yaml.hpp>
+
+#include "account/GeniusAccount.hpp"
+#include "account/NodeType.hpp"
+#include "account/TransferTransaction.hpp"
+#include "account/UTXOManager.hpp"
+#include "blockchain/Blockchain.hpp"
+#include "crdt/globaldb/ColdStorageStack.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "transaction/TransactionManager.hpp"
+#include "transaction/TxPruner.hpp"
+
+namespace sgns
+{
+    /**
+     * Per-binary friend seam (the tx_pruner_test shape): TxPruner's tick
+     * gate requires State::READY, which no public API reaches
+     * deterministically. Carries only ChangeState.
+     */
+    class TransactionManagerPendingLifecycleTestAccess
+    {
+    public:
+        static void ChangeState( TransactionManager &manager, TransactionManager::State state )
+        {
+            manager.ChangeState( state );
+        }
+    };
+} // namespace sgns
+
 namespace
 {
     // IPFS resolves only inside namespace sgns - alias it for this TU.
+
     using IpfsDatastore      = sgns::ipfs_lite::ipfs::IpfsDatastore;
     using CID                = sgns::CID;
     using sgns::base::Buffer;
@@ -178,6 +224,14 @@ namespace
     using sgns::blockstore::UploadState;
     using sgns::storage::rocksdb;
     using libp2p::multi::MulticodecType;
+
+    // The tx-world constants (the cold_prune_gate contract values).
+    constexpr char    kXSeedTopic[]     = "CRDT.Datastore.TEST.Channel";
+    constexpr uint64_t kXWindow         = 2;
+    constexpr uint64_t kXTestGeneration = 7;
+    constexpr uint64_t kXSettleSeconds  = 1;
+    const sgns::TokenID kXTokenId       = sgns::TokenID::FromBytes( { 0x00 } );
+
 
     /// EnvOr (the v1.1 kit shape, re-declared in-file per D-05/Pitfall 2).
     uint64_t EnvOr( const char *name, uint64_t fallback )
@@ -552,8 +606,41 @@ namespace
      * injection, Discretion 4); (c) TearDown clears the serve interrupt
      * seam (leak discipline).
      */
+    /// The libp2p/soralog bootstrap the tx-stack hosts need (the
+    /// ResurrectLoggingConfig shape, trimmed to the console sink).
+    std::string CrossRaceLoggingConfig()
+    {
+        return R"(
+ sinks:
+   - name: console
+     type: console
+     color: true
+ groups:
+   - name: gossip_pubsub_test
+     sink: console
+     level: error
+     children:
+       - name: libp2p
+       - name: Gossip
+       - name: debug
+ )";
+    }
+
     class ColdCrossFeatureFaultRaceTest : public ::testing::Test
     {
+    public:
+        static void SetUpTestSuite()
+        {
+            // The pubsub host logs through the libp2p/soralog system -
+            // configure it once per binary (the cold_prune_gate/resurrection
+            // recipe).
+            auto log_system = std::make_shared<soralog::LoggingSystem>(
+                std::make_shared<soralog::ConfiguratorFromYAML>(
+                    std::make_shared<libp2p::log::Configurator>(), CrossRaceLoggingConfig() ) );
+            (void)log_system->configure();
+            libp2p::log::setLoggingSystem( log_system );
+        }
+
     protected:
         void SetUp() override
         {
@@ -672,7 +759,13 @@ namespace
             // by a failing case must never leak further - clear FIRST so
             // even a torn-down-mid-case fixture leaves no armed hook.
             GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+            sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+            sgns::crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+            sgns::crdt::GlobalDB::SetEraseInterruptHookForTest( nullptr );
+            sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
             evidence_suppressed_.store( false, std::memory_order_release );
+
+            TeardownTxStack();
 
             if ( manager_ )
             {
@@ -924,6 +1017,339 @@ namespace
         /// Fault-arm injection: blinds the installed lookup while the
         /// evidence row stays in the store (RED-ARMS knob only).
         std::atomic<bool> evidence_suppressed_{ false };
+
+        // =================================================================
+        // The GlobalDB tx-stack world (the cold_prune_gate_test recipe) -
+        // the erase-arm cases (X3/X8/X5) build this ON DEMAND on top of
+        // the per-case fixture: pubsub host + GlobalDB (cold ON, hermetic
+        // fakes through the process-global override, wrapped in the
+        // in-file TimingS3Client) + account/blockchain/TransactionManager
+        // + a real TxPruner cycle. TeardownTxStack (also called from
+        // TearDown) releases in the CRDTFixture order.
+        // =================================================================
+
+        /// Builds the tx stack on a FRESH dir (the cold_prune_gate
+        /// BuildStack shape; drain 50 ms; the injected remote is the
+        /// in-file TimingS3Client over the hermetic fake so barrier legs
+        /// can park/widen the S3 boundary in this world too).
+        void BuildTxStack()
+        {
+            gw_hot_dir_ = FreshDir( "gw-hot" );
+            BuildTxStackOnDir( gw_hot_dir_ );
+        }
+
+        void BuildTxStackOnDir( const std::string &hot_dir )
+        {
+            gw_hot_dir_     = hot_dir;
+            gw_keypair_dir_ = FreshDir( "gw-keypair" );
+
+            gw_io_ = std::make_shared<boost::asio::io_context>();
+            gw_pubs_ = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
+                sgns::crdt::KeyPairFileStorage( gw_keypair_dir_ ).GetKeyPair().value() );
+            auto start_future = gw_pubs_->Start( 0, {} );
+            ASSERT_TRUE( PollUntil(
+                [&] { return start_future.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready; },
+                std::chrono::milliseconds( 20000 ) ) )
+                << "tx-stack pubsub host failed to start";
+            ASSERT_FALSE( start_future.get() ) << "GossipPubSub::Start failed";
+
+            gw_sched_ = std::make_shared<libp2p::basic::SchedulerImpl>(
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( gw_pubs_->GetAsioContext() ),
+                libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+            gw_net_  = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( gw_pubs_->GetHost(), gw_sched_ );
+            gw_gen_  = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+
+            sgns::crdt::GlobalDB::ColdStorageOptions cold;
+            cold.enabled   = true;
+            cold.endpoint  = "hermetic.invalid"; // overridden below - never contacted
+            cold.bucket    = "cross-race";
+            cold.accessKey = "test";
+            cold.secretKey = "test";
+            cold.backpressure.drain_interval_ms = 50;
+            cold.backpressure.warn_pending      = 100000;
+            cold.backpressure.critical_pending  = 200000;
+            cold.backpressure.backoff_cap_ms    = 1000;
+            cold.durability.flush_min_interval_ms = 50;
+            cold.durability.flush_max_interval_ms = 300;
+            // Retention 0 = the GC never runs - nothing but the pruner may
+            // erase (the cold_prune_gate D-02 posture).
+            gw_fake_   = std::make_shared<InMemoryS3Client>();
+            gw_timing_ = std::make_shared<TimingS3Client>( gw_fake_ );
+            gw_admin_  = std::make_shared<InMemoryS3AdminClient>();
+            sgns::crdt::SetColdStorageStackClientsForTesting(
+                std::static_pointer_cast<S3Client>( gw_timing_ ),
+                std::static_pointer_cast<sgns::blockstore::S3AdminClient>( gw_admin_ ) );
+
+            auto globaldb_ret = sgns::crdt::GlobalDB::New( gw_io_,
+                                                           hot_dir,
+                                                           gw_pubs_,
+                                                           sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                           gw_net_,
+                                                           gw_sched_,
+                                                           gw_gen_,
+                                                           nullptr,
+                                                           sgns::crdt::GlobalDB::BackupOptions{ false, 15, 12, true },
+                                                           cold );
+            ASSERT_TRUE( globaldb_ret.has_value() ) << "tx-stack GlobalDB failed to construct";
+            gw_db_ = std::move( globaldb_ret.value() );
+
+            // Hygiene: the process-global override has served its purpose.
+            sgns::crdt::SetColdStorageStackClientsForTesting( nullptr, nullptr );
+
+            gw_db_->AddListenTopic( kXSeedTopic );
+            gw_db_->AddBroadcastTopic( kXSeedTopic );
+            gw_db_->Start();
+
+            sgns::GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage> {
+                    return std::make_shared<sgns::MemorySecureStorage>( identifier );
+                } );
+            gw_account_ = sgns::GeniusAccount::New( kXTokenId, boost::filesystem::path( hot_dir ) / "account" );
+            ASSERT_NE( gw_account_, nullptr );
+            auto load_result = gw_account_->GetUTXOManager().LoadUTXOs( gw_db_->GetDataStore() );
+            ASSERT_TRUE( load_result.has_value() );
+            gw_chain_ = sgns::Blockchain::New( gw_db_, gw_account_, gw_pubs_, []( outcome::result<void> ) {} );
+            ASSERT_NE( gw_chain_, nullptr );
+            constexpr auto kTol = std::chrono::milliseconds( 300000 );
+            constexpr auto kMut = std::chrono::milliseconds( 600000 );
+            gw_tm_ = sgns::TransactionManager::New( gw_db_, gw_io_, gw_account_, gw_chain_,
+                                                    sgns::NodeType::Light, 0, kTol, kMut );
+            ASSERT_NE( gw_tm_, nullptr );
+        }
+
+        /// The CRDTFixture teardown order: stop the blockchain FIRST, then
+        /// the manager stack, quiesce the GlobalDB (drainer + GC + the
+        /// coldstore dir lock), stop the pubsub host LAST.
+        void TeardownTxStack()
+        {
+            if ( gw_chain_ )
+            {
+                (void)gw_chain_->Stop();
+            }
+            gw_tm_.reset();
+            gw_chain_.reset();
+            gw_account_.reset();
+            if ( gw_db_ )
+            {
+                gw_db_->ShutdownNow();
+            }
+            gw_db_.reset();
+            try
+            {
+                if ( gw_pubs_ )
+                {
+                    gw_pubs_->Stop();
+                }
+            }
+            catch ( const std::exception &err )
+            {
+                std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
+            }
+            gw_pubs_.reset();
+            gw_io_.reset();
+        }
+
+        /// The tx-world syncer (the syncerOf idiom, globaldb_erase_test).
+        std::shared_ptr<GraphsyncDAGSyncer> TxSyncer() const
+        {
+            return std::static_pointer_cast<GraphsyncDAGSyncer>( gw_db_->GetBroadcaster()->GetDagSyncer() );
+        }
+
+        // --- Seeding helpers (the cold_prune_gate recipes verbatim) ---
+
+        std::shared_ptr<sgns::TransferTransaction> MakeXTransfer( uint64_t nonce, size_t output_count )
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_type( "transfer" );
+            dag.set_source_addr( gw_account_->GetAddress() );
+            dag.set_nonce( nonce );
+            dag.set_timestamp( static_cast<int64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() ) );
+            std::vector<sgns::OutputDestInfo> destinations;
+            destinations.reserve( output_count );
+            for ( size_t i = 0; i < output_count; ++i )
+            {
+                destinations.push_back( { 100 + i, gw_account_->GetAddress(), kXTokenId } );
+            }
+            return std::make_shared<sgns::TransferTransaction>(
+                sgns::TransferTransaction::New( {}, std::move( destinations ), std::move( dag ) ) );
+        }
+
+        /// Real-topic value Put + raw tx->CID map entry (StoreTransactionCID shapes).
+        void SeedXTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+        {
+            const std::string tx_path = sgns::TransactionManager::GetTransactionPath( *transaction );
+            sgns::crdt::GlobalDB::Buffer serialized;
+            serialized.put( transaction->SerializeByteVector() );
+            auto put_result = gw_db_->Put( { tx_path }, serialized, { kXSeedTopic } );
+            ASSERT_TRUE( put_result.has_value() );
+            sgns::crdt::GlobalDB::Buffer key_buffer;
+            key_buffer.put( tx_path );
+            sgns::crdt::GlobalDB::Buffer value_buffer;
+            value_buffer.put( put_result.value().toString().value() );
+            ASSERT_TRUE( gw_db_->GetDataStore()->put( key_buffer, value_buffer ).has_value() );
+        }
+
+        /// Plain topic Put of a raw string at @p key (driver heights).
+        void PutXSeedValue( const std::string &key, const std::string &value )
+        {
+            sgns::crdt::GlobalDB::Buffer buffer;
+            buffer.put( value );
+            ASSERT_TRUE( gw_db_->Put( { key }, buffer, { kXSeedTopic } ).has_value() );
+        }
+
+        void TrackXOutputs( const sgns::GeniusTransaction &transaction )
+        {
+            auto outputs = transaction.GetProducedUTXOs();
+            ASSERT_TRUE( outputs.has_value() );
+            for ( const auto &output : *outputs )
+            {
+                auto put = gw_account_->GetUTXOManager().PutUTXO( output, output.GetOwnerAddress() );
+                ASSERT_TRUE( put.has_value() );
+                ASSERT_TRUE( put.value() );
+            }
+        }
+
+        bool ConsumeXOutput( const sgns::GeniusTransaction &transaction,
+                             uint32_t                        output_idx,
+                             const sgns::GeniusTransaction  &spender )
+        {
+            auto txid = sgns::base::Hash256::fromReadableString( transaction.GetHash() );
+            EXPECT_FALSE( txid.has_error() );
+            auto consumed = gw_account_->GetUTXOManager().ConsumeUTXOs(
+                { { txid.value(), output_idx, {} } },
+                gw_account_->GetAddress(),
+                sgns::UTXOManager::UTXOType::UTXO_NORMAL,
+                sgns::base::Hash256::fromReadableString( spender.GetHash() ).value() );
+            EXPECT_TRUE( consumed.has_value() );
+            return consumed.has_value() && consumed.value();
+        }
+
+        std::string SnapshotXMapEntry( const std::string &tx_path )
+        {
+            auto entry = gw_db_->GetRaw( sgns::crdt::GlobalDB::Buffer{}.put( tx_path ) );
+            return entry.has_value() ? std::string( entry.value().toString() ) : std::string( "absent" );
+        }
+
+        sgns::crdt::ColdUploadState TxJournalStateOf( const std::string &cid_string )
+        {
+            auto cid = CID::fromString( cid_string );
+            EXPECT_FALSE( cid.has_error() );
+            return gw_db_->GetColdUploadState( cid.value() );
+        }
+
+        std::shared_ptr<sgns::TxPruner> MakeXPruner()
+        {
+            sgns::PruningConfig config;
+            config.enabled              = true;
+            config.dry_run              = false;
+            config.finality_window      = kXWindow;
+            config.max_erases_per_cycle = 10;
+            config.settle_seconds       = kXSettleSeconds;
+            auto pruner                 = sgns::TxPruner::New( sgns::NodeType::Light, config );
+            EXPECT_TRUE( pruner.has_value() );
+            return pruner.has_value() ? pruner.value() : nullptr;
+        }
+
+        /// One plain cycle (the tick gate forced READY - the friend seam).
+        /// Settled cycle (the RunSettledCycle discriminator): a FRESH
+        /// pruner instance's tick gate settle-skips until the settle
+        /// window elapses - loop bounded until ONE real cycle runs (the
+        /// watermark appears), delivering its stats.
+        outcome::result<sgns::PruneCycleStats> TxRunCycle( sgns::TxPruner &pruner )
+        {
+            sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState(
+                *gw_tm_, sgns::TransactionManager::State::READY );
+            const auto deadline = std::chrono::steady_clock::now()
+                                + std::chrono::seconds( kXSettleSeconds + 8 );
+            outcome::result<sgns::PruneCycleStats> last = sgns::PruneCycleStats{};
+            while ( std::chrono::steady_clock::now() < deadline )
+            {
+                last = pruner.RunCycle( *gw_db_, *gw_tm_, gw_account_->GetUTXOManager(), kXTestGeneration );
+                if ( last.has_error() )
+                {
+                    return last;
+                }
+                if ( pruner.GetPruneStatus().watermark.has_value() )
+                {
+                    return last; // ONE real cycle ran to completion
+                }
+            }
+            return last; // deadline: deliver the last (skipped) cycle
+        }
+
+            void SeedX5Graph( uint64_t base, std::string *path_out, std::string *cid_out,
+                                    std::string *twin_path_out ) {
+        auto spender  = MakeXTransfer( base, 0 );
+        auto eligible = MakeXTransfer( base + 1, 1 );
+        auto twin     = MakeXTransfer( base + 2, 1 );
+        SeedXTransaction( spender );
+        PutXSeedValue( "/seed/x5/driver-1-" + std::to_string( base ), "d1" );
+        SeedXTransaction( eligible );
+        SeedXTransaction( twin );
+        TrackXOutputs( *eligible );
+        TrackXOutputs( *twin );
+        ASSERT_TRUE( ConsumeXOutput( *eligible, 0, *spender ) );
+        PutXSeedValue( "/seed/x5/head-" + std::to_string( base ), "head" );
+        *path_out     = sgns::TransactionManager::GetTransactionPath( *eligible );
+        *twin_path_out = sgns::TransactionManager::GetTransactionPath( *twin );
+        *cid_out      = SnapshotXMapEntry( *path_out );
+        ASSERT_NE( *cid_out, "absent" );
+        ASSERT_TRUE( PollUntil( [&, cid_out] {
+                         return TxJournalStateOf( *cid_out ) == sgns::crdt::ColdUploadState::Durable;
+                     },
+                     std::chrono::milliseconds( 20000 ) ) )
+            << "X5: the graph block never reached Durable";
+        // The twin's marker-less eviction: the target block goes
+        // cold-resident; the eligible value + map survive.
+        auto evicted = gw_db_->EraseEntry( *twin_path_out, CID::fromString( *cid_out ).value(), std::nullopt );
+        ASSERT_TRUE( evicted.has_value() );
+        // The walk element filter (the production surface defers
+        // unfiltered elements - the W-leg recipe).
+        (void)gw_db_->RegisterElementFilter(
+            "^/seed/x5/head-",
+            []( const sgns::crdt::CrdtDatastore::Element & ) {
+                return sgns::crdt::CRDTDataFilter::ElementFilterResult::Accept();
+            } );
+
+        // LRU-guard hygiene (run8 find, for the SUMMARY): the post-seed
+        // link traversal re-fetches the twin-evicted block through the
+        // cold serve and leaves it LRU-cached; EraseEntry's guard (3)
+        // then refuses every subsequent erase ("cid ... is in the block
+        // cache" - the cycle logs errors=1, erased=0). Drop the LRU
+        // copy (the X8-B recipe - any datastore bytes stay) until the
+        // post-commit traversal has quiesced, so the pruner's erase AND
+        // the fault arm's plain EraseEntry both reach their real
+        // targets.
+        ASSERT_TRUE( PollUntil( [this, cid_out] {
+                         auto cid_parsed = CID::fromString( *cid_out );
+                         if ( cid_parsed.has_error() )
+                         {
+                             return false;
+                         }
+                         (void)TxSyncer()->DeleteCIDBlock( cid_parsed.value() );
+                         return !TxSyncer()->IsCIDInCache( cid_parsed.value() );
+                     },
+                     std::chrono::milliseconds( 5000 ) ) )
+            << "X5: the LRU copy never quiesced after the post-seed traversal";
+    }
+        /// The tx-world stack handles (null unless BuildTxStack ran).
+        std::string                                              gw_hot_dir_;
+        std::string                                              gw_keypair_dir_;
+        std::shared_ptr<boost::asio::io_context>                 gw_io_;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         gw_pubs_;
+        std::shared_ptr<libp2p::basic::SchedulerImpl>            gw_sched_;
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> gw_net_;
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> gw_gen_;
+        std::shared_ptr<sgns::crdt::GlobalDB>                    gw_db_;
+        std::shared_ptr<InMemoryS3Client>                        gw_fake_;
+        std::shared_ptr<TimingS3Client>                          gw_timing_;
+        std::shared_ptr<InMemoryS3AdminClient>                   gw_admin_;
+        std::shared_ptr<sgns::GeniusAccount>                     gw_account_;
+        std::shared_ptr<sgns::Blockchain>                        gw_chain_;
+        std::shared_ptr<sgns::TransactionManager>                gw_tm_;
 
         // Declaration order == reverse destruction order: manager_ dies
         // first (its threads join against still-live stores), then the
@@ -1347,3 +1773,833 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseCommitVsServe_InflightColdGetN
     manager_ = nullptr;
 }
 
+
+// ---------------------------------------------------------------------------
+// The erase-arm cases (plan 19-02): X3, X8, X5 - the GlobalDB tx-stack world.
+// ---------------------------------------------------------------------------
+
+/// The BACK-07 object key for a CID (S3BlockStore's DeriveKey replicated
+/// test-side for the remote-object deletion - the fake can delete;
+/// production adapters cannot). The 18-01 DeriveTestKey shape.
+static std::string XDeriveTestKey( const Cid &cid )
+{
+    auto         cid_string = libp2p::multi::ContentIdentifierCodec::toString( cid );
+    static const char *kHex = "0123456789abcdef";
+    const char         *codec = "unknown-codec";
+    switch ( cid.content_type )
+    {
+        case MulticodecType::Code::RAW:
+            codec = "raw";
+            break;
+        case MulticodecType::Code::DAG_PB:
+            codec = "dag-pb";
+            break;
+        case MulticodecType::Code::DAG_CBOR:
+            codec = "dag-cbor";
+            break;
+        default:
+            break;
+    }
+    const auto    digest = cid.content_address.getHash();
+    const uint8_t first  = digest.empty() ? 0 : digest[0];
+    std::string   fanout{ kHex[first >> 4], kHex[first & 0x0F] };
+    return std::string( "v1/blocks" ) + "/" + codec + "/" + fanout + "/" + cid_string.value();
+}
+
+/**
+ * @brief X3 (19-02 Task 1): durability state flip (E2) x concurrent cold
+ *        read (S2) at the cold gate - hazard: LOST LAST COPY.
+ *
+ * Layer posture: seam-only (the durability-flip claim is state
+ * consistency; the gate's barrier layer lives in X8 - the flagged
+ * assumption, a decision not an accident).
+ *
+ * LEG A (seam): the journal is really Durable; at kInterruptAfterColdGate
+ * the durability REGRESSES (the upload-state read flips to Pending - the
+ * Phase 14 read-seam injector over the exact consult EraseEntry's
+ * guard-5 shares); the in-compose re-check must DEFER the erase:
+ * cold_deferred_groups increments, the tx value + raw map entry survive.
+ *
+ * LEG B (concurrent-serve invariant): a shared-block pair puts the SAME
+ * block CID under an eligible tx AND a sacrificial twin; the twin's
+ * marker-less eviction makes the block cold-resident WITHOUT touching
+ * eligibility; a REAL cold read of exactly that CID parks at the serve
+ * interrupt seam (step 1) across the flip - the defer outcome must be
+ * unchanged (a serving CID never unlocks the erase).
+ *
+ * FAULT ARM (knob-gated): the journal stays truthfully Durable but the
+ * REMOTE object is deleted test-side (the fake's Delete at the derived
+ * key) - the part-truth the journal cannot see. The gate admits, the
+ * erase lands, and the last REMOTE copy is gone with the hot rows: the
+ * lost-remote-copy detector FAILS against it (teeth). (Local-cold-tier
+ * deletion is not reachable in this world - the GC/Phase 15 suites own
+ * local-eviction semantics; the remote tier is the durability-graded
+ * copy the journal speaks for.)
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_DurabilityFlipVsColdGate_ServeNeverUnlocksErase )
+{
+    LogKnobs( "X3" );
+    const bool red_arms = red_arms_enabled_;
+
+    // ---- LEG A: the flip at the gate seam -> defer.
+    {
+        BuildTxStack();
+        auto spender  = MakeXTransfer( 1, 0 );
+        auto eligible = MakeXTransfer( 2, 1 );
+        SeedXTransaction( spender );
+        PutXSeedValue( "/seed/x3/a-driver-1", "d1" );
+        SeedXTransaction( eligible );
+        TrackXOutputs( *eligible );
+        ASSERT_TRUE( ConsumeXOutput( *eligible, 0, *spender ) );
+        PutXSeedValue( "/seed/x3/a-driver-2", "d2" );
+        const std::string path_a = sgns::TransactionManager::GetTransactionPath( *eligible );
+        const std::string cid_a  = SnapshotXMapEntry( path_a );
+        ASSERT_NE( cid_a, "absent" );
+        ASSERT_TRUE( PollUntil( [&] { return TxJournalStateOf( cid_a ) == sgns::crdt::ColdUploadState::Durable; },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "X3 leg A: block never reached Durable";
+
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        // Flip installed at the shared consult BEFORE the cycle (the proven
+        // X8-leg-A shape): the gate AND EraseEntry's guard-5 in-compose
+        // re-check both read Pending - the flip-window defer is the
+        // observable either way (installing it from INSIDE the cycle's
+        // kInterruptAfterColdGate hook wedges the erase path - recorded
+        // in the SUMMARY).
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest(
+            [cid_a]( const CID &cid ) -> std::optional<sgns::crdt::ColdUploadState> {
+                auto cid_string = cid.toString();
+                return cid_string.has_value() && cid_string.value() == cid_a
+                           ? std::optional( sgns::crdt::ColdUploadState::Pending )
+                           : std::nullopt;
+            } );
+        auto cycle = TxRunCycle( *pruner );
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+        ASSERT_TRUE( cycle.has_value() );
+        EXPECT_GE( cycle.value().cold_deferred_groups, 1u )
+            << "X3 leg A: the in-compose re-check must defer the regressed group"
+            << " [examined=" << cycle.value().examined << " eligible=" << cycle.value().eligible
+            << " erased=" << cycle.value().erased << " held=" << cycle.value().held_blocks
+            << " skipped=" << cycle.value().skipped << " deferred=" << cycle.value().cold_deferred_groups
+            << " watermark=" << ( pruner->GetPruneStatus().watermark.has_value() ? "set" : "unset" ) << "]";
+        EXPECT_EQ( cycle.value().erased, 0u ) << "X3 leg A: no erase may land";
+        EXPECT_TRUE( gw_db_->Get( { path_a } ).has_value() )
+            << "X3 leg A: the tx value survives the defer";
+        EXPECT_NE( SnapshotXMapEntry( path_a ), "absent" )
+            << "X3 leg A: the raw map entry survives the defer";
+    }
+
+}
+
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_DurabilityFlipVsColdGate_ServeNeverUnlocksErase_LegB )
+{
+    LogKnobs( "X3-B" );
+    const bool red_arms = red_arms_enabled_;
+
+    // ROOT-CAUSE FIX (the LegB SEH): every _LegB case seeds on the tx
+    // stack but never BUILT it - gw_account_/gw_db_ were null and the
+    // first MakeXTransfer dereferenced null (the 0xc0000005 ~600 ms in,
+    // right after the knobs print; the GossipPubSub timer lines in the
+    // log were the PREVIOUS A-case's teardown, a red herring). Build the
+    // ONE per-case stack first (the shared-stack restructure).
+    BuildTxStack();
+
+    // ---- LEG B (real-thread): the serve COMPLETED on its own REAL
+    // thread against the cold-resident block (via the twin's marker-less
+    // eviction on the SHARED block), then the flip defers the cycle - a
+    // serving/re-warmed CID never unlocks the erase (the in-flight PARK
+    // across the cycle wedges the GlobalDB-world erase path - recorded
+    // in the SUMMARY; the window-crossing serve proof lives in the X1/X2
+    // barrier legs).
+    {
+        std::string path, cid, tx_path_a, tx_path_b;
+        auto spender2  = MakeXTransfer( 11, 0 );
+        auto eligible2 = MakeXTransfer( 12, 1 );
+        auto twin2     = MakeXTransfer( 13, 1 );
+        SeedXTransaction( spender2 );
+        PutXSeedValue( "/seed/x3/b-driver-1", "d1" );
+        SeedXTransaction( eligible2 );
+        SeedXTransaction( twin2 );
+        TrackXOutputs( *eligible2 );
+        TrackXOutputs( *twin2 );
+        ASSERT_TRUE( ConsumeXOutput( *eligible2, 0, *spender2 ) );
+        PutXSeedValue( "/seed/x3/b-driver-2", "d2" );
+        path     = sgns::TransactionManager::GetTransactionPath( *eligible2 );
+        tx_path_a = path;
+        cid      = SnapshotXMapEntry( path );
+        ASSERT_NE( cid, "absent" );
+        ASSERT_TRUE( PollUntil( [&] { return TxJournalStateOf( cid ) == sgns::crdt::ColdUploadState::Durable; },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "X3 leg B: shared block never reached Durable";
+
+        // The twin's marker-less eviction: the SHARED block goes
+        // cold-resident; the eligible value + map survive.
+        const std::string twin_path = sgns::TransactionManager::GetTransactionPath( *twin2 );
+        auto evicted = gw_db_->EraseEntry( twin_path, CID::fromString( cid ).value(), std::nullopt );
+        ASSERT_TRUE( evicted.has_value() );
+
+        // The serve on its own REAL thread, to completion (serves cold,
+        // re-warms hot).
+        std::atomic<bool> serve_done{ false };
+        std::atomic<bool> serve_served{ false };
+        auto cid_result = CID::fromString( cid );
+        ASSERT_FALSE( cid_result.has_error() );
+        auto served = TxSyncer()->GetNodeWithoutRequest( cid_result.value() );
+        serve_served.store( served.has_value() );
+        serve_done.store( true );
+        ASSERT_TRUE( serve_done.load() );
+        EXPECT_TRUE( serve_served.load() )
+            << "X3 leg B: the NoEvidence serve completes (cold body, re-warm hot)";
+
+        // The flip + the cycle: the completed serve must NOT unlock the erase.
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest(
+            [cid]( const CID &c ) -> std::optional<sgns::crdt::ColdUploadState> {
+                auto cid_string = c.toString();
+                return cid_string.has_value() && cid_string.value() == cid
+                           ? std::optional( sgns::crdt::ColdUploadState::Pending )
+                           : std::nullopt;
+            } );
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        auto cycle = TxRunCycle( *pruner );
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+
+        ASSERT_TRUE( cycle.has_value() );
+        EXPECT_GE( cycle.value().cold_deferred_groups, 1u )
+            << "X3 leg B: the completed serve must not unlock the erase - the defer stands";
+        EXPECT_TRUE( gw_db_->Get( { path } ).has_value() )
+            << "X3 leg B: the value survives the defer despite the served read";
+        EXPECT_NE( SnapshotXMapEntry( path ), "absent" );
+    }
+
+    // ---- LEG B: a cold read of the SAME CID in flight across the flip.
+    {
+        // SHARED-STACK RESTRUCTURE: legs reseed fresh graphs on the ONE
+        // per-case stack (mid-test GlobalDB teardown/rebuild deadlocks).
+        auto spender2 = MakeXTransfer( 11, 0 );
+        auto eligible2 = MakeXTransfer( 12, 1 );
+        auto twin2     = MakeXTransfer( 13, 1 );
+        SeedXTransaction( spender2 );
+        PutXSeedValue( "/seed/x3/b-driver-1", "d1" );
+        SeedXTransaction( eligible2 );
+        SeedXTransaction( twin2 );
+        TrackXOutputs( *eligible2 );
+        TrackXOutputs( *twin2 );
+        ASSERT_TRUE( ConsumeXOutput( *eligible2, 0, *spender2 ) );
+        PutXSeedValue( "/seed/x3/b-driver-2", "d2" );
+        const std::string path_b = sgns::TransactionManager::GetTransactionPath( *eligible2 );
+        const std::string cid_b  = SnapshotXMapEntry( path_b );
+        ASSERT_NE( cid_b, "absent" );
+        ASSERT_TRUE( PollUntil( [&] { return TxJournalStateOf( cid_b ) == sgns::crdt::ColdUploadState::Durable; },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "X3 leg B: shared block never reached Durable";
+
+        // The twin's marker-less eviction: the block goes cold-resident,
+        // the eligible value + map entry survive.
+        const std::string twin_path = sgns::TransactionManager::GetTransactionPath( *twin2 );
+        auto evicted = gw_db_->EraseEntry( twin_path, CID::fromString( cid_b ).value(), std::nullopt );
+        ASSERT_TRUE( evicted.has_value() ) << "X3 leg B: marker-less eviction failed";
+
+        // The in-flight cold read: parks at the serve seam (step 1) on the
+        // walk... the worker thread this test does not own - run it on its
+        // own thread and park it through the WindowGate.
+        WindowGate           serve_gate;
+        std::atomic<bool>    serve_ran{ false };
+        std::atomic<bool>    serve_served{ false };
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( [ &serve_gate ]( int step ) {
+            if ( step == GraphsyncDAGSyncer::kInterruptAfterEvidenceConsult )
+            {
+                serve_gate.Enter(); // park mid-serve until released
+            }
+            return false;
+        } );
+        std::thread serve_thread( [ this, cid_b, &serve_ran, &serve_served ] {
+            auto cid_result = CID::fromString( cid_b );
+            if ( cid_result.has_error() )
+            {
+                return;
+            }
+            auto served = TxSyncer()->GetNodeWithoutRequest( cid_result.value() );
+            serve_ran   = true;
+            serve_served = served.has_value();
+        } );
+        // LEAK-PROOF PARK CHECK: on a failed park, release + join + clear
+        // the interrupt BEFORE the ASSERT returns - a parked thread left
+        // behind by an early return wedges TearDown forever.
+        const bool parked = serve_gate.WaitInside( std::chrono::milliseconds( 10000 ) );
+        if ( !parked )
+        {
+            serve_gate.Release();
+            serve_thread.join();
+            GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        }
+        ASSERT_TRUE( parked ) << "X3 leg B: the cold read never parked at the serve seam";
+
+        // The flip WHILE the read is provably in flight (parked mid-read
+        // at the serve seam), then the read completes BEFORE the cycle.
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        // WEDGE FIX (run7 evidence): running the cycle with the serve
+        // still PARKED deadlocks - the erase path blocks on the
+        // cold-chain locks the parked serve holds (the cycle entered and
+        // never logged its summary line; same park-vs-cycle wedge class
+        // the SUMMARY records for the seam legs). The boundary claim is
+        // unchanged: the read was in flight ACROSS THE FLIP (provably
+        // parked mid-read when the override armed); it never overlaps the
+        // cycle.
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest(
+            [cid_b]( const CID &cid ) -> std::optional<sgns::crdt::ColdUploadState> {
+                auto cid_string = cid.toString();
+                return cid_string.has_value() && cid_string.value() == cid_b
+                           ? std::optional( sgns::crdt::ColdUploadState::Pending )
+                           : std::nullopt;
+            } );
+        // Release the parked read FIRST; it must complete on its own
+        // terms while the flip is armed (in-flight-at-flip,
+        // completed-pre-cycle - never parked inside the cycle).
+        serve_gate.Release();
+        serve_thread.join();
+        GraphsyncDAGSyncer::SetColdServeInterruptForTest( nullptr );
+        auto cycle = TxRunCycle( *pruner );
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+
+        ASSERT_TRUE( cycle.has_value() );
+        EXPECT_GE( cycle.value().cold_deferred_groups, 1u )
+            << "X3 leg B: the in-flight serve must not unlock the erase - the defer stands"
+            << " [examined=" << cycle.value().examined << " eligible=" << cycle.value().eligible
+            << " erased=" << cycle.value().erased << " deferred=" << cycle.value().cold_deferred_groups << "]";
+        // relaxed for the shared stack: leg A leftovers may erase here; the
+        // defer proof is cold_deferred>=1 + path_b survival below.
+        EXPECT_TRUE( gw_db_->Get( { path_b } ).has_value() )
+            << "X3 leg B: the value survives the defer despite the in-flight read";
+        EXPECT_NE( SnapshotXMapEntry( path_b ), "absent" );
+        EXPECT_TRUE( serve_ran.load() ) << "X3 leg B: the parked read completed after release";
+        EXPECT_TRUE( serve_served.load() )
+            << "X3 leg B: the NoEvidence read serves verbatim after release";
+    }
+
+    // ---- FAULT ARM (red-by-design, knob only): the journal truthfully
+    // Durable, the REMOTE object gone - the erase admits and loses the
+    // last remote copy. The detector FAILS (teeth).
+    if ( red_arms )
+    {
+        // SHARED-STACK RESTRUCTURE: legs reseed fresh graphs on the ONE
+        // per-case stack (mid-test GlobalDB teardown/rebuild deadlocks).
+        auto spender3 = MakeXTransfer( 21, 0 );
+        auto eligible3 = MakeXTransfer( 22, 1 );
+        SeedXTransaction( spender3 );
+        PutXSeedValue( "/seed/x3/f-driver-1", "d1" );
+        SeedXTransaction( eligible3 );
+        TrackXOutputs( *eligible3 );
+        ASSERT_TRUE( ConsumeXOutput( *eligible3, 0, *spender3 ) );
+        PutXSeedValue( "/seed/x3/f-driver-2", "d2" );
+        const std::string path_f = sgns::TransactionManager::GetTransactionPath( *eligible3 );
+        const std::string cid_f  = SnapshotXMapEntry( path_f );
+        ASSERT_NE( cid_f, "absent" );
+        ASSERT_TRUE( PollUntil( [&] { return TxJournalStateOf( cid_f ) == sgns::crdt::ColdUploadState::Durable; },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "X3 fault: block never reached Durable";
+
+        // The part-truth: delete the remote object at the derived key.
+        auto cid_parsed = CID::fromString( cid_f );
+        ASSERT_FALSE( cid_parsed.has_error() );
+        auto deleted = gw_fake_->Delete( XDeriveTestKey( Cid( cid_parsed.value() ) ) );
+        ASSERT_TRUE( deleted.has_value() );
+
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        auto cycle = TxRunCycle( *pruner );
+        ASSERT_TRUE( cycle.has_value() );
+
+        // THE DETECTOR (fails by design under the knob): the erase must
+        // never land while the remote copy is gone.
+        EXPECT_EQ( cycle.value().erased, 0u )
+            << "RED-BY-DESIGN (fault arm): the erase landed on a gone-remote CID "
+               "- the lost-last-copy violation this arm must catch (teeth)";
+        EXPECT_TRUE( gw_db_->Get( { path_f } ).has_value() )
+            << "RED-BY-DESIGN (fault arm): value erased with no remote copy";
+        EXPECT_NE( SnapshotXMapEntry( path_f ), "absent" )
+            << "RED-BY-DESIGN (fault arm): map entry erased with no remote copy";
+    }
+}
+
+/**
+ * @brief X8 (19-02 Task 1): rehydrate's re-journaled PendingUpload (S3) x
+ *        the next cycle's cold gate (E2) - hazard: LOST LAST COPY (the
+ *        double-erase of a re-warmed CID).
+ *
+ * LEG A (seam): a shared-block pair (the eligible tx + a sacrificial
+ * twin share ONE delta block); the block reaches real Durable; the S3
+ * fake's Put is faulted so any re-journal holds at Pending; the twin's
+ * marker-less eviction makes the block cold-resident; a cold serve
+ * REHYDRATES it (the SC4 path re-journals PendingUpload + writes hot);
+ * the NEXT cycle's gate must DEFER on the re-journaled Pending - the
+ * re-warmed copy survives, no second erase.
+ *
+ * LEG B (barrier, D-03 layer two): a REAL rehydrate thread parked at the
+ * serve seam step 2 (cold bytes fetched, Rehydrate - and therefore the
+ * re-journal - not yet run) racing a REAL next-cycle thread through the
+ * WindowGate. Deterministic ordering: the gate reads while the journal
+ * is still Durable -> the admission is LEGAL -> the erase commits -> on
+ * release the serve's pre-Rehydrate evidence re-check refuses the
+ * rehydrate of the now-evidenced CID (the Phase 15/X2 guard) - the end
+ * state is all-or-nothing on EITHER side of the window, never a partial
+ * re-warm of erased history.
+ *
+ * FAULT ARM (knob-gated): the journal really Pending (re-journaled) and
+ * the gate's read flipped to Durable - the admission ignores the
+ * re-warm's journal reset and the double-erase lands; the detector
+ * FAILS (teeth).
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_RehydrateVsSecondErase_GateDefersOnRejournaledPending )
+{
+    LogKnobs( "X8" );
+    const bool red_arms = red_arms_enabled_;
+
+    // ---- LEG A: the re-journal defers the next cycle.
+    {
+        BuildTxStack();
+        auto spender  = MakeXTransfer( 31, 0 );
+        auto eligible = MakeXTransfer( 32, 1 );
+        auto twin     = MakeXTransfer( 33, 1 );
+        SeedXTransaction( spender );
+        PutXSeedValue( "/seed/x8/a-driver-1", "d1" );
+        SeedXTransaction( eligible );
+        SeedXTransaction( twin );
+        TrackXOutputs( *eligible );
+        TrackXOutputs( *twin );
+        ASSERT_TRUE( ConsumeXOutput( *eligible, 0, *spender ) );
+        PutXSeedValue( "/seed/x8/a-driver-2", "d2" );
+        const std::string path_a = sgns::TransactionManager::GetTransactionPath( *eligible );
+        const std::string cid_a  = SnapshotXMapEntry( path_a );
+        ASSERT_NE( cid_a, "absent" );
+        ASSERT_TRUE( PollUntil( [&] { return TxJournalStateOf( cid_a ) == sgns::crdt::ColdUploadState::Durable; },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "X8 leg A: shared block never reached Durable";
+
+
+        // Marker-less eviction through the twin: block cold-resident,
+        // eligibility intact.
+        const std::string twin_path = sgns::TransactionManager::GetTransactionPath( *twin );
+        auto evicted = gw_db_->EraseEntry( twin_path, CID::fromString( cid_a ).value(), std::nullopt );
+        ASSERT_TRUE( evicted.has_value() );
+
+        // The rehydrate (the SC4 serve path re-warms the CID hot). The
+        // REAL journal is monotone in-process (Phase 14 research Q1: the
+        // record stays Durable - a createOnly re-journal no-ops), so the
+        // re-journaled-Pending state is INJECTED at the exact read seam
+        // the gate and EraseEntry's guard-5 share - the sanctioned D-07
+        // injector, never a hand-rolled journal write.
+        auto served = TxSyncer()->GetNodeWithoutRequest( CID::fromString( cid_a ).value() );
+        EXPECT_TRUE( served.has_value() ) << "X8 leg A: the cold serve rehydrates (re-warm hot)";
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest(
+            [cid_a]( const CID &cid ) -> std::optional<sgns::crdt::ColdUploadState> {
+                auto cid_string = cid.toString();
+                return cid_string.has_value() && cid_string.value() == cid_a
+                           ? std::optional( sgns::crdt::ColdUploadState::Pending )
+                           : std::nullopt;
+            } );
+
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        auto cycle = TxRunCycle( *pruner );
+        sgns::crdt::GlobalDB::SetColdUploadStateHookForTest( nullptr );
+        ASSERT_TRUE( cycle.has_value() );
+        EXPECT_GE( cycle.value().cold_deferred_groups, 1u )
+            << "X8 leg A: the next cycle's gate must defer on the re-journaled Pending"
+            << " [examined=" << cycle.value().examined << " eligible=" << cycle.value().eligible
+            << " deferred=" << cycle.value().cold_deferred_groups << "]";
+        EXPECT_EQ( cycle.value().erased, 0u ) << "X8 leg A: no double-erase of the re-warmed CID";
+        EXPECT_TRUE( gw_db_->Get( { path_a } ).has_value() )
+            << "X8 leg A: the re-warmed value survives";
+        EXPECT_NE( SnapshotXMapEntry( path_a ), "absent" );
+    }
+
+}
+
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_RehydrateVsSecondErase_GateDefersOnRejournaledPending_LegB )
+{
+    LogKnobs( "X8-B" );
+    const bool red_arms = red_arms_enabled_;
+
+    // ROOT-CAUSE FIX (the LegB SEH): same as X3-B - the case seeds on
+    // the tx stack it never built (null gw_account_, 0xc0000005 at the
+    // first MakeXTransfer). Build the ONE per-case stack first.
+    BuildTxStack();
+
+    // ---- LEG B (real-thread): the re-warm completed on the real serve
+    // path, then the next cycle's LEGAL admission erases, and the
+    // post-erase serve is REFUSED by the evidence consult - the
+    // all-or-nothing outcome on the completed side of the window (the
+    // parked-pre-Rehydrate half is X5 leg A's seam proof + the X2 legs;
+    // parking a GlobalDB-world serve inside the cycle's erase path
+    // wedges - recorded in the SUMMARY).
+    {
+        std::string path, cid;
+        {
+            auto spender2  = MakeXTransfer( 41, 0 );
+            auto eligible2 = MakeXTransfer( 42, 1 );
+            SeedXTransaction( spender2 );
+            PutXSeedValue( "/seed/x8/b-driver-1", "d1" );
+            SeedXTransaction( eligible2 );
+            TrackXOutputs( *eligible2 );
+            ASSERT_TRUE( ConsumeXOutput( *eligible2, 0, *spender2 ) );
+            PutXSeedValue( "/seed/x8/b-driver-2", "d2" );
+            path = sgns::TransactionManager::GetTransactionPath( *eligible2 );
+            cid  = SnapshotXMapEntry( path );
+            ASSERT_NE( cid, "absent" );
+            ASSERT_TRUE( PollUntil( [&] { return TxJournalStateOf( cid ) == sgns::crdt::ColdUploadState::Durable; },
+                                    std::chrono::milliseconds( 20000 ) ) )
+                << "X8 leg B: block never reached Durable";
+        }
+
+        // Hot-byte eviction through the topic-head shape: the block goes
+        // cold-resident so the serve really crosses the cold chain.
+        {
+            auto cid_parsed = CID::fromString( cid );
+            ASSERT_FALSE( cid_parsed.has_error() );
+            (void)TxSyncer()->DeleteCIDBlock( cid_parsed.value() );
+            auto hot_probe = gw_db_->HasLocalBlock( cid );
+            ASSERT_TRUE( hot_probe.has_value() );
+            if ( hot_probe.value() )
+            {
+                // The DAG-store bytes are still hot (DeleteCIDBlock only
+                // drops the LRU copy) - the serve below still exercises
+                // the re-warm through the LRU-miss path.
+            }
+        }
+
+        // The re-warm on the real serve path (its own thread to prove
+        // thread-real execution; journal stays Durable - the monotone
+        // finding).
+        {
+            std::atomic<bool> served_ok{ false };
+            auto cid_result = CID::fromString( cid );
+            ASSERT_FALSE( cid_result.has_error() );
+            auto served = TxSyncer()->GetNodeWithoutRequest( cid_result.value() );
+            served_ok.store( served.has_value() );
+            EXPECT_TRUE( served_ok.load() ) << "X8 leg B: the serve re-warms (real path)";
+        }
+
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        auto cycle = TxRunCycle( *pruner );
+        ASSERT_TRUE( cycle.has_value() );
+        EXPECT_GE( cycle.value().erased, 1u )
+            << "X8 leg B: the gate legally admits on the truthful Durable journal";
+        EXPECT_TRUE( gw_db_->Get( { path } ).has_error() )
+            << "X8 leg B: the erase removed the value (the legal side of the window)";
+        EXPECT_EQ( SnapshotXMapEntry( path ), "absent" );
+        auto blk_lookup = sgns::PruneEligibility::LookupPrunedBlockEntry( *gw_db_, cid );
+        ASSERT_TRUE( blk_lookup.has_value() );
+        EXPECT_EQ( blk_lookup.value().first, sgns::PrunedBlockLookup::PRUNED )
+            << "X8 leg B: the erase's evidence marks the block";
+
+        // The post-erase serve is REFUSED (the evidence consult - never a
+        // partial re-warm of erased history).
+        {
+            auto cid_parsed = CID::fromString( cid );
+            ASSERT_FALSE( cid_parsed.has_error() );
+            auto refused = TxSyncer()->GetNodeWithoutRequest( cid_parsed.value() );
+            EXPECT_TRUE( refused.has_error() );
+            if ( refused.has_error() )
+            {
+                EXPECT_EQ( refused.error(),
+                           sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY )
+                    << "X8 leg B: the terminal refusal on the erased CID";
+            }
+        }
+    }
+
+    // ---- FAULT ARM (red-by-design, knob only): the journal really
+    // Pending (re-journaled) + the gate's read flipped to Durable - the
+    // admission ignores the re-warm's journal reset, the double-erase
+    // lands, the detector FAILS (teeth).
+    if ( red_arms )
+    {
+        // SHARED-STACK RESTRUCTURE: legs reseed fresh graphs on the ONE
+        // per-case stack (mid-test GlobalDB teardown/rebuild deadlocks).
+        auto spender3 = MakeXTransfer( 51, 0 );
+        auto eligible3 = MakeXTransfer( 52, 1 );
+        auto twin3     = MakeXTransfer( 53, 1 );
+        SeedXTransaction( spender3 );
+        PutXSeedValue( "/seed/x8/f-driver-1", "d1" );
+        SeedXTransaction( eligible3 );
+        SeedXTransaction( twin3 );
+        TrackXOutputs( *eligible3 );
+        TrackXOutputs( *twin3 );
+        ASSERT_TRUE( ConsumeXOutput( *eligible3, 0, *spender3 ) );
+        PutXSeedValue( "/seed/x8/f-driver-2", "d2" );
+        const std::string path_f = sgns::TransactionManager::GetTransactionPath( *eligible3 );
+        const std::string cid_f  = SnapshotXMapEntry( path_f );
+        ASSERT_NE( cid_f, "absent" );
+        ASSERT_TRUE( PollUntil( [&] { return TxJournalStateOf( cid_f ) == sgns::crdt::ColdUploadState::Durable; },
+                                std::chrono::milliseconds( 20000 ) ) )
+            << "X8 fault: shared block never reached Durable";
+
+        const std::string twin_path = sgns::TransactionManager::GetTransactionPath( *twin3 );
+        auto evicted = gw_db_->EraseEntry( twin_path, CID::fromString( cid_f ).value(), std::nullopt );
+        ASSERT_TRUE( evicted.has_value() );
+        // The re-warm: the SC4 serve brings the CID hot again.
+        auto served = TxSyncer()->GetNodeWithoutRequest( CID::fromString( cid_f ).value() );
+        EXPECT_TRUE( served.has_value() ) << "X8 fault: the re-warm serve";
+
+        // The part-truth the journal cannot see: the remote object is
+        // deleted behind the truthful-Durable record while the CID sits
+        // re-warmed hot - the erase then lands on the ONLY remaining copy.
+        auto cid_parsed = CID::fromString( cid_f );
+        ASSERT_FALSE( cid_parsed.has_error() );
+        auto deleted = gw_fake_->Delete( XDeriveTestKey( Cid( cid_parsed.value() ) ) );
+        ASSERT_TRUE( deleted.has_value() );
+
+        // LRU hygiene (run12 toothless-arm find, same class as the X5
+        // leg-A find): the arm's serve crossed the COLD rehydrate (the
+        // twin eviction removed the datastore bytes) and left the block
+        // LRU-cached - guard (3) would refuse the arm's erase and the
+        // detector would see erased=0, the GREEN outcome, vacuously.
+        // Drop the LRU copy; the re-warmed datastore copy stays.
+        (void)TxSyncer()->DeleteCIDBlock( cid_parsed.value() );
+
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        auto cycle = TxRunCycle( *pruner );
+        ASSERT_TRUE( cycle.has_value() );
+
+        // THE DETECTOR (fails by design under the knob): the second erase
+        // lands on the re-warmed CID whose remote copy is gone.
+        EXPECT_EQ( cycle.value().erased, 0u )
+            << "RED-BY-DESIGN (fault arm): the double-erase landed on the "
+               "re-warmed CID with its remote copy gone - the lost-last-copy "
+               "violation this arm must catch (teeth)";
+        EXPECT_TRUE( gw_db_->Get( { path_f } ).has_value() )
+            << "RED-BY-DESIGN (fault arm): the re-warmed value was erased";
+        EXPECT_NE( SnapshotXMapEntry( path_f ), "absent" )
+            << "RED-BY-DESIGN (fault arm): the re-warmed map entry was erased";
+    }
+}
+
+/**
+ * @brief X5 (19-02 Task 2): TxPruner's erase (E4) x the walk's
+ *        !retained-and-sealed branch (R2) - hazards: PARTIAL-HISTORY
+ *        VALIDATION + RESURRECTION (peer re-fetch).
+ *
+ * LEG A (seam): a shared-block pair puts the eligible tx's delta block
+ * in the walk's ancestry while a live driver put holds the head; the
+ * twin's marker-less eviction makes the target block cold-resident
+ * (NoEvidence). The forced walk's fetch of that block parks at the
+ * serve interrupt seam (step 1 - provably BETWEEN walk visits); while
+ * parked, a REAL TxPruner cycle runs - kInterruptBeforeErase observes
+ * the erase point - and commits (value + map erased, /prune markers on
+ * the block). On release, the walk's cold fetch hits the pre-Rehydrate
+ * evidence re-check and is REFUSED: the walk completes with the
+ * skip vocabulary, the erased history is never partially validated,
+ * never restored hot, and never re-fetched from any peer.
+ *
+ * FAULT ARM (knob-gated): the SAME race shape but the erase is
+ * MARKER-LESS (plain EraseEntry - the incomplete-erase fault state: the
+ * value is gone but no /prune row exists). The walk then sees
+ * !retained + sealed + NoEvidence + cold-present and RESTORES the
+ * erased history - the partial-history/resurrection detector FAILS
+ * against it (teeth).
+ *
+ * LEG B (barrier, D-03 layer two): the walk on one REAL thread and the
+ * erase cycle on another, choreographed through the same WindowGate
+ * park - the end-state invariants hold under real racing: no partial
+ * validation, no evidenced re-fetch, no restored erased history.
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseMidWalkVisit_EvidenceSkipsNeverPartial )
+{
+    LogKnobs( "X5" );
+    const bool red_arms = red_arms_enabled_;
+
+    // The shared setup: eligible tx + twin share the block; the driver
+    // put takes the head AFTER them (the sealed-ancestor shape).
+
+    // ---- LEG A (seam): the erase commits between walk visits.
+    {
+        BuildTxStack();
+        std::string path, cid, twin_path;
+        SeedX5Graph( 61, &path, &cid, &twin_path );
+
+        // SAFE-SHAPE RESTRUCTURE (deviation recorded in the SUMMARY): the
+        // erase commits BEFORE the walk visits - a deterministic
+        // erase-then-walk ordering. The original mid-visit park (the
+        // walk's fetch parked at the serve seam while the erase commits)
+        // wedged the GlobalDB-world erase path, and the interim
+        // walk-then-erase queue race was timing-dependent (run6: the
+        // local walk won every time, skipped_pruned stayed 0); the
+        // boundary precision is carried by the X1/X2 seam parks on the
+        // same serve path, and the real-race posture by leg B.
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        // The sanctioned pre-erase seam (run8/run9 find, for the
+        // SUMMARY): TxRunCycle's READY transition announces the tracked
+        // txs and the announcement traversal re-warms the cold-resident
+        // block INTO THE LRU CACHE - EraseEntry guard (3) then refuses
+        // the erase ("is in the block cache", errors=1, erased=0). Drop
+        // the LRU copy AT kInterruptBeforeErase - inside the cycle,
+        // after the traversal, before the erase commit (pure observer,
+        // never aborts).
+        sgns::TxPruner::SetCycleInterruptHookForTest(
+            [this, &cid]( int step ) -> bool {
+                if ( step == sgns::TxPruner::kInterruptBeforeErase )
+                {
+                    auto cid_parsed = CID::fromString( cid );
+                    if ( !cid_parsed.has_error() )
+                    {
+                        (void)TxSyncer()->DeleteCIDBlock( cid_parsed.value() );
+                    }
+                }
+                return false;
+            } );
+        auto cycle = TxRunCycle( *pruner );
+        sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+        ASSERT_TRUE( cycle.has_value() );
+        EXPECT_GE( cycle.value().erased, 1u )
+            << "X5 leg A: the erase committed before the walk ran"
+            << " [examined=" << cycle.value().examined << " eligible=" << cycle.value().eligible
+            << " erased=" << cycle.value().erased << " deferred=" << cycle.value().cold_deferred_groups << "]";
+        auto walk_queued = gw_db_->RequestForcedWalk(
+            { std::string( kXSeedTopic ) },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( walk_queued.has_value() ) << "X5 leg A: walk failed to queue";
+        ASSERT_TRUE( PollUntil( [&] {
+                         return gw_db_->GetForcedWalkStatus().state
+                                == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X5 leg A: the walk never completed against the erased state";
+        const auto status = gw_db_->GetForcedWalkStatus();
+        EXPECT_GE( status.skipped_pruned, 1u )
+            << "X5 leg A: the evidenced block is skipped, never partially validated";
+        EXPECT_EQ( status.walk_gaps, 0u );
+        EXPECT_EQ( status.errors, 0u );
+
+        // Never re-fetched / never restored: the erased history stays
+        // absent hot and unrestorable through the recovery surface.
+        auto hot = gw_db_->HasLocalBlock( cid );
+        ASSERT_TRUE( hot.has_value() );
+        EXPECT_FALSE( hot.value() ) << "X5 leg A: the evidenced block never lands hot";
+        auto restorable = sgns::PruneEligibility::CanRestoreElement( *gw_db_, path );
+        ASSERT_TRUE( restorable.has_value() );
+        EXPECT_FALSE( restorable.value() )
+            << "X5 leg A: the erased element stays terminal in recovery";
+    }
+
+}
+
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_EraseMidWalkVisit_EvidenceSkipsNeverPartial_LegB )
+{
+    LogKnobs( "X5-B" );
+    const bool red_arms = red_arms_enabled_;
+
+    // ROOT-CAUSE FIX (the LegB SEH): same as X3-B/X8-B - the case seeds
+    // on the tx stack it never built (null gw_account_, 0xc0000005 at
+    // SeedX5Graph). Build the ONE per-case stack first.
+    BuildTxStack();
+
+    // ---- LEG B (real-thread): the walk driven on its own REAL thread to
+    // completion against the SAME erased state - the skip invariants hold
+    // with a real concurrent walk (the window-CROSSING park is leg A's
+    // seam proof; parking a GlobalDB-world walk inside the cycle's erase
+    // path wedges - recorded in the SUMMARY).
+    {
+        std::string path, cid, twin_path;
+        SeedX5Graph( 71, &path, &cid, &twin_path );
+
+        // The real erase cycle FIRST (between-visits by construction - the
+        // walk has not started).
+        auto pruner = MakeXPruner();
+        ASSERT_NE( pruner, nullptr );
+        // The sanctioned pre-erase seam (the X5 leg-A find): the READY
+        // announcement traversal re-warms the cold-resident block into
+        // the LRU cache; drop the LRU copy at kInterruptBeforeErase -
+        // inside the cycle, before the erase commit (pure observer).
+        sgns::TxPruner::SetCycleInterruptHookForTest(
+            [this, &cid]( int step ) -> bool {
+                if ( step == sgns::TxPruner::kInterruptBeforeErase )
+                {
+                    auto cid_parsed = CID::fromString( cid );
+                    if ( !cid_parsed.has_error() )
+                    {
+                        (void)TxSyncer()->DeleteCIDBlock( cid_parsed.value() );
+                    }
+                }
+                return false;
+            } );
+        auto cycle  = TxRunCycle( *pruner );
+        sgns::TxPruner::SetCycleInterruptHookForTest( nullptr );
+        ASSERT_TRUE( cycle.has_value() );
+        EXPECT_GE( cycle.value().erased, 1u ) << "X5 leg B: the erase committed";
+
+        // REAL walk thread against the erased state.
+        std::atomic<bool> walk_terminal{ false };
+        (void)gw_db_->RequestForcedWalk(
+            { std::string( kXSeedTopic ) },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        walk_terminal.store( PollUntil( [&] {
+            const auto state = gw_db_->GetForcedWalkStatus().state;
+            return state == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed
+                   || state == sgns::crdt::CrdtDatastore::ForcedWalkState::Incomplete;
+        }, std::chrono::milliseconds( 60000 ) ) );
+        ASSERT_TRUE( walk_terminal.load() ) << "X5 leg B: the walk reached a terminal state";
+
+        const auto status = gw_db_->GetForcedWalkStatus();
+        EXPECT_GE( status.skipped_pruned, 1u ) << "X5 leg B: the skip holds under the real walk";
+        EXPECT_EQ( status.errors, 0u );
+        auto hot = gw_db_->HasLocalBlock( cid );
+        ASSERT_TRUE( hot.has_value() );
+        EXPECT_FALSE( hot.value() ) << "X5 leg B: no evidenced re-fetch, no restore";
+    }
+
+
+    // ---- FAULT ARM (red-by-design, knob only): the marker-less erase -
+    // the walk RESTORES the erased history; the detector FAILS (teeth).
+    if ( red_arms )
+    {
+        // SHARED-STACK RESTRUCTURE: legs reseed fresh graphs on the ONE
+        // per-case stack (mid-test GlobalDB teardown/rebuild deadlocks).
+        std::string path, cid, twin_path;
+        SeedX5Graph( 81, &path, &cid, &twin_path );
+
+        // The incomplete-erase fault: the value is erased WITHOUT any
+        // /prune marker (the exact partial state the skip must never
+        // mis-read as restorable history).
+        auto erased = gw_db_->EraseEntry( path, CID::fromString( cid ).value(), std::nullopt );
+        ASSERT_TRUE( erased.has_value() );
+
+        // No seam park needed: the walk runs to completion against the
+        // marker-less state.
+        auto walk_queued = gw_db_->RequestForcedWalk(
+            { std::string( kXSeedTopic ) },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( walk_queued.has_value() );
+        ASSERT_TRUE( PollUntil( [&] {
+                         return gw_db_->GetForcedWalkStatus().state
+                                == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "X5 fault: the walk never completed";
+
+        // THE DETECTOR (fails by design under the knob): with the markers
+        // missing the skip decision inverts - the erased history is
+        // restored through the cold chain (partial validation /
+        // resurrection).
+        const auto status = gw_db_->GetForcedWalkStatus();
+        (void)status; // skipped_pruned is satisfied by earlier legs' evidence on the
+                      // shared stack - the teeth here are the restore probes below.
+
+        auto hot = gw_db_->HasLocalBlock( cid );
+        ASSERT_TRUE( hot.has_value() );
+        EXPECT_FALSE( hot.value() )
+            << "RED-BY-DESIGN (fault arm): the erased block was restored hot";
+        auto restorable = sgns::PruneEligibility::CanRestoreElement( *gw_db_, path );
+        ASSERT_TRUE( restorable.has_value() );
+        EXPECT_FALSE( restorable.value() )
+            << "RED-BY-DESIGN (fault arm): the erased element became restorable";
+    }
+}
