@@ -457,6 +457,13 @@ namespace sgns::crdt
          */
         size_t GetStalledDeltaRetryCountForTest() const;
 
+        /**
+         * @brief       Test-only passthrough to EnqueueRootCID (F19 promotion
+         *              pin). Production callers reach the protected entry
+         *              through the friend classes.
+         */
+        bool EnqueueRootCIDForTest( const CID &cid, bool priority );
+
     protected:
         /// Test-only fetch-attempt counter (SC-3): increments once per
         /// EnqueueRootCID call that actually pushes onto pendingRootQueue_
@@ -615,6 +622,10 @@ namespace sgns::crdt
 
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast );
         bool EnqueueRootCID( const CID &cid, bool priority = false );
+
+        /// dagWorkerMutex_ must be held. Moves cid from pendingRootQueue_ to
+        /// priorityRootQueue_ (F19); false when it is not queued ordinarily.
+        bool PromotePendingRootLocked( const CID &cid );
 
         outcome::result<CID> WaitForJob( const CID &cid );
 

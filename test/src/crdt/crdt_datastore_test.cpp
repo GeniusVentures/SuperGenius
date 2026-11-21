@@ -1120,4 +1120,93 @@ namespace sgns::crdt
             << "priority-topic head must seed before the ordinary-topic backlog";
         EXPECT_EQ( order.at( 1 ), ordinary_cid.toString().value() );
     }
+
+    TEST_F( CrdtDatastoreTest, PriorityEnqueuePromotesOrdinaryQueuedHead )
+    {
+        /**
+         * F19 second half (bootstrap starvation, live specimen 01:41:48 UTC
+         * privnet poster): a bootstrap CID first announced on a NON-priority
+         * topic queues ordinarily - on a live fresh join the genesis block
+         * arrives inside processing-channel broadcast batches because the
+         * gnus-blockchain pubsub topic is only subscribed after blockchain
+         * start succeeds (SetFullNodeMode). The messenger inform that follows
+         * (InformGenesisResult) must then PROMOTE the CID out of the ordinary
+         * queue, not dedup it into starvation: the live poster logged
+         * "Queueing processing for block QmU3Cz9S... (priority topic: false)"
+         * at boot+11s and then 17+ genesis retries while the announcement sat
+         * behind the history sync.
+         */
+        auto producer = CreateLoopBackCRDTInstance( databasePath + "promote-source", ipfsDataStore_ );
+        sgns::base::createLogger( "CrdtDatastore", "" )->set_level( spdlog::level::trace );
+        crdtDatastore_->AddTopicName( "lane-processing" );
+
+        ASSERT_OUTCOME_SUCCESS( cid_a, producer.datastore->Publish( CreateTestDelta( "PromoteA", "v1" ),
+                                                                    { "lane-processing" } ) );
+        ASSERT_OUTCOME_SUCCESS( cid_c, producer.datastore->Publish( CreateTestDelta( "PromoteC", "v1" ),
+                                                                    { "lane-processing" } ) );
+        ASSERT_OUTCOME_SUCCESS( cid_b, producer.datastore->Publish( CreateTestDelta( "PromoteB", "v1" ),
+                                                                    { "lane-processing" } ) );
+
+        producer.broadcaster->SetMirrorCounterPart( broadcaster_ );
+
+        auto announce = [&producer]( const CID &cid, const std::string &topic ) -> outcome::result<void>
+        {
+            auto              cid_string = cid.toString().value();
+            pb::CRDTBroadcast announcement;
+            announcement.add_heads()->set_cid( cid_string );
+            Buffer encoded;
+            encoded.put( announcement.SerializeAsString() );
+            return producer.broadcaster->Broadcast( encoded, topic );
+        };
+
+        // Park the DAG worker on A so the queue below cannot drain mid-test.
+        dagSyncer_->ArmRootFetchStall();
+        ASSERT_OUTCOME_SUCCESS_TRY( announce( cid_a, "lane-processing" ) );
+        sgns::test::assertWaitForCondition(
+            [&] { return crdtDatastore_->IsRootCIDPendingOrActive( cid_a ); },
+            std::chrono::seconds( 10 ),
+            "stalled root job never reported pending/active" );
+
+        // C and B land behind the parked A, in that order. Wait until both
+        // announcements were actually drained into the ordinary queue - the
+        // mirror intake polls on a 500 ms sleep, so an immediate promote call
+        // would race ahead of the announcements.
+        ASSERT_OUTCOME_SUCCESS_TRY( announce( cid_c, "lane-processing" ) );
+        ASSERT_OUTCOME_SUCCESS_TRY( announce( cid_b, "lane-processing" ) );
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                return crdtDatastore_->IsRootCIDPendingOrActive( cid_c ) &&
+                       crdtDatastore_->IsRootCIDPendingOrActive( cid_b );
+            },
+            std::chrono::seconds( 10 ),
+            "C and B never landed in the ordinary queue behind the parked A" );
+
+        // The messenger inform for B arrives. It must promote B ahead of C,
+        // not dedup against its ordinary-queue entry.
+        EXPECT_TRUE( crdtDatastore_->EnqueueRootCIDForTest( cid_b, /*priority=*/true ) )
+            << "a priority enqueue for an ordinary-queued CID must promote it";
+
+        dagSyncer_->ReleaseRootFetchStall();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto sa = crdtDatastore_->GetJobStatus( cid_a );
+                auto sb = crdtDatastore_->GetJobStatus( cid_b );
+                auto sc = crdtDatastore_->GetJobStatus( cid_c );
+                return sa.has_value() && sa.value() == CrdtDatastore::JobStatus::COMPLETED &&
+                       sb.has_value() && sb.value() == CrdtDatastore::JobStatus::COMPLETED &&
+                       sc.has_value() && sc.value() == CrdtDatastore::JobStatus::COMPLETED;
+            },
+            std::chrono::seconds( 15 ),
+            "not all three heads completed" );
+
+        auto order = crdtDatastore_->GetSeededRootOrderForTest();
+        ASSERT_GE( order.size(), 2U ) << "expected at least A and B seeded";
+        EXPECT_EQ( order.at( 0 ), cid_a.toString().value() );
+        ASSERT_EQ( order.at( 1 ), cid_b.toString().value() )
+            << "promoted head must seed before C, the ordinary head announced before it";
+        // C may seed after B (order A, B, C) or be absorbed by B's chain merge
+        // before its own seed (order A, B) - both prove B was fetched first.
+    }
 }

@@ -2729,10 +2729,22 @@ namespace sgns::crdt
         std::unique_lock lk( dagWorkerMutex_ );
         if ( IsRootCIDPendingOrActiveLocked( cid ) )
         {
-            return false;
+            if ( !priority )
+            {
+                return false;
+            }
+            // F19: a priority enqueue for a CID already queued ordinarily
+            // PROMOTES it instead of deduping. On a live fresh join the
+            // bootstrap blocks are first announced inside processing-channel
+            // batches (the blockchain pubsub topic is only subscribed after
+            // blockchain start succeeds), so the messenger inform that
+            // follows must jump the CID ahead of the history backlog.
+            if ( !PromotePendingRootLocked( cid ) )
+            {
+                return false; // active, or already in the priority queue
+            }
         }
-
-        if ( priority )
+        else if ( priority )
         {
             priorityRootQueue_.push( cid );
         }
@@ -2749,6 +2761,31 @@ namespace sgns::crdt
         // reached the pending root queue (this return-true branch).
         root_fetch_attempts_for_test_.fetch_add( 1, std::memory_order_relaxed );
         return true;
+    }
+
+    bool CrdtDatastore::PromotePendingRootLocked( const CID &cid )
+    {
+        // Priority enqueues are rare (bootstrap informs, priority-topic
+        // announcements), so the O(n) walk of the ordinary queue is fine.
+        std::queue<CID> remaining;
+        bool            found = false;
+        while ( !pendingRootQueue_.empty() )
+        {
+            const CID current = pendingRootQueue_.front();
+            pendingRootQueue_.pop();
+            if ( !found && current == cid )
+            {
+                found = true;
+                continue;
+            }
+            remaining.push( current );
+        }
+        pendingRootQueue_ = std::move( remaining );
+        if ( found )
+        {
+            priorityRootQueue_.push( cid );
+        }
+        return found;
     }
 
     uint64_t CrdtDatastore::GetRootFetchAttemptsForTest()
@@ -2795,6 +2832,11 @@ namespace sgns::crdt
     size_t CrdtDatastore::GetStalledDeltaRetryCountForTest() const
     {
         return stalledDeltaRetryCount_.load( std::memory_order_relaxed );
+    }
+
+    bool CrdtDatastore::EnqueueRootCIDForTest( const CID &cid, bool priority )
+    {
+        return EnqueueRootCID( cid, priority );
     }
 
     outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()
