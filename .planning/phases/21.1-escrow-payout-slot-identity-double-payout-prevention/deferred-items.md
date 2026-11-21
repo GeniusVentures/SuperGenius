@@ -25,16 +25,15 @@
   to the actual certified hold, while valid result-output tokens retain the
   builder's existing policy. No token registry or unknown-token rejection is
   claimed by this plan.
-- The owning `GetCertificateBySlot` API collapses authorization deferral and
-  rejection into the same error; its classified validation helpers are private.
-  The release resolver approves only through that API, rejects demonstrable
-  parse/key/hash/exact-transaction contradictions, and conservatively pends
-  other failed lookups, including a corrupted vote. A future owner-provided
-  classified lookup may refine liveness; raw record presence never authorizes.
-- Plan 04 must run the complete V2 `HandleNonceConsensusSubject` and ledger
-  ingress cases after adding tag-10 embedded dispatch and manager parser
-  registration. Plan 03 exercises the actual local type-rule and witness
-  gates, plus full ordinary-Transfer ingress (approve and missing-certificate
-  pending). Carry forward V2 approve, invalid-payment reject and missing-hold /
-  missing-certificate pending cases. Do not restore a fresh backdated Transfer
-  escrow exception to make historical replay pass.
+- Resolved in plan 06: owning `GetCertificateBySlot` preserves NOT_FOUND and
+  storage errors, maps rejected validation to invalid_argument, and maps
+  Pending/Stalled authority to resource_unavailable_try_again. The nonce
+  recovery lookup reuses that same authority. The release resolver consumes
+  the classified result directly; its temporary raw-record probe was removed.
+  Corrupted votes/quorum/registry bindings reject; missing/deferred evidence
+  remains retryable. No private authorization policy was copied into accounts.
+- Resolved in plan 04 and retained in plan 06's complete fast-target run: full
+  V2 `HandleNonceConsensusSubject` approve, invalid-payment reject and
+  missing-hold/certificate pending cases run through tag-10 dispatch and the
+  manager parser. Historical Transfer replay still requires private exact
+  canonical evidence; no fresh backdated Transfer escrow exception exists.
