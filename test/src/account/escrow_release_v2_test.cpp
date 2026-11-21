@@ -45,6 +45,16 @@ namespace sgns
         {
             return manager.CheckTransactionAuthorization( tx );
         }
+
+        static outcome::result<void> Parse( TransactionManager &manager, const GeniusTransaction &tx )
+        {
+            return manager.ParseTransaction( tx );
+        }
+
+        static outcome::result<void> Revert( TransactionManager &manager, const GeniusTransaction &tx )
+        {
+            return manager.RevertTransaction( tx );
+        }
     };
 }
 
@@ -346,6 +356,78 @@ namespace
         std::string                                                                  previous_authority_;
         std::unordered_map<std::string, GeniusTransaction::TransactionDeserializeFn> previous_decoders_;
     };
+
+    TEST_F( EscrowReleaseV2ValidationTest, ManagerDispatchReconstructsPaymentType )
+    {
+        const auto hold    = Hold();
+        auto       release = Release( *hold, *processor_ );
+        const auto raw     = release.SerializeByteVector();
+        const auto decoded = TransactionManager::DeSerializeTransaction( { raw.begin(), raw.end() } );
+        ASSERT_TRUE( decoded.has_value() );
+        ASSERT_NE( std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( decoded.value() ), nullptr );
+        EXPECT_TRUE( decoded.value()->CheckHash() );
+        EXPECT_TRUE( decoded.value()->CheckSignature() );
+        EXPECT_EQ( decoded.value()->GetSlotID(), release.GetSlotID() );
+        const auto embedded = TransactionManager::DeSerializeEmbeddedTransaction(
+            release.SerializeToEmbeddedTransaction() );
+        ASSERT_TRUE( embedded.has_value() );
+        ASSERT_NE( std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( embedded.value() ), nullptr );
+        EXPECT_EQ( embedded.value()->SerializeByteVector(), raw );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, ManagerDispatchPreservesMarkerWithoutFundsEffects )
+    {
+        const auto hold = Hold();
+        TrackOutputs( *hold );
+        auto      &ledger = account_->GetUTXOManager();
+        const auto before = ledger.GetBalance( hold->GetUTXOParameters().second.front().dest_address );
+        const auto raw    = base::unhex( escrow_release_legacy_fixture::FIXTURES.front().raw_hex );
+        ASSERT_TRUE( raw.has_value() );
+        const std::string bytes( raw.value().begin(), raw.value().end() );
+        const auto        decoded = TransactionManager::DeSerializeTransaction( bytes );
+        ASSERT_TRUE( decoded.has_value() );
+        const auto marker = std::dynamic_pointer_cast<EscrowReleaseTransaction>( decoded.value() );
+        ASSERT_NE( marker, nullptr );
+        const auto embedded = TransactionManager::DeSerializeEmbeddedTransaction(
+            marker->SerializeToEmbeddedTransaction() );
+        ASSERT_TRUE( embedded.has_value() );
+        ASSERT_NE( std::dynamic_pointer_cast<EscrowReleaseTransaction>( embedded.value() ), nullptr );
+        EXPECT_EQ( embedded.value()->SerializeByteVector(), decoded.value()->SerializeByteVector() );
+        EXPECT_EQ( marker->GetTopics().count( marker->GetEscrowSource() ), 1U );
+        ASSERT_TRUE( LegacyMintAdmissionTestAccess::Parse( *manager_, *marker ).has_value() );
+        ASSERT_TRUE( LegacyMintAdmissionTestAccess::Revert( *manager_, *marker ).has_value() );
+        EXPECT_EQ( ledger.GetBalance( hold->GetUTXOParameters().second.front().dest_address ), before );
+        EXPECT_EQ( ledger.GetBalance( marker->GetReleaseAddress() ), 0U );
+        EXPECT_FALSE( ledger.IsOutPointConsumed( base::Hash256::fromHex( hold->GetHash() ).value(), 0 ) );
+        EXPECT_FALSE( ledger.GetOutPointState( base::Hash256::fromHex( marker->GetHash() ).value(), 0 ).has_value() );
+        EXPECT_EQ( LegacyMintAdmissionTestAccess::TypeRules( *manager_, *marker ).check,
+                   ConsensusManager::Check::Reject );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2FullIngressUsesCertifiedHoldEvidence )
+    {
+        const auto                  hold    = Hold();
+        auto                        release = Release( *hold, *processor_ );
+        TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseIngressTest" ) );
+        auto                        result = handler.HandleNonceConsensusSubject( Subject( release, Proof( *hold ) ) );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value().check, ConsensusManager::Check::Pending );
+        Persist( *hold );
+        result = handler.HandleNonceConsensusSubject( Subject( release, Proof( *hold ) ) );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value().check, ConsensusManager::Check::Pending );
+        Certify( *hold );
+        TrackOutputs( *hold );
+        result = handler.HandleNonceConsensusSubject( Subject( release, Proof( *hold ) ) );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value().check, ConsensusManager::Check::Approve );
+        auto invalid                            = release.GetUTXOParameters();
+        invalid.second.front().encrypted_amount = 18;
+        auto bad                                = Payment( invalid, *processor_ );
+        result                                  = handler.HandleNonceConsensusSubject( Subject( bad, Proof( *hold ) ) );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value().check, ConsensusManager::Check::Reject );
+    }
 
     TEST_F( EscrowReleaseV2ValidationTest, V2ResolverBindsCertifiedHold )
     {
