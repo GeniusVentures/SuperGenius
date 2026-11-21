@@ -277,11 +277,11 @@ Plans:
   4. Existing generic duplicate transaction/certificate handling recognizes same-job payout competitors across different peers, including minimal integration fixes where sender/nonce assumptions bypass the canonical slot; no new settlement registry, quarantine policy, or general input-lock/recovery protocol is required (PAYSAFE-04).
   5. Release regressions mirror MintSlotIgnoresProposalEnvelope and SharedMintSlotConfirmsOnlyTheCertifiedTransaction, plus different-escrow, type/serialization/dispatch, transfer-bypass rejection, invalid-release-input, legacy-cutover, and replay/restart/sync cases showing one payout effect. Existing payout contents and Mint/ordinary-transfer regressions stay green; incident scenarios A-E remain relevant validation inputs (PAYSAFE-05).
 
-**Plans:** 1/8 plans executed
+**Plans:** 2/8 plans executed
 **Wave 1**
 
 - [x] 21.1-01-PLAN.md — Behavior-preserving shared payment apply/revert contracts
-- [ ] 21.1-02-PLAN.md — V2 funds-transfer and faithful legacy marker codecs, wire contracts, and fixtures
+- [x] 21.1-02-PLAN.md — V2 funds-transfer and faithful legacy marker codecs, wire contracts, and fixtures
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -450,7 +450,7 @@ Plans:
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 9/9 | Complete | 2026-10-21 |
-| 21.1. Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED) | v1.3 | 1/8 | In Progress|  |
+| 21.1. Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED) | v1.3 | 2/8 | In Progress|  |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |
