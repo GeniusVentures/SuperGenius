@@ -7,6 +7,7 @@
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/dynamic_message.h>
 #include <chrono>
+#include <limits>
 
 #include "account/GeniusInputValidator.hpp"
 #include "account/UTXOManager.hpp"
@@ -43,8 +44,8 @@ namespace
         void SetUp() override
         {
             previous_decoders_ = GeniusTransaction::GetDeSerializers();
-            account_   = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
-            processor_ = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+            account_           = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+            processor_         = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
             ASSERT_NE( account_, nullptr );
             ASSERT_NE( processor_, nullptr );
             ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
@@ -177,10 +178,44 @@ namespace
             ASSERT_TRUE( blockchain_->GetCertificateBySlot( transaction.GetSlotID() ).has_value() );
         }
 
-        GeniusInputValidator                validator_;
-        std::shared_ptr<GeniusAccount>      account_;
-        std::shared_ptr<GeniusAccount>      processor_;
-        std::shared_ptr<Blockchain>         blockchain_;
+        void TrackOutputs( const GeniusTransaction &producer )
+        {
+            const auto outputs = producer.GetProducedUTXOs();
+            if ( !outputs )
+            {
+                FAIL() << "Producer must expose its actual outputs";
+            }
+            for ( const auto &output : *outputs )
+            {
+                ASSERT_TRUE( account_->GetUTXOManager().PutUTXO( output, output.GetOwnerAddress() ).has_value() );
+            }
+        }
+
+        Verdict Local( const GeniusTransaction &transaction ) const
+        {
+            const auto params = transaction.GetUTXOParametersOpt();
+            if ( !params )
+            {
+                return Verdict::kInvalid;
+            }
+            return validator_.ValidateTransactionUTXOParameters( transaction,
+                                                                 *params,
+                                                                 transaction.GetSrcAddress(),
+                                                                 account_->GetUTXOManager(),
+                                                                 *blockchain_ );
+        }
+
+        EscrowReleaseTransactionV2 Payment( const UTXOTxParameters &params, GeniusAccount &signer )
+        {
+            auto payment = EscrowReleaseTransactionV2::New( params.first, params.second, Dag( signer ) );
+            payment.MakeSignature( signer );
+            return payment;
+        }
+
+        GeniusInputValidator                                                         validator_;
+        std::shared_ptr<GeniusAccount>                                               account_;
+        std::shared_ptr<GeniusAccount>                                               processor_;
+        std::shared_ptr<Blockchain>                                                  blockchain_;
         std::shared_ptr<TransactionManager>                                          manager_;
         std::string                                                                  previous_authority_;
         std::unordered_map<std::string, GeniusTransaction::TransactionDeserializeFn> previous_decoders_;
@@ -240,6 +275,104 @@ namespace
         EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kNotSynced );
         Persist( *hold );
         EXPECT_EQ( validator_.ResolveEscrowReleaseInput( release, *blockchain_ ).verdict, Verdict::kNotSynced );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2LocalAcceptsAnyValidProcessor )
+    {
+        const auto hold = Hold();
+        Certify( *hold );
+        TrackOutputs( *hold );
+        for ( const auto &signer : { account_, processor_ } )
+        {
+            const auto release = Release( *hold, *signer );
+            EXPECT_EQ( Local( release ), Verdict::kValid );
+            EXPECT_EQ( validator_.ValidateTransactionUTXOParameters( release,
+                                                                     release.GetUTXOParameters(),
+                                                                     "different-source",
+                                                                     account_->GetUTXOManager(),
+                                                                     *blockchain_ ),
+                       Verdict::kInvalid );
+        }
+        const auto release = Release( *hold, *processor_ );
+        auto       params  = release.GetUTXOParameters();
+        params.second      = { { 6, account_->GetAddress(), TokenID::FromBytes( { 0 } ) },
+                               { 11, processor_->GetAddress(), TokenID::FromBytes( { 0x7f } ) } };
+        EXPECT_EQ( Local( Payment( params, *processor_ ) ), Verdict::kValid );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, V2LocalRejectsInvalidPaymentInputs )
+    {
+        const auto hold = Hold();
+        Certify( *hold );
+        TrackOutputs( *hold );
+        const auto release = Release( *hold, *processor_ );
+        const auto good    = release.GetUTXOParameters();
+        EXPECT_EQ( Local( release ), Verdict::kValid );
+        auto invalid = good;
+        invalid.first.clear();
+        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        invalid = good;
+        invalid.first.push_back( invalid.first.front() );
+        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        invalid                           = good;
+        invalid.first.front().output_idx_ = 1;
+        invalid.first.front().signature_  = processor_->Sign( invalid.first.front().SerializeForSigning() );
+        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        invalid                          = good;
+        invalid.first.front().signature_ = account_->Sign( invalid.first.front().SerializeForSigning() );
+        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        invalid                                 = good;
+        invalid.second.front().encrypted_amount = 18;
+        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        invalid                         = good;
+        invalid.second.front().token_id = TokenID();
+        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        invalid        = good;
+        invalid.second = {
+            { std::numeric_limits<uint64_t>::max(), account_->GetAddress(), TokenID::FromBytes( { 0 } ) },
+            { 18, account_->GetAddress(), TokenID::FromBytes( { 0 } ) } };
+        EXPECT_EQ( Local( Payment( invalid, *processor_ ) ), Verdict::kInvalid );
+        auto bad_account_signature = release;
+        bad_account_signature.dag_st.set_signature( "invalid" );
+        EXPECT_EQ( Local( bad_account_signature ), Verdict::kInvalid );
+        ASSERT_TRUE( account_->GetUTXOManager()
+                         .ConsumeUTXOs( good.first, hold->GetUTXOParameters().second.front().dest_address )
+                         .has_value() );
+        EXPECT_EQ( Local( release ), Verdict::kInvalid );
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, FreshTransferEscrowBypassRejectedLocally )
+    {
+        const auto hold = Hold();
+        Certify( *hold );
+        TrackOutputs( *hold );
+        const auto release = Release( *hold, *processor_ );
+        const auto params  = release.GetUTXOParameters();
+        for ( const auto &uncle :
+              { hold->GetUTXOParameters().second.front().dest_address, "0x" + std::string( 64, 'f' ) } )
+        {
+            for ( const bool backdated : { false, true } )
+            {
+                auto dag = Dag( *processor_ );
+                dag.set_uncle_hash( uncle );
+                if ( backdated )
+                {
+                    dag.set_timestamp( 1 );
+                }
+                auto transfer = TransferTransaction::New( params.first, params.second, std::move( dag ) );
+                transfer.MakeSignature( *processor_ );
+                EXPECT_EQ( Local( transfer ), Verdict::kInvalid );
+            }
+        }
+        auto owned = TransferTransaction::New( {},
+                                               { { 17, processor_->GetAddress(), TokenID::FromBytes( { 0 } ) } },
+                                               Dag( *account_, 7 ) );
+        owned.MakeSignature( *account_ );
+        TrackOutputs( owned );
+        const auto spend = Release( owned, *processor_ );
+        auto ordinary    = TransferTransaction::New( spend.GetInputInfos(), spend.GetDstInfos(), Dag( *processor_ ) );
+        ordinary.MakeSignature( *processor_ );
+        EXPECT_EQ( Local( ordinary ), Verdict::kValid );
     }
 
     template <typename Message>

@@ -498,6 +498,17 @@ TEST_F( UTXOManagerTest, ExactOutpointLookupFindsEscrowOwnedUTXO )
     EXPECT_EQ( utxo->GetAmount(), 100u );
 }
 
+TEST_F( UTXOManagerTest, OrdinaryVerifierRejectsEscrowOwnerOverride )
+{
+    const std::string owner = "0x" + std::string( 64, 'a' );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ), owner ).value() );
+    InputUTXOInfo input{ DUMMY_HASH, 0, {} };
+    const auto    signature = crypto::sha2_256( input.SerializeForSigning() );
+    input.signature_        = { signature.begin(), signature.end() };
+    const UTXOTxParameters params{ { input }, { { 100, "recipient", TOKEN_1 } } };
+    EXPECT_FALSE( utxo_manager->VerifyParameters( params, std::string( PRIV_KEY ) ) );
+}
+
 TEST_F( UTXOManagerTest, RollbackOnlyReleasesMatchingReservation )
 {
     ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ) ).value() );
