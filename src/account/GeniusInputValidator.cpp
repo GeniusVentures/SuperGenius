@@ -28,6 +28,7 @@
 #include "blockchain/Consensus.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "base/logger.hpp"
+#include "storage/database_error.hpp"
 
 namespace sgns
 {
@@ -104,6 +105,12 @@ namespace sgns
                 std::string_view( reinterpret_cast<const char *>( token_bytes.data() ), token_bytes.size() ) );
         }
 
+        bool HasEscrowLockOutput( const EscrowTransaction &producer )
+        {
+            const auto params = producer.GetUTXOParameters();
+            return !params.second.empty() && utxo_address::IsEscrowLockAddress( params.second.front().dest_address );
+        }
+
     } // namespace
 
     base::Logger InputValidatorLogger()
@@ -135,36 +142,44 @@ namespace sgns
         {
             return {};
         }
+        return ResolveCertifiedEscrowHold( params.first.front().txid_hash_.toReadableString(), blockchain );
+    }
+
+    GeniusInputValidator::EscrowReleaseInput GeniusInputValidator::ResolveCertifiedEscrowHold(
+        const std::string &producer_hash,
+        const Blockchain  &blockchain ) const
+    {
         const auto db = blockchain.GetGlobalDB();
         if ( !db )
         {
             return { WitnessVerdict::kNotSynced, nullptr };
         }
-        const auto producer_hash = params.first.front().txid_hash_.toReadableString();
-        const auto path          = TransactionManager::GetTransactionPath( producer_hash );
-        const auto bytes         = db->Get( path );
-        if ( bytes.has_error() )
+        const auto                               path  = TransactionManager::GetTransactionPath( producer_hash );
+        const auto                               bytes = db->Get( path );
+        std::shared_ptr<const EscrowTransaction> known_producer;
+        if ( bytes.has_value() )
+        {
+            const auto fetched = TransactionManager::DeSerializeTransaction( bytes.value() );
+            if ( fetched.has_error() || !fetched.value() || fetched.value()->GetHash() != producer_hash ||
+                 !fetched.value()->CheckHash() )
+            {
+                return {};
+            }
+            known_producer = std::dynamic_pointer_cast<const EscrowTransaction>( fetched.value() );
+            if ( !known_producer || !HasEscrowLockOutput( *known_producer ) )
+            {
+                return {};
+            }
+        }
+        else if ( bytes.error() != storage::DatabaseError::NOT_FOUND )
         {
             return { WitnessVerdict::kNotSynced, nullptr };
         }
-        const auto fetched = TransactionManager::DeSerializeTransaction( bytes.value() );
-        if ( fetched.has_error() || !fetched.value() || fetched.value()->GetHash() != producer_hash ||
-             !fetched.value()->CheckHash() )
-        {
-            return {};
-        }
-        const auto producer = std::dynamic_pointer_cast<const EscrowTransaction>( fetched.value() );
-        if ( !producer )
-        {
-            return {};
-        }
-        const auto hold_params = producer->GetUTXOParameters();
-        if ( hold_params.second.empty() ||
-             !utxo_address::IsEscrowLockAddress( hold_params.second.front().dest_address ) )
-        {
-            return {};
-        }
-        const auto certificate = blockchain.GetCertificateBySlot( producer->GetSlotID() );
+
+        // Pruning removes the value, not the exact canonical finality record.
+        // Only consensus may establish that the retained record is authoritative.
+        const auto certificate = known_producer ? blockchain.GetCertificateBySlot( known_producer->GetSlotID() )
+                                                : blockchain.FindCertificateByTransactionHash( producer_hash );
         if ( certificate.has_error() )
         {
             if ( certificate.error() == std::errc::invalid_argument )
@@ -173,7 +188,30 @@ namespace sgns
             }
             return { WitnessVerdict::kNotSynced, nullptr };
         }
-        if ( !TransactionManager::CertificateMatchesTransaction( certificate.value(), *producer ) )
+        const auto subject = ConsensusManager::DecodeNonceSubject( certificate.value().proposal().subject() );
+        if ( subject.has_error() || subject.value().transaction().transaction_case() != EmbeddedTransaction::kEscrow )
+        {
+            return {};
+        }
+        const auto fetched = TransactionManager::DeSerializeEmbeddedTransaction( subject.value().transaction() );
+        if ( fetched.has_error() || !fetched.value() )
+        {
+            return {};
+        }
+        const auto producer = std::dynamic_pointer_cast<const EscrowTransaction>( fetched.value() );
+        if ( !producer || producer->GetHash() != producer_hash || !producer->CheckHash() )
+        {
+            return {};
+        }
+        if ( !HasEscrowLockOutput( *producer ) )
+        {
+            return {};
+        }
+        if ( !TransactionManager::CertificateMatchesTransaction( certificate.value(), *producer ) ||
+             ConsensusManager::GetSlotKey( certificate.value().proposal() ) != producer->GetSlotID() ||
+             subject.value().transaction().SerializeAsString() !=
+                 producer->SerializeToEmbeddedTransaction().SerializeAsString() ||
+             ( known_producer && known_producer->SerializeByteVector() != producer->SerializeByteVector() ) )
         {
             return {};
         }

@@ -2852,24 +2852,12 @@ namespace sgns
             return std::optional<std::string>{};
         }
         const auto hash = params->first.front().txid_hash_.toReadableString();
-        BOOST_OUTCOME_TRY( auto bytes, globaldb_m->Get( GetTransactionPath( hash ) ) );
-        BOOST_OUTCOME_TRY( auto producer, DeSerializeTransaction( bytes ) );
-        if ( !producer || producer->GetHash() != hash || !producer->CheckHash() )
+        const auto resolved = genius_input_validator_.ResolveCertifiedEscrowHold( hash, *blockchain_ );
+        if ( resolved.verdict != IInputValidator::WitnessVerdict::kValid || !resolved.producer )
         {
             return std::errc::invalid_argument;
         }
-        const auto hold = std::dynamic_pointer_cast<const EscrowTransaction>( producer );
-        if ( !hold )
-        {
-            return std::optional<std::string>{};
-        }
-        BOOST_OUTCOME_TRY( GetCertifiedApplicationEvidence( *hold ) );
-        const auto outputs = hold->GetUTXOParameters().second;
-        if ( outputs.empty() || !utxo_address::IsEscrowLockAddress( outputs.front().dest_address ) )
-        {
-            return std::errc::invalid_argument;
-        }
-        return std::optional{ outputs.front().dest_address };
+        return std::optional{ resolved.producer->GetUTXOParameters().second.front().dest_address };
     }
 
     outcome::result<void> TransactionManager::ApplyUTXOPayment( const GeniusTransaction &payment,

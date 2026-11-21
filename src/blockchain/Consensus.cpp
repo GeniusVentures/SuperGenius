@@ -5004,6 +5004,24 @@ namespace sgns
         {
             return outcome::failure( std::errc::invalid_argument );
         }
+        return FindCanonicalNonceCertificate( account_id, nonce, expected_tx_hash );
+    }
+
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::FindCertificateByTransactionHash(
+        const std::string &expected_tx_hash ) const
+    {
+        if ( expected_tx_hash.empty() || !db_ )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return FindCanonicalNonceCertificate( std::nullopt, std::nullopt, expected_tx_hash );
+    }
+
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::FindCanonicalNonceCertificate(
+        const std::optional<std::string> &account_id,
+        const std::optional<uint64_t>    &nonce,
+        const std::optional<std::string> &expected_tx_hash ) const
+    {
         BOOST_OUTCOME_TRY( auto records, db_->QueryKeyValues( CERTIFICATE_BASE_PATH_KEY ) );
         std::optional<Certificate> selected;
         for ( const auto &[key, value] : records )
@@ -5012,7 +5030,7 @@ namespace sgns
             // A malformed unrelated record cannot identify this subject. The direct
             // slot path still reports its parse failure when its slot is known.
             if ( !candidate.ParseFromString( value.toString() ) ||
-                 candidate.proposal().subject().account_id() != account_id ||
+                 ( account_id && candidate.proposal().subject().account_id() != *account_id ) ||
                  !SubjectTypeMatches( candidate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
             {
                 continue;
@@ -5020,9 +5038,15 @@ namespace sgns
             auto subject = DecodeNonceSubject( candidate.proposal().subject() );
             if ( subject.has_error() )
             {
-                return outcome::failure( std::errc::invalid_argument );
+                if ( account_id )
+                {
+                    return outcome::failure( std::errc::invalid_argument );
+                }
+                // Without a known account, malformed unrelated payloads cannot
+                // identify the requested transaction hash.
+                continue;
             }
-            if ( subject.value().nonce() != nonce ||
+            if ( ( nonce && subject.value().nonce() != *nonce ) ||
                  ( expected_tx_hash && subject.value().tx_hash() != *expected_tx_hash ) )
             {
                 continue;

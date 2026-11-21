@@ -8,6 +8,7 @@
 #define SGNS_GENIUS_INPUT_VALIDATOR_HPP
 
 #include <memory>
+#include <string>
 
 #include "account/InputValidators.hpp"
 
@@ -37,6 +38,15 @@ namespace sgns
          */
         EscrowReleaseInput ResolveEscrowReleaseInput( const EscrowReleaseTransactionV2 &release,
                                                       const Blockchain                 &blockchain ) const;
+
+        /**
+         * @brief Resolves an exact hold through its owning canonical certificate, including after value pruning.
+         * @param[in] producer_hash Exact escrow-hold transaction hash.
+         * @param[in] blockchain Authoritative producer and certificate source.
+         * @return Valid with the immutable hold, pending when evidence is missing, otherwise invalid.
+         */
+        EscrowReleaseInput ResolveCertifiedEscrowHold( const std::string &producer_hash,
+                                                       const Blockchain  &blockchain ) const;
 
         /// @copydoc IInputValidator::ValidateTransactionUTXOParameters
         WitnessVerdict ValidateTransactionUTXOParameters( const GeniusTransaction &tx,

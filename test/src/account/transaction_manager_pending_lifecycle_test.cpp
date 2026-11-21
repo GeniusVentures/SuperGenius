@@ -25,6 +25,7 @@
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "storage/database_error.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -341,14 +342,17 @@ namespace
                              .has_value() );
         }
 
-        void StoreCertificate( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+        void StoreCertificate( const std::shared_ptr<sgns::GeniusTransaction> &transaction,
+                               const std::optional<sgns::ConsensusSubject>    &supplied_subject = std::nullopt )
         {
-            auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
-                                                                       transaction->GetNonce(),
-                                                                       transaction->GetHash(),
-                                                                       transaction->SerializeToEmbeddedTransaction(),
-                                                                       std::nullopt,
-                                                                       std::nullopt );
+            auto subject = supplied_subject ? outcome::result<sgns::ConsensusSubject>( *supplied_subject )
+                                            : sgns::ConsensusManager::CreateNonceSubject(
+                                                  account_->GetAddress(),
+                                                  transaction->GetNonce(),
+                                                  transaction->GetHash(),
+                                                  transaction->SerializeToEmbeddedTransaction(),
+                                                  std::nullopt,
+                                                  std::nullopt );
             ASSERT_TRUE( subject.has_value() );
 
             auto proposal = sgns::ConsensusManager::CreateProposal( subject.value(),
@@ -383,11 +387,12 @@ namespace
             certificate_data.put( certificate.SerializeAsString() );
             // The canonical slot record is the sole certificate authority: store
             // and check at the transaction's slot, never at its hash.
-            ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + transaction->GetSlotID() ),
+            const auto slot = sgns::ConsensusManager::GetSlotKey( proposal.value() );
+            ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + slot ),
                                    certificate_data,
                                    { "CRDT.Datastore.TEST.Channel" } )
                              .has_value() );
-            ASSERT_TRUE( blockchain_->CheckCertificateForSlot( transaction->GetSlotID() ) );
+            ASSERT_TRUE( blockchain_->CheckCertificateForSlot( slot ) );
         }
 
         void StoreTransaction( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
@@ -1114,6 +1119,133 @@ TEST_F( TransactionDeletionRecoveryTest, V2UnappliedCleanupDoesNotRequireMissing
     ASSERT_TRUE( db_->Remove( sgns::crdt::HierarchicalKey( sgns::TransactionManager::GetTransactionPath( *hold ) ), {} )
                      .has_value() );
     EXPECT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *release ).has_value() );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, PrunedHoldRecoveryClassifiesCanonicalAuthority )
+{
+    const auto hold        = MakeCertifiedHold( 17 );
+    const auto certificate = blockchain_->GetCertificateBySlot( hold->GetSlotID() );
+    ASSERT_TRUE( certificate.has_value() );
+    StorePrunableTransaction( hold );
+    ASSERT_TRUE( manager_->EraseTransactionEntryPruned( hold->GetHash() ).has_value() );
+    const sgns::GeniusInputValidator validator;
+    auto resolve = [&] { return validator.ResolveCertifiedEscrowHold( hold->GetHash(), *blockchain_ ).verdict; };
+    auto persist = [&]( const std::string &slot, const sgns::ConsensusManager::Certificate &value )
+    {
+        sgns::base::Buffer bytes;
+        bytes.put( value.SerializeAsString() );
+        ASSERT_TRUE( db_->Put( { "/cert/" + slot }, bytes, {} ).has_value() );
+    };
+    EXPECT_EQ( resolve(), sgns::IInputValidator::WitnessVerdict::kValid );
+    const auto wrong_hash = blockchain_->FindCertificateByTransactionHash( std::string( 64, 'b' ) );
+    ASSERT_TRUE( wrong_hash.has_error() );
+    EXPECT_EQ( wrong_hash.error(), sgns::storage::DatabaseError::NOT_FOUND );
+
+    auto corrupt = certificate.value();
+    corrupt.mutable_votes( 0 )->set_signature( "invalid" );
+    persist( hold->GetSlotID(), corrupt );
+    EXPECT_EQ( resolve(), sgns::IInputValidator::WitnessVerdict::kInvalid );
+    persist( hold->GetSlotID(), certificate.value() );
+    persist( "misplaced-hold", certificate.value() );
+    const auto duplicate = blockchain_->FindCertificateByTransactionHash( hold->GetHash() );
+    ASSERT_TRUE( duplicate.has_error() );
+    EXPECT_EQ( duplicate.error(), std::errc::invalid_argument );
+    EXPECT_EQ( resolve(), sgns::IInputValidator::WitnessVerdict::kInvalid );
+    ASSERT_TRUE( db_->Remove( { "/cert/misplaced-hold" }, {} ).has_value() );
+    ASSERT_TRUE( db_->Remove( { "/cert/" + hold->GetSlotID() }, {} ).has_value() );
+    EXPECT_EQ( resolve(), sgns::IInputValidator::WitnessVerdict::kNotSynced );
+
+    const auto proposal = sgns::ConsensusManager::CreateProposal( certificate.value().proposal().subject(),
+                                                                  account_->GetAddress(),
+                                                                  "unavailable-registry",
+                                                                  0,
+                                                                  [this]( std::vector<uint8_t> payload )
+                                                                  { return account_->Sign( payload ); } );
+    ASSERT_TRUE( proposal.has_value() );
+    auto deferred                = certificate.value();
+    *deferred.mutable_proposal() = proposal.value();
+    deferred.set_proposal_id( proposal.value().proposal_id() );
+    deferred.set_registry_cid( proposal.value().registry_cid() );
+    deferred.set_registry_epoch( proposal.value().registry_epoch() );
+    auto *vote = deferred.mutable_votes( 0 );
+    vote->set_proposal_id( deferred.proposal_id() );
+    const auto signing_bytes = sgns::VoteSigningBytes( *vote );
+    ASSERT_TRUE( signing_bytes.has_value() );
+    const auto signature = account_->Sign( signing_bytes.value() );
+    vote->set_signature( signature.data(), signature.size() );
+    persist( hold->GetSlotID(), deferred );
+    const auto pending = blockchain_->FindCertificateByTransactionHash( hold->GetHash() );
+    ASSERT_TRUE( pending.has_error() );
+    EXPECT_EQ( pending.error(), std::errc::resource_unavailable_try_again );
+    EXPECT_EQ( resolve(), sgns::IInputValidator::WitnessVerdict::kNotSynced );
+}
+
+TEST_F( TransactionDeletionRecoveryTest, PrunedHoldRecoveryRequiresExactCanonicalSubject )
+{
+    const auto hold = MakeCertifiedHold( 17 );
+    StorePrunableTransaction( hold );
+    ASSERT_TRUE( manager_->EraseTransactionEntryPruned( hold->GetHash() ).has_value() );
+    const sgns::GeniusInputValidator validator;
+    const auto                       original = hold->SerializeToEmbeddedTransaction();
+    auto                             unknown  = original;
+    unknown.GetReflection()->MutableUnknownFields( &unknown )->AddVarint( 99, 1 );
+    for ( const auto &embedded : { unknown, original } )
+    {
+        const auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                                         hold->GetNonce(),
+                                                                         hold->GetHash(),
+                                                                         embedded,
+                                                                         std::nullopt,
+                                                                         std::nullopt );
+        ASSERT_TRUE( subject.has_value() );
+        StoreCertificate( hold, subject.value() );
+        EXPECT_EQ( validator.ResolveCertifiedEscrowHold( hold->GetHash(), *blockchain_ ).verdict,
+                   embedded.SerializeAsString() == original.SerializeAsString()
+                       ? sgns::IInputValidator::WitnessVerdict::kValid
+                       : sgns::IInputValidator::WitnessVerdict::kInvalid );
+    }
+    for ( const auto &[source, nonce] :
+          std::vector<std::pair<std::string, uint64_t>>{ { "different-source", hold->GetNonce() },
+                                                         { account_->GetAddress(), hold->GetNonce() + 1 } } )
+    {
+        const auto subject = sgns::ConsensusManager::CreateNonceSubject( source,
+                                                                         nonce,
+                                                                         hold->GetHash(),
+                                                                         original,
+                                                                         std::nullopt,
+                                                                         std::nullopt );
+        ASSERT_TRUE( subject.has_value() );
+        StoreCertificate( hold, subject.value() );
+        EXPECT_EQ( validator.ResolveCertifiedEscrowHold( hold->GetHash(), *blockchain_ ).verdict,
+                   sgns::IInputValidator::WitnessVerdict::kInvalid );
+    }
+    ASSERT_TRUE( db_->Remove( { "/cert/" + hold->GetSlotID() }, {} ).has_value() );
+    const auto release    = MakeRelease( *hold, { { 17, account_->GetAddress(), kTokenId } } );
+    const auto wrong_type = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                                        hold->GetNonce(),
+                                                                        hold->GetHash(),
+                                                                        release->SerializeToEmbeddedTransaction(),
+                                                                        std::nullopt,
+                                                                        std::nullopt );
+    ASSERT_TRUE( wrong_type.has_value() );
+    StoreCertificate( hold, wrong_type.value() );
+    EXPECT_EQ( validator.ResolveCertifiedEscrowHold( hold->GetHash(), *blockchain_ ).verdict,
+               sgns::IInputValidator::WitnessVerdict::kInvalid );
+    ASSERT_TRUE( db_->Remove( { "/cert/" + release->GetSlotID() }, {} ).has_value() );
+    StoreCertificate( hold );
+    const auto contradictory = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
+                                                                           hold->GetNonce() + 1,
+                                                                           hold->GetHash(),
+                                                                           {},
+                                                                           std::nullopt,
+                                                                           std::nullopt );
+    ASSERT_TRUE( contradictory.has_value() );
+    StoreCertificate( hold, contradictory.value() );
+    const auto ambiguous = blockchain_->FindCertificateByTransactionHash( hold->GetHash() );
+    ASSERT_TRUE( ambiguous.has_error() );
+    EXPECT_EQ( ambiguous.error(), std::errc::invalid_argument );
+    EXPECT_EQ( validator.ResolveCertifiedEscrowHold( hold->GetHash(), *blockchain_ ).verdict,
+               sgns::IInputValidator::WitnessVerdict::kInvalid );
 }
 
 TEST_F( TransactionDeletionRecoveryTest, V2CompletionRequiresActualSpenderPayment )
@@ -2097,6 +2229,19 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct 
     EXPECT_EQ( ledger.GetOutPointSpender( v2_hold_hash, 0 ), std::optional{ release_hash } );
     ExpectRecoveryPaymentOutputs( ledger, *release );
 
+    StorePrunableTransaction( legacy_hold );
+    ASSERT_TRUE( manager_->EraseTransactionEntryPruned( legacy_hold->GetHash() ).has_value() );
+    ASSERT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *legacy_hold ) ).has_error() );
+    const auto fresh = MakePaymentTransfer( funding.value(), outputs.value(), legacy_hold->GetUncleHash() );
+    ASSERT_TRUE( ConfirmPayment( fresh ).has_error() );
+    EXPECT_EQ( ledger.GetOutPointSpender( legacy_hold_hash, 0 ), std::optional{ historical_hash } );
+    EXPECT_FALSE( ledger.GetOutPointState( sgns::base::Hash256::fromHex( fresh->GetHash() ).value(), 0 ).has_value() );
+    for ( const auto &output : outputs.value() )
+    {
+        ASSERT_TRUE( ledger.ClearUnspentKeepConsumed( output.dest_address ).has_value() );
+        ASSERT_EQ( ledger.GetBalance( output.dest_address ), 0U );
+    }
+
     manager_->Stop();
     manager_.reset();
     ledger.ReleaseStorage();
@@ -2139,4 +2284,21 @@ TEST_F( TransactionDeletionRecoveryTest, LegacyHistoryAndV2ReplayRemainDistinct 
         EXPECT_EQ( ledger.GetUnconsumedUTXOs( output.dest_address ).size(), 2U );
     }
     EXPECT_EQ( total, AMOUNT );
+
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::Revert( *manager_, *historical ).has_value() );
+    const auto restored = ledger.GetUnconsumedUTXO( legacy_hold_hash, 0 );
+    if ( !restored )
+    {
+        FAIL() << "historical own rollback must restore the pruned original hold";
+    }
+    EXPECT_EQ( restored->GetOwnerAddress(), funding->GetOwnerAddress() );
+    EXPECT_EQ( restored->GetTokenID(), funding->GetTokenID() );
+    EXPECT_EQ( restored->GetAmount(), AMOUNT );
+    EXPECT_FALSE( ledger.GetOutPointState( historical_hash, 0 ).has_value() );
+    ExpectRecoveryPaymentOutputs( ledger, *release );
+    for ( const auto &output : outputs.value() )
+    {
+        EXPECT_EQ( ledger.GetBalance( output.token_id, output.dest_address ), output.encrypted_amount );
+        EXPECT_EQ( ledger.GetUnconsumedUTXOs( output.dest_address ).size(), 1U );
+    }
 }

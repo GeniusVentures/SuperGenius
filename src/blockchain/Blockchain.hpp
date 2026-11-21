@@ -343,6 +343,13 @@ namespace sgns
             uint64_t                          nonce,
             const std::optional<std::string> &expected_tx_hash = std::nullopt ) const;
         /**
+         * @brief Forwards exact transaction-hash recovery through owning canonical certificate validation.
+         * @param[in] expected_tx_hash Exact nonce-subject transaction hash.
+         * @return Unique approved certificate or the owning classified lookup error.
+         */
+        outcome::result<ConsensusManager::Certificate> FindCertificateByTransactionHash(
+            const std::string &expected_tx_hash ) const;
+        /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
          * @param[in] b Second hash candidate.

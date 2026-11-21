@@ -664,6 +664,13 @@ namespace sgns
             uint64_t                          nonce,
             const std::optional<std::string> &expected_tx_hash = std::nullopt ) const;
         /**
+         * @brief Recovers a unique transaction from existing canonical nonce certificates.
+         * @param[in] expected_tx_hash Exact subject transaction hash.
+         * @return Validated certificate, with the same classified errors as GetCertificateBySlot;
+         *         contradictory or ambiguous matching records are invalid_argument.
+         */
+        outcome::result<Certificate> FindCertificateByTransactionHash( const std::string &expected_tx_hash ) const;
+        /**
          * @brief Checks whether an approved authoritative certificate exists for a canonical slot.
          * @param[in] slot_key Canonical slot key, without the `/cert/` prefix.
          * @return `true` only when the exact authoritative record is approved.
@@ -725,6 +732,18 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class MultiNodeFinalityFaultTestAccess;
         friend class ValidatorAdmissionEquivocationTestAccess;
+
+        /**
+         * @brief Applies exact subject filters to the shared read-only canonical certificate scan.
+         * @param[in] account_id Optional exact account; matching malformed subjects reject when known.
+         * @param[in] nonce Optional exact nonce.
+         * @param[in] expected_tx_hash Optional exact transaction hash.
+         * @return Unique owning validated readback or its classified lookup error.
+         */
+        outcome::result<Certificate> FindCanonicalNonceCertificate(
+            const std::optional<std::string> &account_id,
+            const std::optional<uint64_t>    &nonce,
+            const std::optional<std::string> &expected_tx_hash ) const;
 
         /**
          * @brief Constructs a consensus manager.
