@@ -55,6 +55,119 @@ namespace sgns
     class MultiNodeFinalityFaultTestAccess
     {
     public:
+        /// @brief Reads the configured proposal-attempt lifetime without changing the test clock.
+        static std::chrono::milliseconds EscrowProposalTTL( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager->pending_config_.pending_ttl;
+        }
+
+        /// @brief Reads the pending-vote lifetime for aged historical certificate data.
+        static std::chrono::milliseconds EscrowVoteTTL()
+        {
+            return ConsensusManager::kPendingVoteQueueTTL;
+        }
+
+        /// @brief Exercises the manager-selected local input validator.
+        static IInputValidator::WitnessVerdict EscrowAdmission( TransactionManager      &manager,
+                                                                const GeniusTransaction &transaction )
+        {
+            const auto parameters = transaction.GetUTXOParametersOpt();
+            if ( !parameters.has_value() )
+            {
+                return IInputValidator::WitnessVerdict::kInvalid;
+            }
+            const auto &[chain, validator] = manager.SelectInputValidator( transaction );
+            return validator.ValidateTransactionUTXOParameters( transaction,
+                                                                parameters.value(),
+                                                                transaction.GetSrcAddress(),
+                                                                manager.account_m->GetUTXOManager(),
+                                                                *manager.blockchain_ );
+        }
+
+        /// @brief Replays canonical evidence through the production consensus collaborator.
+        static outcome::result<ConsensusManager::Check> EscrowApplyCertificate(
+            TransactionManager                  &manager,
+            const std::string                   &transaction_hash,
+            const ConsensusManager::Certificate &certificate )
+        {
+            return manager.consensus_m_->OnConsensusCertificate( transaction_hash, certificate );
+        }
+
+        /// @brief Checks canonical subject identity independently of signed-byte application evidence.
+        static bool EscrowCertificateMatches( const ConsensusManager::Certificate &certificate,
+                                              const GeniusTransaction             &transaction )
+        {
+            return TransactionManager::CertificateMatchesTransaction( certificate, transaction );
+        }
+
+        /// @brief Reserves the normal outgoing nonce and predecessor for a known local intent.
+        static SGTransaction::DAGStruct EscrowIntentDAG( TransactionManager &manager, const std::string &lock )
+        {
+            return manager.FillDAGStruct( lock );
+        }
+
+        /// @brief Checks the private signed-byte application binding in addition to subject identity.
+        static bool EscrowExactHistory( TransactionManager &manager, const GeniusTransaction &transaction )
+        {
+            return manager.GetCertifiedApplicationEvidence( transaction ).has_value();
+        }
+
+        /// @brief Derives recipients from retained complete results using the existing payout owner.
+        static outcome::result<std::vector<OutputDestInfo>> EscrowPayoutOutputs(
+            const SGProcessing::TaskResult &results,
+            uint64_t                        amount,
+            const TokenID                  &token )
+        {
+            return TransactionManager::BuildPayoutOutputs( results,
+                                                           amount,
+                                                           token,
+                                                           TransactionManager::BURN_BASIS_POINTS_DEFAULT );
+        }
+
+        /// @brief Retains an old signed local intent in the existing outgoing queue.
+        static void EscrowEnqueueIntent( TransactionManager                       &manager,
+                                         const std::shared_ptr<GeniusTransaction> &transaction )
+        {
+            TransactionManager::TransactionBatch batch;
+            batch.emplace_back( transaction, std::nullopt );
+            manager.EnqueueTransaction( TransactionManager::TransactionItem{ std::move( batch ), nullptr } );
+        }
+
+        /// @brief Snapshots queued signed transactions under the queue owner's lock.
+        static std::vector<std::shared_ptr<GeniusTransaction>> EscrowQueuedTransactions( TransactionManager &manager )
+        {
+            std::lock_guard                                 lock( manager.mutex_m );
+            std::vector<std::shared_ptr<GeniusTransaction>> result;
+            for ( const auto &item : manager.tx_queue_m )
+            {
+                for ( const auto &entry : item.first )
+                {
+                    result.push_back( entry.first );
+                }
+            }
+            return result;
+        }
+
+        // Same rollback + successful dequeue used by TickOnce, with no timer or
+        // publish side effects. The test must establish absence of certification
+        // before invoking this seam; this is not a general migration operation.
+        static outcome::result<void> EscrowRollbackQueuedIntent( TransactionManager &manager,
+                                                                 const std::string  &transaction_hash )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            if ( manager.tx_queue_m.empty() || manager.tx_queue_m.front().first.size() != 1 ||
+                 manager.tx_queue_m.front().first.front().first->GetHash() != transaction_hash )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            auto rolled_back = manager.RollbackTransactions( manager.tx_queue_m.front() );
+            if ( rolled_back.has_value() )
+            {
+                manager.tx_queue_m.pop_front();
+            }
+            return rolled_back;
+        }
+
         /// @brief Applies real certified fixture producers through the manager's normal effects path.
         static outcome::result<void> Confirm( TransactionManager                       &manager,
                                               const std::shared_ptr<GeniusTransaction> &transaction )
@@ -2101,6 +2214,458 @@ TEST_F( FinalityFaultNetwork, EscrowReleaseDifferentHoldsRemainIndependent )
         std::chrono::seconds( 25 ),
         "different hold slots each produce their complete payment",
         nullptr );
+    StopNetwork( network );
+}
+
+TEST_F( FinalityFaultNetwork, EscrowReleaseDelayedDeliveryRestartAndCatchupPaysOnce )
+{
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    for ( uint16_t leg = 0; leg < 2; ++leg )
+    {
+        SCOPED_TRACE( leg == 0 ? "D-partition-certificate-first" : "E-restart-passive-catchup" );
+        auto network = StartNetwork( "escrow-delay-" + std::to_string( leg ),
+                                     static_cast<uint16_t>( 54851 + leg * 10 ) );
+        StoreRegistry( network );
+        const auto hold = EscrowHold( network );
+        EstablishEscrow( network, hold );
+        auto winner = EscrowPayment( network.second, *hold, network.passive.account->GetAddress() );
+        auto loser  = EscrowPayment( network.third, *hold, network.passive.account->GetAddress() );
+        ASSERT_TRUE( winner && loser );
+        const auto proposal  = EscrowProposal( network.second, *winner );
+        const auto contender = EscrowProposal( network.third, *loser );
+        ASSERT_TRUE( proposal.has_value() && contender.has_value() );
+        ASSERT_TRUE( network.second.consensus->SubmitProposal( proposal.value() ).has_value() );
+        EXPECT_FALSE( network.second.consensus->CheckCertificateForSlot( winner->GetSlotID() ) );
+        EXPECT_FALSE( HasEscrowPayment( network.second, *hold, *winner, loser.get() ) );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                return sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.second.consensus,
+                                                                                            winner->GetSlotID() ) ==
+                       proposal.value().proposal_id();
+            },
+            std::chrono::seconds( 5 ),
+            "the isolated first submitter durably votes its own payment",
+            nullptr );
+        // D begins with split votes; E reorders a contender behind a durable matching vote.
+        const auto &third_proposal = leg == 0 ? contender.value() : proposal.value();
+        ASSERT_TRUE( network.third.consensus->SubmitProposal( third_proposal ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                return sgns::MultiNodeFinalityFaultTestAccess::DurableActiveVoteProposalId( network.third.consensus,
+                                                                                            winner->GetSlotID() ) ==
+                       third_proposal.proposal_id();
+            },
+            std::chrono::seconds( 5 ),
+            "the second submitter has its explicit partitioned vote",
+            nullptr );
+        ASSERT_TRUE( network.third.consensus->SubmitProposal( contender.value() ).has_value() );
+        ConnectValidatorPeers( { &network.first, &network.second, &network.third } );
+        ASSERT_TRUE( network.second.consensus->SubmitProposal( proposal.value() ).has_value() );
+        ASSERT_WAIT_FOR_CONDITION( [&]
+                                   { return network.first.consensus->CheckCertificateForSlot( winner->GetSlotID() ); },
+                                   std::chrono::seconds( 25 ),
+                                   "partitioned validators finalize exactly one payment",
+                                   nullptr );
+        const auto certificate = network.first.consensus->GetCertificateBySlot( winner->GetSlotID() );
+        ASSERT_TRUE( certificate.has_value() );
+        const auto certified_hash = sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash(
+            certificate.value().proposal() );
+        ASSERT_TRUE( certified_hash == winner->GetHash() || certified_hash == loser->GetHash() );
+        if ( certified_hash == loser->GetHash() )
+        {
+            std::swap( winner, loser );
+        }
+        EXPECT_FALSE( network.passive.consensus->CheckCertificateForSlot( winner->GetSlotID() ) );
+        if ( leg == 0 )
+        {
+            // The public certificate intake precedes transaction/CRDT catch-up on the isolated receiver.
+            ASSERT_TRUE( network.passive.consensus->SubmitCertificate( certificate.value() ).has_value() );
+            ASSERT_TRUE( network.passive.consensus->SubmitProposal( contender.value() ).has_value() );
+        }
+        RestartPeer( network.third );
+        if ( leg == 1 )
+        {
+            RestartPeer( network.passive );
+        }
+        ConnectPeers( Peers( network ) );
+        const auto monitored = network.first.db->GetMonitoredTopics();
+        ASSERT_TRUE( monitored.has_value() );
+        ASSERT_TRUE(
+            network.first.db
+                ->RequestHeadBroadcast( std::set<std::string>( monitored.value().begin(), monitored.value().end() ) )
+                .has_value() );
+        const auto peers = Peers( network );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                return std::all_of( peers.begin(),
+                                    peers.end(),
+                                    [&]( const auto *peer )
+                                    {
+                                        return peer->consensus->CheckCertificateForSlot( winner->GetSlotID() ) &&
+                                               HasEscrowPayment( *peer, *hold, *winner, loser.get() );
+                                    } );
+            },
+            std::chrono::seconds( 25 ),
+            "restart and passive catch-up preserve one complete payment",
+            nullptr );
+        for ( auto *peer : peers )
+        {
+            const auto canonical = peer->consensus->GetCertificateBySlot( winner->GetSlotID() );
+            ASSERT_TRUE( canonical.has_value() );
+            EXPECT_EQ( canonical.value().proposal_id(), certificate.value().proposal_id() );
+            EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::NonceTransactionHash( canonical.value().proposal() ),
+                       winner->GetHash() );
+            ASSERT_TRUE( peer->consensus->SubmitCertificate( certificate.value() ).has_value() );
+            EXPECT_TRUE( HasEscrowPayment( *peer, *hold, *winner, loser.get() ) );
+        }
+        StopNetwork( network );
+    }
+}
+
+TEST_F( FinalityFaultNetwork, EscrowReleaseLegacyCertificateOutlivesProposalTTL )
+{
+    using Access = sgns::MultiNodeFinalityFaultTestAccess;
+    using Check  = sgns::ConsensusManager::Check;
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto network = StartNetwork( "escrow-legacy-ttl", 54951 );
+    ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus &&
+                 network.passive.consensus );
+    StoreRegistry( network );
+    ConnectPeers( Peers( network ) );
+    const auto hold = EscrowHold( network );
+    ASSERT_TRUE( hold );
+    EstablishEscrow( network, hold );
+
+    const auto payment_shape = EscrowPayment( network.second, *hold, network.passive.account->GetAddress() );
+    ASSERT_TRUE( payment_shape );
+    auto fresh = std::make_shared<sgns::TransferTransaction>(
+        sgns::TransferTransaction::New( payment_shape->GetInputInfos(),
+                                        payment_shape->GetDstInfos(),
+                                        payment_shape->dag_st ) );
+    fresh->MakeSignature( *network.second.account );
+    ASSERT_TRUE( fresh->CheckHash() && fresh->CheckSignature() );
+    for ( auto *peer : Peers( network ) )
+    {
+        // This is the actual selected local admission validator with certified
+        // hold evidence present. Fresh old-format escrow spending is invalid.
+        EXPECT_EQ( Access::EscrowAdmission( *peer->transactions, *fresh ),
+                   sgns::IInputValidator::WitnessVerdict::kInvalid );
+    }
+
+    const auto now = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+            .count() );
+    const auto attempt_age = std::max( Access::EscrowProposalTTL( network.first.consensus ), Access::EscrowVoteTTL() ) +
+                             std::chrono::hours( 1 );
+    ASSERT_GT( now, static_cast<uint64_t>( attempt_age.count() ) );
+    const auto aged_at = now - static_cast<uint64_t>( attempt_age.count() );
+    auto       old_dag = fresh->dag_st;
+    old_dag.set_timestamp( static_cast<int64_t>( aged_at ) );
+    auto historical = std::make_shared<sgns::TransferTransaction>(
+        sgns::TransferTransaction::New( fresh->GetInputInfos(), fresh->GetDstInfos(), std::move( old_dag ) ) );
+    historical->MakeSignature( *network.second.account );
+    const auto original_bytes = historical->SerializeByteVector();
+    ASSERT_TRUE( historical->CheckHash() && historical->CheckSignature() );
+    ASSERT_NE( historical->GetHash(), fresh->GetHash() );
+    const auto old_slot = historical->GetSrcAddress() + ":" + std::to_string( historical->GetNonce() );
+    ASSERT_EQ( historical->GetSlotID(), old_slot );
+    const std::vector<Peer *> voters{ &network.first, &network.second, &network.third };
+    const auto                old_certificate = SignedCertificate( network.second, *historical, voters, aged_at );
+    ASSERT_TRUE( old_certificate.has_value() );
+    ASSERT_GT( now - old_certificate.value().proposal().timestamp(),
+               static_cast<uint64_t>( Access::EscrowProposalTTL( network.first.consensus ).count() ) );
+    ASSERT_GT( now - old_certificate.value().votes( 0 ).timestamp(),
+               static_cast<uint64_t>( Access::EscrowVoteTTL().count() ) );
+    EXPECT_EQ( old_certificate.value().timestamp(), aged_at );
+
+    const auto v2 = EscrowPayment( network.third, *hold, network.passive.account->GetAddress() );
+    ASSERT_TRUE( v2 );
+    ASSERT_NE( v2->GetSlotID(), old_slot );
+    const auto v2_certificate = SignedCertificate( network.third, *v2, voters );
+    ASSERT_TRUE( v2_certificate.has_value() );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            for ( auto *peer : Peers( network ) )
+            {
+                auto registry = peer->blockchain->GetValidatorRegistry();
+                if ( registry->LoadVerifiedRegistryByCid( old_certificate.value().registry_cid() ).has_error() ||
+                     registry->LoadVerifiedRegistryByCid( v2_certificate.value().registry_cid() ).has_error() )
+                {
+                    return false;
+                }
+            }
+            return true;
+        },
+        std::chrono::seconds( 20 ),
+        "every peer loaded both exact certificate registries through the authorized registry chain",
+        nullptr );
+    EXPECT_EQ( Access::SlotKey( old_certificate.value().proposal() ), old_slot );
+    EXPECT_EQ( Access::SlotKey( v2_certificate.value().proposal() ), v2->GetSlotID() );
+    EXPECT_TRUE( Access::EscrowCertificateMatches( old_certificate.value(), *historical ) );
+    EXPECT_FALSE( Access::EscrowCertificateMatches( old_certificate.value(), *v2 ) );
+    auto altered_history = sgns::TransferTransaction::DeSerializeByteVector( original_bytes );
+    ASSERT_TRUE( altered_history );
+    altered_history->dag_st.set_signature( "altered-history-signature" );
+    ASSERT_TRUE( altered_history->CheckHash() );
+    EXPECT_NE( historical->SerializeByteVector(), altered_history->SerializeByteVector() );
+
+    const auto hold_hash = sgns::base::Hash256::fromReadableString( hold->GetHash() );
+    const auto old_hash  = sgns::base::Hash256::fromReadableString( historical->GetHash() );
+    const auto v2_hash   = sgns::base::Hash256::fromReadableString( v2->GetHash() );
+    ASSERT_TRUE( hold_hash.has_value() && old_hash.has_value() && v2_hash.has_value() );
+    const auto                                     peers = Peers( network );
+    std::array<std::map<std::string, uint64_t>, 4> balances_before;
+    std::map<std::string, uint64_t>                credits;
+    for ( const auto &output : historical->GetDstInfos() )
+    {
+        ASSERT_EQ( output.token_id, kToken );
+        credits[output.dest_address] += output.encrypted_amount;
+    }
+    for ( size_t index = 0; index < peers.size(); ++index )
+    {
+        for ( const auto &[recipient, amount] : credits )
+        {
+            balances_before[index][recipient] = peers[index]->account->GetUTXOManager().GetBalance( kToken, recipient );
+        }
+    }
+    // The old certificate is cryptographically valid on every peer despite
+    // expiring proposal/vote retry windows. It is retained historical finality,
+    // not a newly admitted old transfer proposal.
+    for ( auto *peer : peers )
+    {
+        ASSERT_EQ( Access::ValidateCertificate( peer->consensus, old_certificate.value() ), Check::Approve );
+        ASSERT_EQ( Access::ValidateCertificate( peer->consensus, v2_certificate.value() ), Check::Approve );
+        sgns::crdt::GlobalDB::Buffer history;
+        history.put( original_bytes );
+        ASSERT_TRUE(
+            peer->db->Put( { sgns::TransactionManager::GetTransactionPath( *historical ) }, history, {} ).has_value() );
+        ASSERT_TRUE( peer->consensus->SubmitCertificate( old_certificate.value() ).has_value() );
+        EXPECT_TRUE( Access::EscrowExactHistory( *peer->transactions, *historical ) );
+        EXPECT_FALSE( Access::EscrowExactHistory( *peer->transactions, *altered_history ) );
+        const auto applied = Access::EscrowApplyCertificate( *peer->transactions,
+                                                             historical->GetHash(),
+                                                             old_certificate.value() );
+        ASSERT_TRUE( applied.has_value() );
+        ASSERT_EQ( applied.value(), Check::Approve );
+    }
+    for ( size_t index = 0; index < peers.size(); ++index )
+    {
+        auto &ledger = peers[index]->account->GetUTXOManager();
+        ASSERT_EQ( ledger.GetOutPointSpender( hold_hash.value(), 0 ), std::optional{ old_hash.value() } );
+        for ( const auto &[recipient, amount] : credits )
+        {
+            EXPECT_EQ( ledger.GetBalance( kToken, recipient ), balances_before[index][recipient] + amount );
+        }
+    }
+
+    for ( size_t index = 0; index < peers.size(); ++index )
+    {
+        auto *peer = peers[index];
+        // Both eras' certificate slots can coexist: slot identity is not an
+        // authenticated cross-era fence. Local input-conflict/duplicate rules
+        // still prevent this sequential redelivery from crediting twice.
+        ASSERT_TRUE( peer->consensus->SubmitCertificate( v2_certificate.value() ).has_value() );
+        (void) Access::EscrowApplyCertificate( *peer->transactions, v2->GetHash(), v2_certificate.value() );
+        ASSERT_TRUE( peer->consensus->GetCertificateBySlot( old_slot ).has_value() );
+        ASSERT_TRUE( peer->consensus->GetCertificateBySlot( v2->GetSlotID() ).has_value() );
+        ASSERT_EQ( Access::ValidateCertificate( peer->consensus, old_certificate.value() ), Check::Approve );
+        auto &ledger = peer->account->GetUTXOManager();
+        EXPECT_EQ( ledger.GetOutPointSpender( hold_hash.value(), 0 ), std::optional{ old_hash.value() } );
+        for ( const auto &[recipient, amount] : credits )
+        {
+            EXPECT_EQ( ledger.GetBalance( kToken, recipient ), balances_before[index][recipient] + amount );
+        }
+        for ( uint32_t output = 0; output < v2->GetDstInfos().size(); ++output )
+        {
+            EXPECT_FALSE( ledger.GetOutPointState( v2_hash.value(), output ).has_value() );
+        }
+        const auto retained = peer->db->Get( { sgns::TransactionManager::GetTransactionPath( *historical ) } );
+        ASSERT_TRUE( retained.has_value() );
+        EXPECT_EQ( retained.value().toString(), std::string( original_bytes.begin(), original_bytes.end() ) );
+    }
+    EXPECT_EQ( historical->SerializeByteVector(), original_bytes );
+    std::cerr << "P21_1_LEGACY_TTL old_hash=" << historical->GetHash() << " old_slot=" << old_slot
+              << " aged_ms=" << attempt_age.count()
+              << " proposal_ttl_ms=" << Access::EscrowProposalTTL( network.first.consensus ).count()
+              << " v2_hash=" << v2->GetHash() << " v2_slot=" << v2->GetSlotID()
+              << " cross_era_exclusivity=not-proven activation=pending\n";
+    StopNetwork( network );
+}
+
+TEST_F( FinalityFaultNetwork, EscrowReleasePendingIntentRebuildPreservesNonceAndHistory )
+{
+    using Access = sgns::MultiNodeFinalityFaultTestAccess;
+    using Status = sgns::TransactionManager::TransactionStatus;
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+    auto network = StartNetwork( "escrow-pending-rebuild", 54961 );
+    ASSERT_TRUE( network.first.consensus && network.second.consensus && network.third.consensus &&
+                 network.passive.consensus );
+    StoreRegistry( network );
+    ConnectPeers( Peers( network ) );
+    const auto hold = EscrowHold( network );
+    ASSERT_TRUE( hold );
+    EstablishEscrow( network, hold );
+    auto      &sender    = network.second;
+    const auto hold_hash = sgns::base::Hash256::fromReadableString( hold->GetHash() );
+    ASSERT_TRUE( hold_hash.has_value() );
+
+    // The caller retains the complete processing-result set it has already
+    // validated. No partial/empty results or replacement recipient policy is
+    // invented during reconstruction; PayEscrow uses all retained entries.
+    SGProcessing::TaskResult complete_results;
+    for ( const auto &[subtask, recipient] : std::array<std::pair<std::string, std::string>, 2>{
+              std::make_pair( "complete-subtask-a", network.third.account->GetAddress() ),
+              std::make_pair( "complete-subtask-b", network.passive.account->GetAddress() ) } )
+    {
+        auto *result = complete_results.add_subtask_results();
+        result->set_subtaskid( subtask );
+        result->set_node_address( recipient );
+        result->set_developer_address( network.first.account->GetAddress() );
+        result->set_developer_cut( 500000 );
+        result->set_token_id( kToken.bytes().data(), kToken.size() );
+    }
+    ASSERT_EQ( complete_results.subtask_results_size(), 2 );
+    const auto retained_results = complete_results.SerializeAsString();
+    const auto payout_outputs   = Access::EscrowPayoutOutputs( complete_results, hold->GetAmount(), kToken );
+    ASSERT_TRUE( payout_outputs.has_value() );
+    sgns::InputUTXOInfo input{ hold_hash.value(), 0, {} };
+    input.signature_ = sender.account->Sign( input.SerializeForSigning() );
+    auto old_intent  = std::make_shared<sgns::TransferTransaction>(
+        sgns::TransferTransaction::New( { input },
+                                        payout_outputs.value(),
+                                        Access::EscrowIntentDAG( *sender.transactions, hold->GetUncleHash() ) ) );
+    old_intent->MakeSignature( *sender.account );
+    const auto old_bytes = old_intent->SerializeByteVector();
+    const auto old_nonce = old_intent->GetNonce();
+    const auto old_slot  = old_intent->GetSlotID();
+    const auto old_hash  = sgns::base::Hash256::fromReadableString( old_intent->GetHash() );
+    ASSERT_TRUE( old_hash.has_value() );
+    ASSERT_TRUE( old_intent->CheckHash() && old_intent->CheckSignature() );
+    Access::EscrowEnqueueIntent( *sender.transactions, old_intent );
+    sender.account->GetUTXOManager().ReserveUTXOs( { input }, old_intent->GetHash() );
+    ASSERT_TRUE( sender.account->GetUTXOManager().IsOutPointReserved( hold_hash.value(), 0 ) );
+    sgns::crdt::GlobalDB::Buffer history;
+    history.put( old_bytes );
+    const auto old_path = sgns::TransactionManager::GetTransactionPath( *old_intent );
+    ASSERT_TRUE( sender.db->Put( { old_path }, history, {} ).has_value() );
+    for ( auto *peer : Peers( network ) )
+    {
+        ASSERT_FALSE( peer->consensus->CheckCertificateForSlot( old_slot ) );
+        ASSERT_FALSE( Access::DurableActiveVoteProposalId( peer->consensus, old_slot ).has_value() );
+    }
+
+    ASSERT_TRUE( Access::EscrowRollbackQueuedIntent( *sender.transactions, old_intent->GetHash() ).has_value() );
+    EXPECT_EQ( sender.transactions->GetTransactionStatusByTxId( old_intent->GetHash() ), Status::FAILED );
+    ASSERT_TRUE( Access::EscrowQueuedTransactions( *sender.transactions ).empty() );
+    EXPECT_FALSE( sender.account->GetUTXOManager().IsOutPointReserved( hold_hash.value(), 0 ) );
+    EXPECT_FALSE( sender.account->GetUTXOManager().IsOutPointConsumed( hold_hash.value(), 0 ) );
+    EXPECT_EQ( sender.account->GetProposedNonce(), old_nonce );
+
+    const auto rebuilt_hash = sender.transactions->PayEscrow( sgns::TransactionManager::GetTransactionPath( *hold ),
+                                                              complete_results,
+                                                              nullptr );
+    ASSERT_TRUE( rebuilt_hash.has_value() );
+    const auto queued = Access::EscrowQueuedTransactions( *sender.transactions );
+    ASSERT_EQ( queued.size(), 1U );
+    const auto rebuilt = std::dynamic_pointer_cast<sgns::EscrowReleaseTransactionV2>( queued.front() );
+    ASSERT_TRUE( rebuilt );
+    EXPECT_EQ( rebuilt->GetHash(), rebuilt_hash.value() );
+    EXPECT_NE( rebuilt->GetHash(), old_intent->GetHash() );
+    EXPECT_NE( rebuilt->GetSlotID(), old_slot );
+    EXPECT_EQ( rebuilt->GetNonce(), old_nonce );
+    ASSERT_TRUE( rebuilt->CheckHash() && rebuilt->CheckSignature() );
+    ASSERT_EQ( rebuilt->GetInputInfos().size(), 1U );
+    EXPECT_EQ( rebuilt->GetInputInfos().front().txid_hash_, hold_hash.value() );
+    EXPECT_EQ( rebuilt->GetInputInfos().front().output_idx_, 0U );
+    ASSERT_EQ( rebuilt->GetDstInfos().size(), payout_outputs.value().size() );
+    for ( size_t index = 0; index < payout_outputs.value().size(); ++index )
+    {
+        EXPECT_EQ( rebuilt->GetDstInfos()[index].dest_address, payout_outputs.value()[index].dest_address );
+        EXPECT_EQ( rebuilt->GetDstInfos()[index].encrypted_amount, payout_outputs.value()[index].encrypted_amount );
+        EXPECT_EQ( rebuilt->GetDstInfos()[index].token_id, payout_outputs.value()[index].token_id );
+    }
+    EXPECT_EQ( complete_results.SerializeAsString(), retained_results );
+    EXPECT_EQ( old_intent->SerializeByteVector(), old_bytes );
+
+    const auto                                     peers = Peers( network );
+    std::map<std::string, uint64_t>                credits;
+    std::array<std::map<std::string, uint64_t>, 4> balances_before;
+    for ( const auto &output : payout_outputs.value() )
+    {
+        credits[output.dest_address] += output.encrypted_amount;
+    }
+    for ( size_t index = 0; index < peers.size(); ++index )
+    {
+        for ( const auto &[recipient, amount] : credits )
+        {
+            balances_before[index][recipient] = peers[index]->account->GetUTXOManager().GetBalance( kToken, recipient );
+        }
+    }
+    const std::vector<Peer *> voters{ &network.first, &network.second, &network.third };
+    const auto                certificate = SignedCertificate( sender, *rebuilt, voters );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]
+        {
+            for ( auto *peer : peers )
+            {
+                if ( peer->blockchain->GetValidatorRegistry()
+                         ->LoadVerifiedRegistryByCid( certificate.value().registry_cid() )
+                         .has_error() )
+                {
+                    return false;
+                }
+            }
+            return true;
+        },
+        std::chrono::seconds( 20 ),
+        "every peer loaded the rebuilt payment's exact authorized registry",
+        nullptr );
+    const auto new_hash = sgns::base::Hash256::fromReadableString( rebuilt->GetHash() );
+    ASSERT_TRUE( new_hash.has_value() );
+    for ( auto *peer : peers )
+    {
+        ASSERT_TRUE( peer->consensus->SubmitCertificate( certificate.value() ).has_value() );
+        for ( unsigned redelivery = 0; redelivery < 2; ++redelivery )
+        {
+            const auto applied = Access::EscrowApplyCertificate( *peer->transactions,
+                                                                 rebuilt->GetHash(),
+                                                                 certificate.value() );
+            ASSERT_TRUE( applied.has_value() );
+            EXPECT_EQ( applied.value(), sgns::ConsensusManager::Check::Approve );
+        }
+    }
+    for ( size_t index = 0; index < peers.size(); ++index )
+    {
+        auto &ledger = peers[index]->account->GetUTXOManager();
+        EXPECT_EQ( ledger.GetOutPointSpender( hold_hash.value(), 0 ), std::optional{ new_hash.value() } );
+        EXPECT_FALSE( ledger.GetOutPointState( old_hash.value(), 0 ).has_value() );
+        EXPECT_FALSE( peers[index]->consensus->CheckCertificateForSlot( old_slot ) );
+        for ( const auto &[recipient, amount] : credits )
+        {
+            EXPECT_EQ( ledger.GetBalance( kToken, recipient ), balances_before[index][recipient] + amount );
+        }
+    }
+    const auto retained_history = sender.db->Get( { old_path } );
+    ASSERT_TRUE( retained_history.has_value() );
+    EXPECT_EQ( retained_history.value().toString(), std::string( old_bytes.begin(), old_bytes.end() ) );
+    EXPECT_EQ( old_intent->SerializeByteVector(), old_bytes );
+    EXPECT_NE( sender.transactions->GetTransactionStatusByTxId( old_intent->GetHash() ), Status::CONFIRMED );
+    const auto confirmed_nonce = sender.account->GetLocalConfirmedNonce();
+    const auto confirmed_hash  = sender.account->GetLocalConfirmedTxHash( old_nonce );
+    ASSERT_TRUE( confirmed_nonce.has_value() && confirmed_hash.has_value() );
+    EXPECT_EQ( confirmed_nonce.value(), old_nonce );
+    EXPECT_EQ( confirmed_hash.value(), rebuilt->GetHash() );
+    std::cerr << "P21_1_PENDING_REBUILD old_hash=" << old_intent->GetHash() << " old_slot=" << old_slot
+              << " reused_nonce=" << old_nonce << " v2_hash=" << rebuilt->GetHash()
+              << " v2_slot=" << rebuilt->GetSlotID() << " old_signed_history=preserved results=complete\n";
     StopNetwork( network );
 }
 
