@@ -706,3 +706,84 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
                                                      std::chrono::milliseconds( 100 ) );
     EXPECT_FALSE( node3Replicated );
 }
+
+TEST_F( GlobalDBIntegrationTest, BootstrapPriorityTopicFetchesAnnouncedHead )
+{
+    /**
+     * F19 (bootstrap starvation on fresh join): genesis and account-creation
+     * CIDs reach a joiner out-of-band through the account messenger, and the
+     * topic announcement carrying the same CID can lose the race to the
+     * ordinary queue — which the history backlog occupies for minutes. On the
+     * privnet fresh joiner of 01:07 UTC the genesis CID sat starved behind the
+     * processing-channel sync: first "Genesis block was not received" timeout
+     * after 9m55s of waiting, then a retry loop (91 retries) until the fetch
+     * finally completed at 12m55s, followed by the same loop for the account
+     * creation CID.
+     *
+     * The fix has two halves, mirroring what Blockchain::New and the
+     * InformGenesisResult / InformAccountCreationResponse messengers do:
+     *  - the bootstrap topic is registered as priority, so the announcement
+     *    that supplies the fetch route lands in the priority queue instead of
+     *    behind the history backlog;
+     *  - the CID is also enqueued directly on messenger response — a CID with
+     *    no announcement yet has no graphsync route, so the direct enqueue
+     *    cannot fetch by itself; it reserves the priority head slot so the
+     *    fetch starts the moment the route arrives.
+     */
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_f19_source" );
+    testNodes->addNode( "globaldb_f19_joiner" );
+
+    auto &source = testNodes->getNodes()[0];
+    auto &joiner = testNodes->getNodes()[1];
+
+    ASSERT_FALSE( source.db->AddBroadcastTopic( "lane-processing" ).has_error() );
+    ASSERT_FALSE( source.db->AddBroadcastTopic( "gnus-blockchain" ).has_error() );
+    // The joiner listens only to the bootstrap topic — the history backlog of
+    // "lane-processing" never reaches it in this test.
+    joiner.db->AddListenTopic( "gnus-blockchain" );
+    joiner.db->AddPriorityTopic( "gnus-blockchain" );
+    testNodes->connectNodes();
+
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "bootstrap payload" );
+    const HierarchicalKey key( "/bootstrap/genesis" );
+
+    // A CID the joiner has no announcement for: exactly what the account
+    // messenger hands InformGenesisResult before any topic traffic. A direct
+    // priority enqueue must accept it, and the immediate re-enqueue must dedup
+    // while the entry is still pending.
+    const auto        backlogTx = source.db->BeginTransaction();
+    sgns::base::Buffer backlogValue;
+    backlogValue.put( "backlog payload" );
+    ASSERT_NE( backlogTx, nullptr );
+    ASSERT_TRUE( backlogTx->Put( HierarchicalKey( "/lane/head" ), backlogValue ).has_value() );
+    const auto backlogCommit = backlogTx->Commit( { "lane-processing" } );
+    ASSERT_TRUE( backlogCommit.has_value() );
+    const auto unseen_cid = backlogCommit.value().toString().value();
+
+    ASSERT_TRUE( joiner.db->EnqueueRootCID( unseen_cid, /*priority=*/true ) )
+        << "a well-formed unqueued CID must be accepted even without a route";
+    EXPECT_FALSE( joiner.db->EnqueueRootCID( unseen_cid, true ) )
+        << "re-enqueuing a pending CID must be a no-op";
+    EXPECT_FALSE( joiner.db->EnqueueRootCID( "not-a-cid", true ) )
+        << "a malformed CID string must be rejected, not crash";
+
+    // The bootstrap announcement path: priority topic registration plus the
+    // announcement (which brings the fetch route) must deliver the head even
+    // while an unfetchable earlier entry sits in the same priority queue.
+    const auto tx = source.db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    ASSERT_TRUE( tx->Put( key, value ).has_value() );
+    const auto commitRes = tx->Commit( { "gnus-blockchain" } );
+    ASSERT_TRUE( commitRes.has_value() );
+
+    sgns::test::assertWaitForCondition(
+        [&]() -> bool { return joiner.db->Get( key ).has_value(); },
+        WAIT_TIMEOUT,
+        "bootstrap head announced on the priority topic was never fetched" );
+    const auto got = joiner.db->Get( key );
+    ASSERT_TRUE( got.has_value() );
+    EXPECT_EQ( got.value().toString(), "bootstrap payload" );
+}

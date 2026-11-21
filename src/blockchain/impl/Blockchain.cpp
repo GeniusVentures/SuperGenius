@@ -93,6 +93,11 @@ namespace sgns
         const auto weak_instance            = instance->weak_from_this();
         const auto genesis_pattern          = fmt::format( "/?{}", GENESIS_KEY );
         const auto account_creation_pattern = fmt::format( "/?{}.*", ACCOUNT_CREATION_KEY_PREFIX );
+        // Bootstrap blocks (genesis, account creation) travel on the
+        // blockchain channel; a fresh joiner must fetch them ahead of the
+        // history backlog or every bootstrap watcher times out in the
+        // "Genesis block was not received" retry loop (F19).
+        instance->db_->AddPriorityTopic( std::string( BLOCKCHAIN_TOPIC ) );
 
         instance->logger_->info( "[{}] Blockchain instance created with authorized full node: {}",
                                  instance->account_->GetAddress().substr( 0, 8 ),
@@ -896,6 +901,10 @@ namespace sgns
         logger_->debug( "[{}] Informing genesis result response with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
                         genesis_result.value() );
+        // Enqueue out-of-band: the messenger response may be the ONLY notice
+        // of this CID, and the announcement race would leave the fetch queued
+        // behind the history backlog (F19).
+        (void) db_->EnqueueRootCID( genesis_result.value(), /*priority=*/true );
         WatchCIDDownload( genesis_result.value(), Error::GENESIS_BLOCK_MISSING, TIMEOUT_GENESIS_BLOCK );
         return outcome::success();
     }
@@ -913,6 +922,7 @@ namespace sgns
         logger_->debug( "[{}] Informing account creation response with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
                         creation_result.value() );
+        (void) db_->EnqueueRootCID( creation_result.value(), /*priority=*/true );
         WatchCIDDownload( creation_result.value(), Error::ACCOUNT_CREATION_BLOCK_MISSING, TIMEOUT_ACC_CREATION_BLOCK );
 
         return outcome::success();

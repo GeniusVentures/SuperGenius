@@ -735,6 +735,22 @@ namespace sgns::crdt
         }
     }
 
+    bool GlobalDB::EnqueueRootCID( const std::string &cidString, bool priority )
+    {
+        auto cid_result = CID::fromString( cidString );
+        if ( cid_result.has_error() )
+        {
+            m_logger->error( "EnqueueRootCID: malformed CID {}", cidString.substr( 0, 12 ) );
+            return false;
+        }
+        auto crdt_datastore = ActiveCRDTDataStore();
+        if ( !crdt_datastore )
+        {
+            return false;
+        }
+        return crdt_datastore->EnqueueRootCID( cid_result.value(), priority );
+    }
+
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
     {
         auto crdt_datastore = ActiveCRDTDataStore();

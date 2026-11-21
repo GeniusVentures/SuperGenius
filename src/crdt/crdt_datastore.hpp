@@ -466,6 +466,7 @@ namespace sgns::crdt
         static std::atomic<uint64_t> root_fetch_attempts_for_test_;
 
         friend class PubSubBroadcasterExt;
+        friend class GlobalDB;
         friend class ::sgns::Blockchain;
         friend class ::sgns::ValidatorRegistry;
 

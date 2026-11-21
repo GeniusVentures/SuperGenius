@@ -184,6 +184,17 @@ namespace sgns::crdt
         void                  AddPriorityTopic( const std::string &topicName );
 
         /**
+         * Enqueues one CID for a DAG fetch on the active CRDT datastore,
+         * optionally ahead of the ordinary backlog (bootstrap blocks learned
+         * out-of-band via the account messenger). No-op when the CID is
+         * already pending, active, or completed. Safe to call before Start.
+         * @param[in] cidString CID in its string form.
+         * @param[in] priority true seeds the CID ahead of the ordinary queue.
+         * @return false when the CID string is malformed or already queued.
+         */
+        bool                  EnqueueRootCID( const std::string &cidString, bool priority );
+
+        /**
          * @brief Queues a recovery walk with explicit validators, including retained sealed blocks.
          * @param[in] topics Enrolled topics whose current history should be revisited.
          * @param[in] guard Domain-owned check protecting absent elements from restoration after pruning.
