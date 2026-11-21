@@ -853,6 +853,62 @@ namespace
         return wire;
     }
 
+    std::vector<EmbeddedTransaction> SignedReleaseEnvelopes( GeniusAccount &account )
+    {
+        EmbeddedTransaction payment;
+        *payment.mutable_escrow_release_v2() = SignedPaymentWire( account, 2 );
+        std::vector<EmbeddedTransaction> envelopes{ payment };
+        for ( const auto &fixture : escrow_release_legacy_fixture::FIXTURES )
+        {
+            const auto bytes = base::unhex( fixture.embedded_hex );
+            if ( !bytes )
+            {
+                ADD_FAILURE() << "Historical embedded fixture hex must decode";
+                return {};
+            }
+            EmbeddedTransaction marker;
+            if ( !marker.ParseFromArray( bytes.value().data(), static_cast<int>( bytes.value().size() ) ) )
+            {
+                ADD_FAILURE() << "Historical embedded fixture must parse";
+                return {};
+            }
+            envelopes.push_back( std::move( marker ) );
+        }
+        return envelopes;
+    }
+
+    std::vector<EmbeddedTransaction> MalformedReleaseEnvelopes( const std::vector<EmbeddedTransaction> &valid )
+    {
+        std::vector<EmbeddedTransaction> malformed;
+        auto                             payment = valid.front();
+        payment.mutable_escrow_release_v2()->mutable_utxo_params()->clear_inputs();
+        malformed.push_back( payment );
+        payment = valid.front();
+        payment.mutable_escrow_release_v2()->mutable_utxo_params()->mutable_inputs( 0 )->set_output_index( 1 );
+        malformed.push_back( payment );
+        payment = valid.front();
+        payment.mutable_escrow_release_v2()->mutable_utxo_params()->mutable_outputs( 0 )->set_token_id( "short" );
+        malformed.push_back( payment );
+        for ( size_t index = 1; index < valid.size(); ++index )
+        {
+            auto marker = valid[index];
+            marker.mutable_escrow_release()->mutable_utxo_params()->mutable_inputs( 0 )->set_tx_id_hash( "bad" );
+            malformed.push_back( marker );
+            marker = valid[index];
+            marker.mutable_escrow_release()->mutable_utxo_params()->mutable_outputs( 0 )->set_token_id(
+                std::string( TokenID::ByteArray{}.size() + 1, '\x42' ) );
+            malformed.push_back( marker );
+        }
+        return malformed;
+    }
+
+    std::vector<uint8_t> ReleaseEnvelopeBytes( const EmbeddedTransaction &embedded )
+    {
+        return embedded.transaction_case() == EmbeddedTransaction::kEscrowReleaseV2
+                   ? MessageBytes( embedded.escrow_release_v2() )
+                   : MessageBytes( embedded.escrow_release() );
+    }
+
     class EscrowReleaseV2CodecTest : public ::testing::Test
     {
     protected:
@@ -868,6 +924,99 @@ namespace
         std::shared_ptr<GeniusAccount> first_;
         std::shared_ptr<GeniusAccount> second_;
     };
+
+    TEST_F( EscrowReleaseV2CodecTest, ManagerRejectsMalformedReleaseDispatch )
+    {
+        const auto valid = SignedReleaseEnvelopes( *first_ );
+        ASSERT_EQ( valid.size(), 3U );
+        for ( const auto &embedded : MalformedReleaseEnvelopes( valid ) )
+        {
+            SCOPED_TRACE( embedded.DebugString() );
+            const auto   bytes = ReleaseEnvelopeBytes( embedded );
+            base::Buffer buffer;
+            buffer.put( bytes );
+            const auto raw_string = TransactionManager::DeSerializeTransaction(
+                std::string( bytes.begin(), bytes.end() ) );
+            const auto raw_buffer = TransactionManager::DeSerializeTransaction( buffer );
+            const auto decoded    = TransactionManager::DeSerializeEmbeddedTransaction( embedded );
+            for ( const auto *result : { &raw_string, &raw_buffer, &decoded } )
+            {
+                EXPECT_TRUE( result->has_error() );
+                if ( result->has_error() )
+                {
+                    EXPECT_EQ( result->error(), std::make_error_code( std::errc::invalid_argument ) );
+                }
+            }
+        }
+    }
+
+    TEST_F( EscrowReleaseV2CodecTest, ManagerPreservesSignedReleaseCompatibility )
+    {
+        const auto valid = SignedReleaseEnvelopes( *first_ );
+        ASSERT_EQ( valid.size(), 3U );
+        TransactionConsensusHandler::RegisterSlotKeyHandler();
+        for ( const auto &embedded : valid )
+        {
+            SCOPED_TRACE( embedded.transaction_case() );
+            const auto   bytes = ReleaseEnvelopeBytes( embedded );
+            base::Buffer buffer;
+            buffer.put( bytes );
+            const auto raw_string = TransactionManager::DeSerializeTransaction(
+                std::string( bytes.begin(), bytes.end() ) );
+            const auto raw_buffer = TransactionManager::DeSerializeTransaction( buffer );
+            const auto decoded    = TransactionManager::DeSerializeEmbeddedTransaction( embedded );
+            for ( const auto *result : { &raw_string, &raw_buffer, &decoded } )
+            {
+                ASSERT_TRUE( result->has_value() );
+                ASSERT_NE( result->value(), nullptr );
+                EXPECT_EQ( result->value()->SerializeByteVector(), bytes );
+                EXPECT_TRUE( result->value()->CheckHash() );
+                EXPECT_TRUE( result->value()->CheckSignature() );
+            }
+            const auto &transaction = *decoded.value();
+            const auto  subject     = ConsensusManager::CreateNonceSubject( transaction.GetSrcAddress(),
+                                                                       transaction.GetNonce(),
+                                                                       transaction.GetHash(),
+                                                                       embedded,
+                                                                       std::nullopt,
+                                                                       std::nullopt );
+            ASSERT_TRUE( subject.has_value() );
+            ConsensusProposal proposal;
+            *proposal.mutable_subject() = subject.value();
+            EXPECT_EQ( ConsensusManager::GetSlotKey( proposal ), transaction.GetSlotID() );
+        }
+    }
+
+    TEST_F( EscrowReleaseV2ValidationTest, MalformedReleaseNonceHandlersRejectSafely )
+    {
+        const auto valid = SignedReleaseEnvelopes( *account_ );
+        ASSERT_EQ( valid.size(), 3U );
+        TransactionConsensusHandler::RegisterSlotKeyHandler();
+        TransactionConsensusHandler handler( *manager_, base::createLogger( "ReleaseDecodeContractTest" ) );
+        for ( const auto &embedded : MalformedReleaseEnvelopes( valid ) )
+        {
+            SCOPED_TRACE( embedded.DebugString() );
+            // Assert the dispatch contract before entering consumers that dereference its result.
+            ASSERT_TRUE( TransactionManager::DeSerializeEmbeddedTransaction( embedded ).has_error() );
+            const auto &dag     = embedded.transaction_case() == EmbeddedTransaction::kEscrowReleaseV2
+                                      ? embedded.escrow_release_v2().dag_struct()
+                                      : embedded.escrow_release().dag_struct();
+            const auto  subject = ConsensusManager::CreateNonceSubject( dag.source_addr(),
+                                                                       dag.nonce(),
+                                                                       dag.data_hash(),
+                                                                       embedded,
+                                                                       std::nullopt,
+                                                                       std::nullopt );
+            ASSERT_TRUE( subject.has_value() );
+            ConsensusProposal proposal;
+            *proposal.mutable_subject() = subject.value();
+            EXPECT_EQ( ConsensusManager::GetSlotKey( proposal ),
+                       dag.source_addr() + ":" + std::to_string( dag.nonce() ) );
+            const auto verdict = handler.HandleNonceConsensusSubject( subject.value() );
+            ASSERT_TRUE( verdict.has_value() );
+            EXPECT_EQ( verdict.value().check, ConsensusManager::Check::Reject );
+        }
+    }
 
     TEST_F( EscrowReleaseV2CodecTest, RawAndEmbeddedRoundTripPreserveSignedPayment )
     {
