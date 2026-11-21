@@ -4746,10 +4746,24 @@ namespace sgns
 
         if ( GetExpectedCertificateSlotKey( certificate ) != key )
         {
-            logger_->error( "{}: certificate slot key mismatch expected={}",
-                                             __func__,
-                                             key );
-            return outcome::failure( std::errc::invalid_argument );
+            // A certificate sits at the slot key of the binary era that sealed
+            // it. Upgrades re-derive that key from the embedded transaction
+            // (F13: spends keyed on the spent outpoint), so a pre-upgrade
+            // record no longer matches the recomputed key. Accept the legacy
+            // content-independent derivation too: both are bound to the
+            // certificate's own subject, so neither lets a record be
+            // relocated to a slot it does not belong to.
+            const auto        nonce_subject = DecodeNonceSubject( certificate.proposal().subject() );
+            const std::string legacy_key =
+                std::string{ CERTIFICATE_BASE_PATH_KEY } + certificate.proposal().subject().account_id() +
+                ":" + std::to_string( nonce_subject.has_value() ? nonce_subject.value().nonce() : 0ULL );
+            if ( !nonce_subject.has_value() || legacy_key != key )
+            {
+                logger_->error( "{}: certificate slot key mismatch expected={}",
+                                __func__,
+                                key );
+                return outcome::failure( std::errc::invalid_argument );
+            }
         }
         if ( ValidateCertificate( certificate ) != Check::Approve )
         {

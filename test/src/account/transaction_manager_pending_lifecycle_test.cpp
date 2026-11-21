@@ -1316,6 +1316,138 @@ TEST_F( TransactionDeletionRecoveryTest, PayoutSlotKeyIsTheSpentOutpointWhoeverS
         << "an inputless transfer keeps the legacy src:nonce slot key";
 }
 
+TEST_F( TransactionDeletionRecoveryTest, ChainAcrossUpgradeResolvesLegacySlotCertificate )
+{
+    /**
+     * F18 (stress2-20261120 B1 post-F13): a certificate is stored at the slot
+     * key of the binary era that sealed it. Pre-upgrade nodes keyed a spend's
+     * certificate at src:nonce; F13 keys it on the spent outpoint. A follower
+     * that chains onto a pre-upgrade spend must still resolve the
+     * predecessor's certificate — both derivations are bound to the
+     * certificate's own subject, so the lookup accepts either key. FN
+     * privnet 2026-11-20 23:44 UTC: every escrow payout pended forever with
+     * "Missing previous certificate" (hashes 7141fe9c/6cd577d1) and both
+     * processors retried the same payout bytes past their 30 s timeouts.
+     */
+    using Status = sgns::TransactionManager::TransactionStatus;
+    auto apply   = [this]( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
+    {
+        return sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState( *manager_,
+                                                                                           transaction,
+                                                                                           Status::CONFIRMED );
+    };
+
+    static ControllableParametersValidator validator;
+    validator.parameters_valid_ = true;
+    ScopedValidatorSwap swap( "supergenius_chain", &validator );
+
+    auto mint_a = MakeTransaction( 0 );
+    ASSERT_FALSE( apply( mint_a ).has_error() );
+    auto mint_b = std::make_shared<sgns::MintTransaction>(
+        sgns::MintTransaction::New( 1,
+                                    std::string( sgns::GeniusTransaction::GENIUS_CHAIN_ID ),
+                                    kTokenId,
+                                    MakeDAG( 1, mint_a->GetHash() ) ) );
+    mint_b->MakeSignature( *account_ );
+    ASSERT_FALSE( apply( mint_b ).has_error() );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance(), 2U );
+
+    auto make_escrow = [this, &apply]( const std::string &lock, const std::string &previous_hash )
+    {
+        auto params = account_->GetUTXOManager().CreateTxParameter( 1, lock, kTokenId );
+        EXPECT_TRUE( params.has_value() );
+        auto dag = MakeDAG( account_->ReserveNextNonce(), previous_hash );
+        dag.set_uncle_hash( lock );
+        auto escrow = std::make_shared<sgns::EscrowTransaction>(
+            sgns::EscrowTransaction::New( std::move( params.value() ), 1, std::move( dag ) ) );
+        escrow->MakeSignature( *account_ );
+        StoreCertificate( escrow );
+        StoreTransaction( escrow );
+        EXPECT_FALSE( apply( escrow ).has_error() );
+        return escrow;
+    };
+
+    const std::string lock_a = "0x" + std::string( 64, '1' );
+    const std::string lock_b = "0x" + std::string( 64, '2' );
+    auto escrow_a = make_escrow( lock_a, mint_b->GetHash() );
+    auto escrow_b = make_escrow( lock_b, escrow_a->GetHash() );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance( lock_a ), 1U );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance( lock_b ), 1U );
+
+    const auto escrow_a_outpoint = sgns::base::Hash256::fromReadableString( escrow_a->GetHash() );
+    ASSERT_TRUE( escrow_a_outpoint.has_value() );
+    const auto escrow_b_outpoint = sgns::base::Hash256::fromReadableString( escrow_b->GetHash() );
+    ASSERT_TRUE( escrow_b_outpoint.has_value() );
+
+    const std::string dest_a = "0x" + std::string( 64, 'a' );
+    const std::string dest_b = "0x" + std::string( 64, 'b' );
+
+    // The pre-upgrade payout: input-bearing, certified and stored under the
+    // legacy src:nonce slot key — exactly what a pre-F13 binary wrote for it.
+    auto payout = MakePayout( *account_, escrow_a_outpoint.value(), 0, account_->ReserveNextNonce(),
+                              escrow_b->GetHash(), dest_a );
+    const std::string legacy_slot = payout->GetSrcAddress() + ":" + std::to_string( payout->GetNonce() );
+    ASSERT_NE( legacy_slot, payout->GetSlotID() )
+        << "an input-bearing payout must carry the outpoint slot key under F13";
+
+    const auto certificate = MakeCertificate( *account_, payout );
+    sgns::crdt::GlobalDB::Buffer certificate_data;
+    certificate_data.put( certificate.SerializeAsString() );
+    ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + legacy_slot ),
+                           certificate_data,
+                           { "CRDT.Datastore.TEST.Channel" } )
+                     .has_value() );
+    ASSERT_TRUE( blockchain_->CheckCertificateForSlot( legacy_slot ) )
+        << "a certificate stored at its sealing-era slot key must stay readable after the upgrade";
+
+    StoreTransaction( payout );
+
+    // The payout itself validates fine: its own predecessor (the escrow hold)
+    // was certified at a slot key both eras agree on.
+    auto payout_commitment = manager_->BuildUTXOTransitionCommitment( *payout );
+    ASSERT_TRUE( payout_commitment.has_value() );
+    auto payout_subject = sgns::ConsensusManager::CreateNonceSubject( payout->GetSrcAddress(),
+                                                                      payout->GetNonce(),
+                                                                      payout->GetHash(),
+                                                                      payout->SerializeToEmbeddedTransaction(),
+                                                                      payout_commitment,
+                                                                      std::nullopt );
+    ASSERT_TRUE( payout_subject.has_value() );
+    const auto payout_result = sgns::TransactionManagerPendingLifecycleTestAccess::HandleNonceConsensusSubject(
+        *manager_,
+        payout_subject.value() );
+    ASSERT_TRUE( payout_result.has_value() );
+    ASSERT_EQ( payout_result.value().check, sgns::ConsensusManager::Check::Approve );
+    const auto tracked_payout = sgns::TransactionManagerPendingLifecycleTestAccess::GetTrackedTx(
+        *manager_,
+        payout->GetHash() );
+    ASSERT_TRUE( tracked_payout.has_value() )
+        << "the intermediate payout must be tracked so the follower's nonce window accepts it";
+
+    // The follower chains onto the payout on the account's nonce chain but
+    // spends a fresh outpoint (the in-flight payout already owns the first
+    // one). Its replay protection must find the predecessor's certificate at
+    // the legacy slot, because the F13 outpoint slot holds nothing.
+    auto follower = MakePayout( *account_, escrow_b_outpoint.value(), 0, account_->ReserveNextNonce(),
+                                payout->GetHash(), dest_b );
+
+    auto commitment = manager_->BuildUTXOTransitionCommitment( *follower );
+    ASSERT_TRUE( commitment.has_value() );
+    auto subject = sgns::ConsensusManager::CreateNonceSubject( follower->GetSrcAddress(),
+                                                               follower->GetNonce(),
+                                                               follower->GetHash(),
+                                                               follower->SerializeToEmbeddedTransaction(),
+                                                               commitment,
+                                                               std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+    const auto result = sgns::TransactionManagerPendingLifecycleTestAccess::HandleNonceConsensusSubject(
+        *manager_,
+        subject.value() );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value().check, sgns::ConsensusManager::Check::Approve )
+        << "a chain whose predecessor was certified pre-upgrade must still validate";
+}
+
 TEST_F( TransactionDeletionRecoveryTest, LoserPayoutCertificateIsQuarantinedNotRetriedForever )
 {
     /**

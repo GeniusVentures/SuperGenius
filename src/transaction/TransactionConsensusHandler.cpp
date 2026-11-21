@@ -841,6 +841,20 @@ namespace sgns
 
             auto previous_cert_result = owner_.blockchain_->GetCertificateBySlot(
                 previous_transaction_result.value()->GetSlotID() );
+            if ( previous_cert_result.has_error() )
+            {
+                // The predecessor may have been certified by a pre-upgrade
+                // binary at the legacy content-independent slot (src:nonce);
+                // probe it before parking the proposal on a dependency that
+                // can never fire (F18: post-F13 payouts of pre-F13 chains
+                // pended forever on "Missing previous certificate").
+                const std::string legacy_slot = previous_transaction_result.value()->GetSrcAddress() + ":" +
+                                                std::to_string( previous_transaction_result.value()->GetNonce() );
+                if ( legacy_slot != previous_transaction_result.value()->GetSlotID() )
+                {
+                    previous_cert_result = owner_.blockchain_->GetCertificateBySlot( legacy_slot );
+                }
+            }
             if ( previous_cert_result.has_error() ||
                  !TransactionManager::CertificateMatchesTransaction( previous_cert_result.value(),
                                                                      *previous_transaction_result.value() ) )
