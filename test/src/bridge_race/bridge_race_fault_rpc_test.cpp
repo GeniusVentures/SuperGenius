@@ -39,21 +39,37 @@
 #include <chrono>
 #include <thread>
 
+#include <account/BridgeEventTypes.hpp>
+#include <eth/abi_decoder.hpp>
+#include <base/parse_utility.hpp>
+
 #include "src/mock/mock_rpc_config.hpp"
 #include "src/mock/mock_rpc_transport.hpp"
 
 namespace
 {
-    /// @brief Mock-default bridge contract address/topic0 (mirrors the private
-    ///        kBridgeContractAddress/kBridgeEventTopic0 constants baked into
-    ///        MockRpcTransport's default success/wrong-logs receipt builders in
-    ///        mock_rpc_transport.cpp). No quorum slot's verification traffic reaches the
-    ///        real Anvil chain, so the WeightedRpcEndpoint's expected contract/topic0 must
-    ///        match what MockRpcTransport actually returns, not the real Sepolia bridge
-    ///        contract address.
+    /// @brief Mock-default bridge contract address (mirrors the private
+    ///        kBridgeContractAddress constant baked into MockRpcTransport's default
+    ///        success/wrong-logs receipt builders in mock_rpc_transport.cpp). No quorum
+    ///        slot's verification traffic reaches the real Anvil chain, so the
+    ///        WeightedRpcEndpoint's expected contract must match what MockRpcTransport
+    ///        actually returns, not the real Sepolia bridge contract address.
     constexpr const char *kMockBridgeContractAddress = "0x1234567890123456789012345678901234567890";
-    constexpr const char *kMockBridgeEventTopic0 =
-        "0x1234567890123456789012345678901234567890123456789012345678901234";
+
+    /// @brief Canonical v2 BridgeOutInitiated topic0. Since MINT-04 receipt/mint fact
+    ///        binding, the mock success receipt must carry a decodable bridge-event log
+    ///        whose facts match the mint being confirmed, and binding selects the event
+    ///        shape by the canonical topic0 — the old arbitrary mock topic0
+    ///        (0x1234...1234) names no decodable event.
+    const std::string &MockBridgeEventTopic0()
+    {
+        static const std::string topic0 = []
+        {
+            const auto hash = eth::abi::event_signature_hash( std::string( sgns::kBridgeOutInitiatedSig ) );
+            return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
+        }();
+        return topic0;
+    }
 
     /// @brief Per-PUBLIC-slot consensus weight.
     ///
@@ -86,16 +102,25 @@ namespace
     /// is unaffected: the factory still serves this URL from MockRpcTransport, so
     /// verification never touches the real chain, and slot classification is weight-based
     /// (consensus_weight >= 50 == DIRECT), not URL-based.
-    void ConfigureDivergentQuorum( const std::shared_ptr<GeniusNode>   &node,
-                                   const std::string                   &direct_url,
-                                   sgns::test::MockBehavior            direct_behavior,
-                                   sgns::test::MockBehavior            public1_behavior,
-                                   sgns::test::MockBehavior            public2_behavior )
+    ///
+    /// @param burn_receipt Canned success receipt (MINT-04 fact-carrying) served for the
+    ///                     burn tx hash by every kSuccess slot; the burn tx hash is the
+    ///                     only receipt request the quorum makes.
+    void ConfigureDivergentQuorum( const std::shared_ptr<GeniusNode>         &node,
+                                   const std::string                         &direct_url,
+                                   sgns::test::MockBehavior                   direct_behavior,
+                                   sgns::test::MockBehavior                   public1_behavior,
+                                   sgns::test::MockBehavior                   public2_behavior,
+                                   const std::pair<std::string, std::string> &burn_receipt )
     {
-        const auto configs = sgns::test::BuildDivergentSlotConfigs( direct_behavior,
-                                                                    public1_behavior,
-                                                                    public2_behavior,
-                                                                    direct_url );
+        auto configs = sgns::test::BuildDivergentSlotConfigs( direct_behavior,
+                                                              public1_behavior,
+                                                              public2_behavior,
+                                                              direct_url );
+        for ( auto &config : configs )
+        {
+            config.responses[burn_receipt.first] = { burn_receipt.second };
+        }
 
         auto tx_mgr_result = node->GetTransactionManager();
         ASSERT_TRUE( tx_mgr_result.has_value() ) << "node transaction manager not ready";
@@ -120,25 +145,44 @@ namespace
         ep_direct.url                     = configs[0].url;
         ep_direct.consensus_weight        = 100;
         ep_direct.bridge_contract_address = kMockBridgeContractAddress;
-        ep_direct.accepted_topic0_hashes  = { kMockBridgeEventTopic0 };
+        ep_direct.accepted_topic0_hashes  = { MockBridgeEventTopic0() };
 
         // The PUBLIC URLs are spelled as literals rather than read from configs[i].url so
         // the 3-way divergence is visible at this call site (asserted against the builder
         // below). The DIRECT slot's URL is the caller's, for the reason documented above.
 
         sgns::WeightedRpcEndpoint ep_public1 = ep_direct;
-        ep_public1.url              = "mock://public1";
-        ep_public1.consensus_weight = kPublicSlotWeight;
+        ep_public1.url                       = "mock://public1";
+        ep_public1.consensus_weight          = kPublicSlotWeight;
         ASSERT_EQ( ep_public1.url, configs[1].url );
 
         sgns::WeightedRpcEndpoint ep_public2 = ep_direct;
-        ep_public2.url              = "mock://public2";
-        ep_public2.consensus_weight = kPublicSlotWeight;
+        ep_public2.url                       = "mock://public2";
+        ep_public2.consensus_weight          = kPublicSlotWeight;
         ASSERT_EQ( ep_public2.url, configs[2].url );
 
-        ASSERT_TRUE( node->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId,
-                                                 { ep_direct, ep_public1, ep_public2 } ) )
+        ASSERT_TRUE(
+            node->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, { ep_direct, ep_public1, ep_public2 } ) )
             << "READY node rejected divergent RPC endpoint configuration";
+    }
+
+    /// @brief Canned MINT-04 fact-carrying receipt for a burn seeded with
+    ///        SendBridgeOutBurn: the mock slots must confirm the SAME facts the
+    ///        real Anvil burn carries (token id 0, the seeded amount, the
+    ///        destination's compressed X half and Y parity).
+    std::pair<std::string, std::string> BurnReceiptFor( const std::string &tx_hash,
+                                                        const std::string &dest_addr,
+                                                        uint64_t           amount )
+    {
+        const auto dest = sgns::test::anvil::BridgeDestinationFromSgnsAddress( dest_addr );
+        return { tx_hash,
+                 sgns::test::BuildBridgeOutFactReceiptJson( tx_hash,
+                                                            kMockBridgeContractAddress,
+                                                            MockBridgeEventTopic0(),
+                                                            /*token_id=*/0u,
+                                                            amount,
+                                                            dest.first.substr( 2 ),
+                                                            dest.second ) };
     }
 } // namespace
 
@@ -153,21 +197,24 @@ TEST_F( BridgeRaceE2ETest, AllSlotsDistinctStillReachesQuorum )
 
     // Seed the burn against the REAL Anvil instance BEFORE configuring the mock quorum
     // (D-03 ordering — still needed for genuine on-chain log discovery by the watcher).
-    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
+                                                                      static_cast<uint64_t>( kMintAmount ),
+                                                                      dest_addr );
     ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
 
     // All three slots confirm, each under a DISTINCT slot identity: slot 0 hashes the
     // real Anvil URL (mock-served), slots 1/2 the mock://publicN URLs. The slot groups
     // disagree with each other by construction — the cumulative model does not care,
     // because each group is tallied independently: 1/2 + 1/4 + 1/4 = 100% > 3/4.
+    const auto burn_receipt = BurnReceiptFor( tx_hash, dest_addr, static_cast<uint64_t>( kMintAmount ) );
     for ( const auto &node : s_nodes )
     {
         ConfigureDivergentQuorum( node,
                                   s_anvil.RpcUrl(),
                                   sgns::test::MockBehavior::kSuccess,
                                   sgns::test::MockBehavior::kSuccess,
-                                  sgns::test::MockBehavior::kSuccess );
+                                  sgns::test::MockBehavior::kSuccess,
+                                  burn_receipt );
         ASSERT_FALSE( ::testing::Test::HasFatalFailure() );
     }
 
@@ -193,8 +240,9 @@ TEST_F( BridgeRaceE2ETest, DirectSlotFailureFailClosesMint )
     // Same real-burn seeding as the positive case: discovery runs on a REAL transport
     // against Anvil and is expected to succeed — the fault injected below must gate the
     // mint at consensus, not at discovery.
-    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), dest_addr );
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
+                                                                      static_cast<uint64_t>( kMintAmount ),
+                                                                      dest_addr );
     ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed contested burn";
 
     // The DIRECT slot times out; both PUBLIC slots confirm and agree (their receipts
@@ -203,13 +251,15 @@ TEST_F( BridgeRaceE2ETest, DirectSlotFailureFailClosesMint )
     // populated, but slot 0 is never filled: the reachable slot sum is capped at
     // 1/4+1/4 = 1/2 of voting reputation, strictly below the 3/4 quorum threshold.
     // No number of approving votes can close that gap — the mint must fail closed.
+    const auto burn_receipt = BurnReceiptFor( tx_hash, dest_addr, static_cast<uint64_t>( kMintAmount ) );
     for ( const auto &node : s_nodes )
     {
         ConfigureDivergentQuorum( node,
                                   s_anvil.RpcUrl(),
                                   sgns::test::MockBehavior::kTimeout,
                                   sgns::test::MockBehavior::kSuccess,
-                                  sgns::test::MockBehavior::kSuccess );
+                                  sgns::test::MockBehavior::kSuccess,
+                                  burn_receipt );
         ASSERT_FALSE( ::testing::Test::HasFatalFailure() );
     }
 

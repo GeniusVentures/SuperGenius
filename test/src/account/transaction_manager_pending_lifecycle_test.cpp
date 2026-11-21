@@ -202,6 +202,25 @@ namespace
             return transaction;
         }
 
+        /// @brief Builds signed mint-v2 traffic for send-path tests; legacy v1 value mints are admission-disabled.
+        std::shared_ptr<sgns::MintTransactionV2> MakeSubmissionTransaction( uint64_t    nonce,
+                                                                            std::string uncle_hash = {} )
+        {
+            auto dag = MakeDAG( nonce );
+            dag.set_uncle_hash( std::move( uncle_hash ) );
+            const auto burn_hash = sgns::base::Hash256::fromReadableString( std::string( 64, '8' ) ).value();
+            const sgns::GeniusUTXO burn( burn_hash, 0, 1, kTokenId, account_->GetAddress() );
+            auto                   transaction = std::make_shared<sgns::MintTransactionV2>(
+                sgns::MintTransactionV2::New( 1,
+                                              "public",
+                                              kTokenId,
+                                              std::move( dag ),
+                                              account_->CreateInputsFromUTXOs( { burn } ),
+                                              account_->GetAddress() ) );
+            transaction->MakeSignature( *account_ );
+            return transaction;
+        }
+
         void RecreateManager()
         {
             manager_->Stop();
@@ -375,7 +394,7 @@ namespace
 
 TEST_F( TransactionManagerRecoveryTest, NonRetryableFailureDoesNotStrandFollowingTransaction )
 {
-    auto       failed_transaction = MakeTransaction();
+    auto       failed_transaction = MakeSubmissionTransaction( account_->ReserveNextNonce() );
     const auto failed_nonce       = failed_transaction->GetNonce();
 
     // Reusing a committed CRDT transaction makes Put() fail deterministically and
@@ -394,7 +413,7 @@ TEST_F( TransactionManagerRecoveryTest, NonRetryableFailureDoesNotStrandFollowin
     sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
     ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
 
-    auto following_transaction = MakeTransaction();
+    auto following_transaction = MakeSubmissionTransaction( account_->ReserveNextNonce() );
     ASSERT_EQ( following_transaction->GetNonce(), failed_nonce );
 
     sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
@@ -575,7 +594,7 @@ TEST_F( TransactionManagerPreviousHashTest, FallsBackToCrdtWhenConfirmedHeadHist
 // certificate will never exist.
 TEST_F( TransactionManagerPreviousHashTest, NonceConflictKeepsTerminallyRejectedTransactionFailed )
 {
-    auto failed_transaction = MakeTransaction( 1 );
+    auto failed_transaction = MakeSubmissionTransaction( 1 );
     // Reusing a committed CRDT transaction makes Put() fail deterministically.
     auto committed_transaction = MakeCommittedTransaction();
     ASSERT_TRUE( committed_transaction );
@@ -1077,14 +1096,7 @@ TEST_F( TransactionManagerRecoveryTest, PreBroadcastFailureKeepsManagerReadyWith
     const auto reserved_nonce = account_->ReserveNextNonce();
     ASSERT_EQ( reserved_nonce, 1U );
 
-    auto oversized_dag = MakeDAG( reserved_nonce );
-    oversized_dag.set_uncle_hash( std::string( 70 * 1024, 'x' ) );
-    auto oversized = std::make_shared<sgns::MintTransaction>(
-        sgns::MintTransaction::New( 1,
-                                    std::string( sgns::GeniusTransaction::GENIUS_CHAIN_ID ),
-                                    kTokenId,
-                                    std::move( oversized_dag ) ) );
-    oversized->MakeSignature( *account_ );
+    auto oversized = MakeSubmissionTransaction( reserved_nonce, std::string( 70 * 1024, 'x' ) );
     ASSERT_TRUE( oversized->SerializeToEmbeddedTransaction().ByteSizeLong() > 64 * 1024 );
 
     sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, oversized, db_->BeginTransaction() );
@@ -1101,7 +1113,7 @@ TEST_F( TransactionManagerRecoveryTest, PreBroadcastFailureKeepsManagerReadyWith
     EXPECT_EQ( account_->ReserveNextNonce(), reserved_nonce );
 
     // A subsequent valid send reuses the nonce and proceeds normally.
-    auto retry = MakeTransaction( reserved_nonce );
+    auto retry = MakeSubmissionTransaction( reserved_nonce );
     sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, retry, db_->BeginTransaction() );
     sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
     EXPECT_EQ( manager_->GetTransactionStatusByTxId( retry->GetHash() ),
@@ -1115,7 +1127,7 @@ TEST_F( TransactionManagerRecoveryTest, PreBroadcastFailureKeepsManagerReadyWith
 // recovery path exactly as before.
 TEST_F( TransactionManagerRecoveryTest, PreBroadcastNegativeControlNonTypedFailureStillEntersSyncing )
 {
-    auto transaction = MakeTransaction();
+    auto transaction = MakeSubmissionTransaction( account_->ReserveNextNonce() );
 
     auto committed_transaction = MakeCommittedTransaction();
     ASSERT_TRUE( committed_transaction );
@@ -1141,7 +1153,7 @@ TEST_F( TransactionManagerRecoveryTest, SyncingExitFallsBackToDurableNonceAfterW
 
     // Enter SYNCING through the real send-failure path (non-typed error) —
     // this is the machinery that arms syncing_since_ at the D-02 wiring site.
-    auto transaction           = MakeTransaction();
+    auto transaction           = MakeSubmissionTransaction( account_->ReserveNextNonce() );
     auto committed_transaction = MakeCommittedTransaction();
     ASSERT_TRUE( committed_transaction );
     sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
@@ -1185,7 +1197,7 @@ TEST_F( TransactionManagerRecoveryTest, SyncingExitNormalSyncPathDoesNotDependOn
 {
     SyncingExitWindowGuard window_guard( std::chrono::seconds( 60 ) );
 
-    auto transaction           = MakeTransaction();
+    auto transaction           = MakeSubmissionTransaction( account_->ReserveNextNonce() );
     auto committed_transaction = MakeCommittedTransaction();
     ASSERT_TRUE( committed_transaction );
     sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,

@@ -435,6 +435,10 @@ public:
         auto load_result = account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() );
         assert( load_result.has_value() );
 
+        // Pin the registry genesis signer before Blockchain captures its trust root.
+        previous_authorized_full_node_address_ = Blockchain::GetAuthorizedFullNodeAddress();
+        Blockchain::SetAuthorizedFullNodeAddress( account_->GetAddress() );
+
         // Create a Blockchain with a no-op callback
         blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
         assert( blockchain_ != nullptr );
@@ -482,11 +486,13 @@ public:
         tm_.reset();
         blockchain_.reset();
         account_.reset();
+        Blockchain::SetAuthorizedFullNodeAddress( previous_authorized_full_node_address_ );
     }
 
     std::shared_ptr<GeniusAccount>      account_;
     std::shared_ptr<Blockchain>         blockchain_;
     std::shared_ptr<TransactionManager> tm_;
+    std::string                        previous_authorized_full_node_address_;
 
     void PersistTransaction( const std::shared_ptr<GeniusTransaction> &transaction )
     {

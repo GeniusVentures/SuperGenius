@@ -66,13 +66,15 @@ namespace sgns
         static constexpr size_t DefaultMaxNewValidatorsPerUpdate =
             10;                                                  ///< Default cap for new validators added per update.
         static constexpr size_t DefaultCertificatesPerBatch = 5; ///< Default number of certificates grouped per batch.
-        using ValidatorEntry                                = validator::ValidatorEntry;
-        using Registry                                      = validator::Registry;
-        using SignatureEntry                                = validator::SignatureEntry;
-        using RegistryUpdate                                = validator::RegistryUpdate;
-        using Role                                          = validator::Role;
-        using Status                                        = validator::Status;
-        using InitCallback                                  = std::function<void( bool )>;
+        static constexpr size_t kMaxVerifiedRegistryMemoEntries =
+            64; ///< Cap for verified-registry CID memo entries (oldest-first eviction, never a wholesale clear).
+        using ValidatorEntry = validator::ValidatorEntry;
+        using Registry       = validator::Registry;
+        using SignatureEntry = validator::SignatureEntry;
+        using RegistryUpdate = validator::RegistryUpdate;
+        using Role           = validator::Role;
+        using Status         = validator::Status;
+        using InitCallback   = std::function<void( bool )>;
         using BlockRequestMethod =
             std::function<void( const std::string &, std::function<void( outcome::result<std::string> )> )>;
 
@@ -266,17 +268,48 @@ namespace sgns
          */
         outcome::result<Registry> LoadCurrentRegistry() const;
         /**
-         * @brief Loads a registry by CID.
+         * @brief Loads a registry by CID after verifying its update chain.
          *
-         * Each registry CRDT element contains a complete serialized
-         * RegistryUpdate snapshot, so this reads the element from the identified
-         * delta directly; reconstructing the registry does not require replaying
-         * or merging ancestor deltas.
+         * The registry at @p cid is returned only when its RegistryUpdate
+         * classifies as valid AND every ancestor update along the
+         * prev-registry chain classifies as valid down to a genesis-anchored
+         * root (empty prev link signed by the genesis authority) or an
+         * already-verified memoized ancestor. A forged or self-certified chain
+         * that never roots in the genesis authority is unauthorized.
+         *
+         * Failure mapping:
+         *  - std::errc::permission_denied -- an update on the chain is
+         *    permanently invalid (unauthorized; do not retry);
+         *  - std::errc::resource_unavailable_try_again -- an update or its
+         *    dependencies are not synced locally yet (retryable: an ordering
+         *    problem, never an authorization failure).
+         *
+         * Verified CIDs on the walked path are memoized (bounded, oldest-first
+         * eviction at @ref kMaxVerifiedRegistryMemoEntries) so repeated loads
+         * terminate without re-walking the chain.
          *
          * @param[in] cid Registry CID.
          * @return Registry snapshot or an error.
          */
-        outcome::result<Registry> LoadRegistryByCid( const std::string &cid ) const;
+        outcome::result<Registry> LoadVerifiedRegistryByCid( const std::string &cid ) const;
+        /**
+         * @brief Loads a registry by CID WITHOUT update-chain verification.
+         *
+         * @details UNTRUSTED: bypasses the genesis-rooted chain verification and
+         * reads the CRDT element at @p cid directly. Each registry CRDT element
+         * contains a complete serialized RegistryUpdate snapshot, so
+         * reconstructing the registry does not require replaying or merging
+         * ancestor deltas. Reserved for verification internals (the
+         * base-registry fetch inside VerifyUpdateClassified -- using the
+         * verified loader there would recurse) and the grandfathered
+         * final-certificate path added by plan 21-04. No other caller may use
+         * it: a peer-supplied CID must go through @ref LoadVerifiedRegistryByCid.
+         *
+         * @param[in] cid Registry CID.
+         * @return Registry snapshot or an error.
+         */
+        outcome::result<Registry> LoadUnverifiedRegistryByCid( const std::string &cid ) const;
+
         /**
          * @brief Loads the currently active registry update payload.
          * @return Registry update or an error.
@@ -310,9 +343,9 @@ namespace sgns
          */
         enum class UpdateVerification : uint8_t
         {
-            kValid,           ///< Update fully verified.
+            kValid, ///< Update fully verified.
             kMissingDependency, ///< Referenced data (base registry snapshot, member certificate) not synced locally yet — retryable.
-            kInvalid,         ///< Update failed verification permanently.
+            kInvalid, ///< Update failed verification permanently.
         };
         /**
          * @brief Verifies a registry update and classifies the failure mode.
@@ -326,6 +359,84 @@ namespace sgns
          * @return Verification verdict.
          */
         UpdateVerification VerifyUpdateClassified( const RegistryUpdate &update, bool enforce_time_window ) const;
+
+        /**
+         * @brief Bounded memo of registry snapshots whose update chains verified to genesis.
+         *
+         * @details Entries are inserted only after a full verified chain walk
+         *          terminated at a genesis-anchored root or an already-verified
+         *          ancestor (T-21-0103: a memo entry is itself proof of
+         *          authorization, so only fully verified CIDs may enter). At
+         *          @ref kMaxVerifiedRegistryMemoEntries the single oldest entry
+         *          is evicted per insertion -- never a wholesale clear, which
+         *          would let per-certificate replays re-walk every chain
+         *          (T-21-0102).
+         */
+        class VerifiedRegistryMemo
+        {
+        public:
+            /**
+             * @brief Records a verified CID with its registry snapshot.
+             * @param[in] cid Verified registry CID.
+             * @param[in] registry Verified registry snapshot for the CID.
+             */
+            void Insert( const std::string &cid, Registry registry );
+            /**
+             * @brief Returns the memoized registry snapshot for a verified CID.
+             * @param[in] cid Registry CID.
+             * @return Snapshot when the CID is memoized, otherwise empty.
+             */
+            std::optional<Registry> Lookup( const std::string &cid ) const;
+            /**
+             * @brief Checks whether a CID was memoized as verified.
+             * @param[in] cid Registry CID.
+             * @return `true` when the CID is memoized.
+             */
+            bool Contains( const std::string &cid ) const;
+            /**
+             * @brief Returns the number of memoized entries.
+             * @return Current memo size.
+             */
+            size_t Size() const;
+
+        private:
+            mutable std::mutex                        mutex_;    ///< Guards both memo containers.
+            std::unordered_map<std::string, Registry> verified_; ///< Verified CID to snapshot.
+            std::deque<std::string> insertion_order_;            ///< FIFO of memoized CIDs for oldest-first eviction.
+        };
+
+        /**
+         * @brief Pure chain-walk verification decision for CID registry loads.
+         *
+         * @details Walks the prev-registry chain starting at @p cid: each hop
+         *          is fetched raw (no recursion into the verified loader) and
+         *          classified. The walk terminates at a genesis-anchored root
+         *          (empty prev link that classifies valid -- the genesis-
+         *          authority signature) or a memoized-verified ancestor. A
+         *          revisit of a CID inside one walk is a forged cycle and is
+         *          unauthorized. On success every walked CID is memoized
+         *          ancestor-first, so FIFO eviction drops the oldest chain
+         *          positions and the most recently verified head survives
+         *          longest. Extracted as a pure static helper so the walk,
+         *          memo, and verdict mapping are unit-testable without a
+         *          GlobalDB-backed ValidatorRegistry instance
+         *          (EvaluateRegularPromotionStatic pattern).
+         *
+         * @param[in] cid Head registry CID to verify.
+         * @param[in] fetch_update Raw (unverified) RegistryUpdate fetch by CID.
+         * @param[in] classify_update Per-hop verification decision.
+         * @param[in,out] memo Verified-CID memo read for termination and
+         *                    written on success.
+         * @return Head registry snapshot, std::errc::permission_denied when
+         *         the chain is unauthorized, or
+         *         std::errc::resource_unavailable_try_again when it is not
+         *         synced locally yet.
+         */
+        static outcome::result<Registry> VerifyRegistryChainClassified(
+            const std::string                                                           &cid,
+            const std::function<outcome::result<RegistryUpdate>( const std::string & )> &fetch_update,
+            const std::function<UpdateVerification( const RegistryUpdate & )>           &classify_update,
+            VerifiedRegistryMemo                                                        &memo );
         /**
          * @brief Persists a registry update.
          * @param[in] update Registry update to store.
@@ -510,6 +621,7 @@ namespace sgns
 
     protected:
         friend class sgns::Migration3_5_0To3_6_0;
+        friend class ValidatorAdmissionEquivocationTestAccess;
 
         /**
          * @brief Migrates registry-related CIDs from old to new datastore.
@@ -532,7 +644,7 @@ namespace sgns
             std::unordered_map<std::string, bool> registered_votes;   ///< Vote decisions by registered validators.
             std::unordered_map<std::string, bool> unregistered_votes; ///< Vote decisions by unregistered validators.
             std::unordered_set<std::string>       unregistered;       ///< Unregistered voter ids (observability).
-            std::unordered_set<std::string>       approved;           ///< Approving active validator ids (observability).
+            std::unordered_set<std::string>       approved; ///< Approving active validator ids (observability).
         };
 
         /**
@@ -585,6 +697,33 @@ namespace sgns
          */
         bool VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const;
         /**
+         * @brief Raw (unverified) RegistryUpdate fetch by CID.
+         * @details Private core shared by @ref LoadUnverifiedRegistryByCid and
+         *          the verified chain walk: reads the CRDT element at the CID
+         *          directly and returns the deserialized RegistryUpdate (the
+         *          walk needs the prev link and signatures, not just the
+         *          snapshot). UNTRUSTED -- never expose outside verification
+         *          internals.
+         * @param[in] cid Registry CID.
+         * @return Registry update or an error.
+         */
+        outcome::result<RegistryUpdate> LoadUnverifiedRegistryUpdateByCid( const std::string &cid ) const;
+        /**
+         * @brief Genesis-termination check for a chain-root registry update.
+         * @details An update with an empty prev link is valid only when signed
+         *          by the genesis authority over the canonical signing bytes.
+         *          Unlike the genesis branch inside VerifyUpdateClassified,
+         *          this check is a property of the update alone and does not
+         *          depend on the process-local cached head, so a synced node
+         *          can still re-verify its own genesis root during a chain
+         *          walk.
+         * @param[in] update Chain-root update (empty prev link).
+         * @param[in] signing_bytes Canonical signing bytes for the update.
+         * @return kValid when genesis-signed, otherwise kInvalid.
+         */
+        UpdateVerification VerifyGenesisAuthoritySignature( const RegistryUpdate       &update,
+                                                            const std::vector<uint8_t> &signing_bytes ) const;
+        /**
          * @brief Derives the registry committed to by a certificate-backed update.
          * @param[in] update Registry update carrying certificate metadata.
          * @param[in] certificate Certificate authorizing the update.
@@ -620,9 +759,8 @@ namespace sgns
          *         votes do not reach quorum (an empty partition set is a verdict,
          *         not a valid zero-vote tally).
          */
-        outcome::result<CertificateVotes> ExtractCertificateVotes(
-            const sgns::ConsensusCertificate &certificate,
-            const Registry                   &current_registry ) const;
+        outcome::result<CertificateVotes> ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
+                                                                   const Registry &current_registry ) const;
         /**
          * @brief Builds next registry snapshot using a certificate-derived vote set.
          * @param[in] current_registry Current registry snapshot.
@@ -788,22 +926,25 @@ namespace sgns
         uint64_t                        quorum_denominator_; ///< Quorum denominator.
         WeightConfig                    weight_config_;      ///< Weight and penalty configuration.
         std::string                     genesis_authority_;  ///< Genesis authority validator id.
-        std::string                     registry_key_;       ///< Instance-scoped registry CRDT key (public base when scope is empty).
-        std::string                     validator_topic_;    ///< Instance-scoped registry gossip topic (public base when scope is empty).
-        std::string                     registry_cid_key_;   ///< Instance-scoped registry-CID persistence key (public base when scope is empty).
-        base::Logger                    logger_ = base::createLogger( "ValidatorRegistry" ); ///< Component logger.
-        mutable std::shared_mutex       cache_mutex_;               ///< Guards cached registry/update state.
-        std::optional<Registry>         cached_registry_;           ///< Cached active registry snapshot.
-        std::optional<RegistryUpdate>   cached_update_;             ///< Cached active registry update.
-        std::string                     cached_registry_id_;        ///< Cached active registry CID.
-        bool                            cache_initialized_ = false; ///< Indicates whether cache has been initialized.
-        size_t                          max_new_validators_per_update_ =
+        std::string registry_key_;    ///< Instance-scoped registry CRDT key (public base when scope is empty).
+        std::string validator_topic_; ///< Instance-scoped registry gossip topic (public base when scope is empty).
+        std::string
+            registry_cid_key_; ///< Instance-scoped registry-CID persistence key (public base when scope is empty).
+        base::Logger                  logger_ = base::createLogger( "ValidatorRegistry" ); ///< Component logger.
+        mutable std::shared_mutex     cache_mutex_;               ///< Guards cached registry/update state.
+        std::optional<Registry>       cached_registry_;           ///< Cached active registry snapshot.
+        std::optional<RegistryUpdate> cached_update_;             ///< Cached active registry update.
+        std::string                   cached_registry_id_;        ///< Cached active registry CID.
+        bool                          cache_initialized_ = false; ///< Indicates whether cache has been initialized.
+        mutable VerifiedRegistryMemo
+               verified_registry_memo_; ///< Memoizes chain-verified registry CIDs for LoadVerifiedRegistryByCid.
+        size_t max_new_validators_per_update_ =
             DefaultMaxNewValidatorsPerUpdate;                         ///< Cap for new validators per update.
         size_t certificates_per_batch_ = DefaultCertificatesPerBatch; ///< Certificates required per batch subject.
         mutable std::mutex batch_mutex_;                              ///< Guards batch-tracking collections.
         std::unordered_map<std::string, std::set<std::string>>
-            pending_certificate_slots_by_base_;                  ///< Pending canonical certificate slots keyed by base registry.
-        std::unordered_set<std::string> pending_batch_subject_ids_; ///< Batch subject ids pending finalization.
+            pending_certificate_slots_by_base_; ///< Pending canonical certificate slots keyed by base registry.
+        std::unordered_set<std::string> pending_batch_subject_ids_;   ///< Batch subject ids pending finalization.
         std::unordered_set<std::string> finalized_batch_subject_ids_; ///< Batch subject ids already finalized.
         std::unordered_set<std::string> applying_batch_subject_ids_;  ///< Batch subject ids currently being applied.
         std::function<outcome::result<void>( const ConsensusSubject &subject )>

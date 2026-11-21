@@ -74,6 +74,15 @@ namespace sgns
         TokenID GetTokenID() const;
 
         /**
+         * @brief       Get the primary destination address of the mint
+         * @return      The first output's destination address (the same field
+         *              GetSlotID reads), or an empty string when the mint has
+         *              no outputs. Burn-receipt recipient binding compares this
+         *              field; it never re-parses GetSlotID output.
+         */
+        [[nodiscard]] std::string GetPrimaryDestinationAddress() const;
+
+        /**
          * @brief       Get source chain identifier for bridge mint validation routing
          * @return      Source chain id
          */

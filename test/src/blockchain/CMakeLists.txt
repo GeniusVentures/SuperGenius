@@ -58,6 +58,17 @@ target_link_libraries(validator_registry_promotion_test
     blockchain_genesis
 )
 
+# Phase 21 (TRUST-01): verified registry CID chain-walk unit tests. Exercises
+# the pure static VerifyRegistryChainClassified helper and its bounded
+# verified-CID memo directly -- no GlobalDB wiring needed (mirrors the
+# EvaluateRegularPromotionStatic pattern).
+addtest(validator_registry_verified_load_test
+    validator_registry_verified_load_test.cpp
+)
+target_link_libraries(validator_registry_verified_load_test
+    blockchain_genesis
+)
+
 # Phase 15 (D-09): instance-scope validator registry identifier tests. Pure
 # identifier-level checks (public byte-stability, scoped suffixing, three-way
 # disjointness) against CRDT-backed registries -- no consensus round needed.
@@ -98,6 +109,22 @@ addtest(validator_registry_batch_slot_test
     validator_registry_batch_slot_test.cpp
 )
 target_link_libraries(validator_registry_batch_slot_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
+# Phase 21 (TRUST-02): D-04 ACTIVE-addition cap enforcement + cross-certificate
+# equivocation guard proofs. Cap cases drive the ValidatorRegistry member path
+# on a CRDTFixture GlobalDB (config-wired setter value proven to flow);
+# equivocation cases drive FilterCertificate at the conflicting-certificate
+# branch with durable /cert/<slot> records (single-node harness, multi-node
+# evidence shape — the 21-06 durable-cert-writer precedent).
+addtest(validator_admission_equivocation_test
+    validator_admission_equivocation_test.cpp
+)
+target_link_libraries(validator_admission_equivocation_test
     blockchain_genesis
     genius_node_test
     rapidjson

@@ -66,7 +66,11 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
     auto       base       = MakeTempDir( "ncp_autodht" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
+    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath,
+                                           /*node_type=*/"Full",
+                                           /*is_processor=*/true,
+                                           /*rpc_catchup=*/false,
+                                           TEST_PRIVATE_KEY );
 
     auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     NodeTeardownGuard teardown{ node };
@@ -91,7 +95,11 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
     auto       base       = MakeTempDir( "ncp_port_seed" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/20000, /*auto_dht=*/false );
-    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
+    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath,
+                                           /*node_type=*/"Full",
+                                           /*is_processor=*/true,
+                                           /*rpc_catchup=*/false,
+                                           TEST_PRIVATE_KEY );
 
     auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     NodeTeardownGuard teardown{ node };
@@ -110,7 +118,11 @@ TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
     auto       base       = MakeTempDir( "ncp_ephemeral_port" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
-    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false, TEST_PRIVATE_KEY );
+    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath,
+                                           /*node_type=*/"Full",
+                                           /*is_processor=*/true,
+                                           /*rpc_catchup=*/false,
+                                           TEST_PRIVATE_KEY );
 
     auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     NodeTeardownGuard teardown{ node };
@@ -186,4 +198,97 @@ TEST( NetworkConfigPrecedence, BackgroundMultiplierAcceptsFractional )
 TEST( NetworkConfigPrecedence, BackgroundMultiplierIgnoresIllTypedValue )
 {
     EXPECT_DOUBLE_EQ( MultiplierAfterLoad( "ncp_multiplier_string", R"("3")" ), 3.0 );
+}
+
+namespace
+{
+    // D-03/D-04 (21-03): the authorization defer window and validator-admission cap are
+    // network_config.json keys beside the reconnect knobs. WriteNetworkConfig emits only
+    // port_seed/auto_dht/upnp_enabled, so scenes needing these keys hand-roll the JSON.
+    void WriteNetworkConfigWithTrustKnobs( const std::string &base_path,
+                                           const std::string &defer_window_literal,
+                                           const std::string &cap_literal )
+    {
+        std::ofstream config( base_path + "network_config.json" );
+        ASSERT_TRUE( config.good() );
+        config << R"({ "port_seed": 0, "auto_dht": false, "upnp_enabled": false, )"
+               << R"("authorization_defer_window_sec": )" << defer_window_literal << ", "
+               << R"("max_new_validators_per_update": )" << cap_literal << " }";
+    }
+
+    struct TrustKnobs
+    {
+        std::chrono::seconds defer_window;
+        size_t               cap;
+    };
+
+    TrustKnobs TrustKnobsAfterLoad( const std::string &dir,
+                                    const std::string &defer_window_literal,
+                                    const std::string &cap_literal )
+    {
+        UseMemorySecureStorage();
+        auto       base       = MakeTempDir( dir );
+        const auto dev_config = MakeDevConfig( base );
+        WriteNetworkConfigWithTrustKnobs( dev_config.BaseWritePath, defer_window_literal, cap_literal );
+        sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath,
+                                               /*node_type=*/"Full",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false,
+                                               TEST_PRIVATE_KEY );
+
+        auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+        NodeTeardownGuard teardown{ node };
+        EXPECT_NE( node, nullptr );
+        if ( !node )
+        {
+            return { std::chrono::seconds{ -1 }, 0 };
+        }
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+        TrustKnobs resolved{ sgns::GeniusNodeTestAccess::AuthorizationDeferWindow( node ),
+                             sgns::GeniusNodeTestAccess::MaxNewValidatorsPerUpdate( node ) };
+        WaitForReady( node );
+        return resolved;
+    }
+} // namespace
+
+// Absent keys keep the safe defaults: 1800 s window (D-03 user emphasis — generous),
+// registry-default cap of 10 (D-04).
+TEST( NetworkConfigPrecedence, AuthorizationTrustKnobsDefaultWithoutKeys )
+{
+    UseMemorySecureStorage();
+    auto       base       = MakeTempDir( "ncp_trust_knobs_default" );
+    const auto dev_config = MakeDevConfig( base );
+    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+    sgns::test::WriteLocalTrustSgnsConfig( dev_config.BaseWritePath,
+                                           /*node_type=*/"Full",
+                                           /*is_processor=*/false,
+                                           /*rpc_catchup=*/false,
+                                           TEST_PRIVATE_KEY );
+
+    auto              node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    NodeTeardownGuard teardown{ node };
+    ASSERT_NE( node, nullptr );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+
+    EXPECT_EQ( sgns::GeniusNodeTestAccess::AuthorizationDeferWindow( node ), std::chrono::seconds( 1800 ) );
+    EXPECT_EQ( sgns::GeniusNodeTestAccess::MaxNewValidatorsPerUpdate( node ),
+               sgns::ValidatorRegistry::DefaultMaxNewValidatorsPerUpdate );
+    ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
+}
+
+// Well-typed keys win over the defaults.
+TEST( NetworkConfigPrecedence, AuthorizationTrustKnobsConfigDriven )
+{
+    const auto resolved = TrustKnobsAfterLoad( "ncp_trust_knobs_driven", "2400", "3" );
+    EXPECT_EQ( resolved.defer_window, std::chrono::seconds( 2400 ) );
+    EXPECT_EQ( resolved.cap, 3U );
+}
+
+// Ill-typed values keep the defaults: a string window, and a negative cap (ill-typed for
+// its size_t destination — T-21-0305 keeps the default instead of coercing).
+TEST( NetworkConfigPrecedence, AuthorizationTrustKnobsIgnoreIllTypedValues )
+{
+    const auto resolved = TrustKnobsAfterLoad( "ncp_trust_knobs_illtyped", R"("1800")", "-5" );
+    EXPECT_EQ( resolved.defer_window, std::chrono::seconds( 1800 ) );
+    EXPECT_EQ( resolved.cap, sgns::ValidatorRegistry::DefaultMaxNewValidatorsPerUpdate );
 }

@@ -25,3 +25,10 @@ addtest(scaled_integer_test
 target_link_libraries(scaled_integer_test
     ScaledInteger
 )
+
+addtest(bounded_defer_test
+    bounded_defer_test.cpp
+)
+target_link_libraries(bounded_defer_test
+    bounded_defer
+)

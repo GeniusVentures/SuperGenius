@@ -53,6 +53,15 @@ target_link_libraries(ScaledInteger
 )
 supergenius_install(ScaledInteger)
 
+# Generic bounded defer-and-hold tracker (assessment D-03): mechanism only,
+# pure std dependencies — consumers (21-04 consensus trust, 21-06 mint ingress)
+# own the policy.
+add_library(bounded_defer
+    bounded_defer.hpp
+    bounded_defer.cpp
+)
+supergenius_install(bounded_defer)
+
 message(STATUS "Generating sgnsv.h from sgnsv.h.in")
 
 cmake_policy(SET CMP0115 NEW)

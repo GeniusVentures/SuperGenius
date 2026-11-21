@@ -107,8 +107,8 @@ namespace
     // chainlist fetch blocks for up to 15s -- and cleanup frees the ENGINE lock
     // underneath them, which segfaults the process after the tests passed.
     // Leaking OpenSSL state at exit is cheaper than that crash.
-    [[maybe_unused]] const bool OPENSSL_NO_ATEXIT_INSTALLED =
-        OPENSSL_init_crypto( OPENSSL_INIT_NO_ATEXIT, nullptr ) == 1;
+    [[maybe_unused]] const bool OPENSSL_NO_ATEXIT_INSTALLED = OPENSSL_init_crypto( OPENSSL_INIT_NO_ATEXIT, nullptr ) ==
+                                                              1;
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
@@ -583,6 +583,14 @@ namespace sgns
             burn_config_quorum_threshold_ = config_json["burn_config_quorum_threshold"].GetUint64();
             node_logger_->info( "sgns_config.json: burn_config_quorum_threshold={}", burn_config_quorum_threshold_ );
         }
+        // Presence is logged, never the value: the pin is a trust-root secret in the
+        // same sense as the identity fields it anchors (D-03 privacy precedent).
+        if ( config_json.HasMember( "genesis_manifest_fingerprint" ) &&
+             config_json["genesis_manifest_fingerprint"].IsString() )
+        {
+            genesis_manifest_fingerprint_ = config_json["genesis_manifest_fingerprint"].GetString();
+            node_logger_->info( "sgns_config.json: genesis_manifest_fingerprint pin loaded" );
+        }
         // Unset config never trips D-07's floor rejection: default to the exact majority
         // floor for the parsed genesis peer count (ceil(0.51*N)). MembershipQuorumFloor
         // maps an empty peer set to 0; keep the historical default of 1 for that case.
@@ -916,6 +924,22 @@ namespace sgns
                         // Scope this blockchain's validator consensus to the private
                         // network (empty on public nodes keeps public identifiers).
                         private_network_id_ );
+
+                    // D-04 (21-03): config-wired cap on validators admitted per registry
+                    // update — the first production caller of the registry setter; the
+                    // enforcement test lands in 21-07.
+                    if ( auto registry = blockchain_->GetValidatorRegistry() )
+                    {
+                        registry->SetMaxNewValidatorsPerUpdate( max_new_validators_per_update_ );
+                    }
+
+                    // D-03 (21-04): config-wired authorization defer window for the
+                    // consensus manager's strict registry-authorization stall path
+                    // (authorization_defer_window_sec, default 1800s).
+                    if ( auto consensus_manager = blockchain_->GetConsensusManager() )
+                    {
+                        consensus_manager->SetAuthorizationDeferWindow( authorization_defer_window_sec_ );
+                    }
                 }
                 if ( blockchain_ )
                 {
@@ -991,6 +1015,38 @@ namespace sgns
                         configured.membership_threshold    = trusted_peer_quorum_threshold_;
                         configured.burn_threshold          = burn_config_quorum_threshold_;
                         manifest                           = std::move( configured );
+                    }
+                    // Folded-todo residual (T-21-0301): anchor the configured trust
+                    // root to the ceremony fingerprint pin on fresh boots. The pin
+                    // catches partial tamper/drift of the mutable JSON trust fields;
+                    // whole-file replacement including the pin implies local write
+                    // control equal to controlling the node (T-21-0302 accepted).
+                    // Post-confirmation restarts are governed by the persisted-state
+                    // checks inside the controller.
+                    if ( has_configured_trust && !genesis_manifest_fingerprint_.empty() )
+                    {
+                        const auto computed = manifest->Fingerprint();
+                        if ( !computed || *computed != genesis_manifest_fingerprint_ )
+                        {
+                            // Rule name plus truncated digests only — never key values
+                            // or the full fingerprint (privacy precedent, D-03).
+                            node_logger_->critical( "genesis manifest fingerprint mismatch: configured "
+                                                    "trust root does not match the pinned ceremony "
+                                                    "fingerprint (pin {}…, computed {}…); refusing to "
+                                                    "start",
+                                                    genesis_manifest_fingerprint_.substr( 0, 16 ),
+                                                    computed ? computed->substr( 0, 16 ) : std::string( "none" ) );
+                            account_service_switching_ = false;
+                            StateTransition( NodeState::FATAL_TRUST_MISMATCH );
+                            return;
+                        }
+                        node_logger_->info( "genesis manifest fingerprint pin verified" );
+                    }
+                    else if ( has_configured_trust )
+                    {
+                        node_logger_->warn( "trust root unpinned: no genesis_manifest_fingerprint in "
+                                            "sgns_config.json; configured trust fields are not "
+                                            "anchored to a ceremony fingerprint" );
                     }
                     if ( !trust_signer_ )
                     {
@@ -1209,6 +1265,12 @@ namespace sgns
                     account_service_switching_ = false;
                     return;
                 }
+
+                // MINT-03 (21-06): the sync-admission defer window for
+                // value-carrying v1 mints is the shared D-03
+                // authorization_defer_window_sec (21-03), the same window
+                // the consensus certificate layer consumes above.
+                transaction_manager_->SetLegacyMintDeferWindow( authorization_defer_window_sec_ );
 
                 RequestBootstrapWalk();
 
@@ -2051,6 +2113,19 @@ namespace sgns
                                 trust_bootstrap_sync_interval_.count() );
         }
 
+        // D-03/D-04 (21-03): authorization deferral window and validator-admission cap,
+        // read beside the reconnect knobs — config-wins with safe defaults (1800 s and
+        // the registry's default cap of 10). A negative cap is ill-typed for its size_t
+        // destination and keeps the default; cap floors are handled by the registry's
+        // existing enforcement.
+        read_seconds( "authorization_defer_window_sec", settings.authorization_defer_window_sec );
+        int max_new_validators = static_cast<int>( settings.max_new_validators_per_update );
+        read( "max_new_validators_per_update", max_new_validators );
+        if ( max_new_validators >= 0 )
+        {
+            settings.max_new_validators_per_update = static_cast<size_t>( max_new_validators );
+        }
+
         return settings;
     }
 
@@ -2260,6 +2335,10 @@ namespace sgns
         // membership. Log the public id only - never the network_key value (D-03).
         private_network_id_      = settings.private_network_id;
         network_bootstrap_peers_ = settings.network_bootstrap_peers;
+        // D-03/D-04 (21-03): retained for the post-InitNetwork consumers (registry cap
+        // applied at blockchain construction; defer windows in 21-04/21-06).
+        authorization_defer_window_sec_ = settings.authorization_defer_window_sec;
+        max_new_validators_per_update_  = settings.max_new_validators_per_update;
         if ( !private_network_id_.empty() )
         {
             node_logger_->info( "network_config.json: private-network identity: {}", private_network_id_ );
@@ -2419,7 +2498,7 @@ namespace sgns
             return false;
         }
 
-        task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, ScopedProcessingChannel(), private_network_id_ );
+        task_queue_ = processing::TaskQueueImpl::New( tx_globaldb_, ScopedProcessingChannel(), private_network_id_ );
         // Thread the private-network key into the per-subtask processing host so it gets
         // the same Noise-only + pnet enforcement as the gossip host (D-11). Public nodes
         // keep the defaulted argument and today's construction semantics.
@@ -2806,7 +2885,7 @@ namespace sgns
         // CR-C2-01: this path shuts tx_globaldb_ down later (after the io drain
         // and PubSub stop below), so the policy stack must deny-all now instead
         // of relying on the GlobalDB going away underneath it.
-        ShutdownNodePolicyServices( /*global_db_shutdown_follows=*/ true );
+        ShutdownNodePolicyServices( /*global_db_shutdown_follows=*/true );
 
         // The LocalPriceManager owns its own io_context + runner thread and
         // references no node members (D-05); its drain-join destructor resolves
@@ -2880,7 +2959,7 @@ namespace sgns
         ShutdownForDestruction();
 
         const auto caller_thread_id = std::this_thread::get_id();
-        stop_upnp = true;
+        stop_upnp                   = true;
         if ( upnp_thread.joinable() )
         {
             if ( upnp_thread.get_id() == caller_thread_id )
@@ -3045,8 +3124,8 @@ namespace sgns
     {
         // Parses a base58 peer-id string; nullopt when pubsub_ is down or the id is malformed.
         std::optional<libp2p::peer::PeerId> ParsePeerId( const std::shared_ptr<ipfs_pubsub::GossipPubSub> &pubsub,
-                                                         const std::string                                         &peer_id,
-                                                         base::Logger                                               logger )
+                                                         const std::string                                &peer_id,
+                                                         base::Logger                                      logger )
         {
             if ( !pubsub )
             {
@@ -3135,7 +3214,7 @@ namespace sgns
         // Encode the string to UTF-8 bytes, then compute its SHA-256
         // Scope FIRST, net-and-version appendix LAST: an empty scope hashes today's exact
         // byte string, so public job discovery keeps its CID.
-        const std::string topic = ScopedProcessingGridChannel() + sgns::version::GetNetAndVersionAppendix();
+        const std::string   topic = ScopedProcessingGridChannel() + sgns::version::GetNetAndVersionAppendix();
         const base::Hash256 hash  = crypto::sha2_256( topic.data(), topic.size() );
 
         // Provide CID
@@ -3309,7 +3388,7 @@ namespace sgns
         else
         {
             std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
-            account_ = std::move( account );
+            account_                   = std::move( account );
             account_service_switching_ = false;
         }
 
@@ -3347,7 +3426,10 @@ namespace sgns
         }
 
         const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        if ( !snapshot.account || !snapshot.manager )
+        {
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
         const auto token_id = GetTokenID();
         auto       balance  = snapshot.account->GetUTXOManager().GetBalance( token_id );
         if ( balance > 0 )
@@ -3403,7 +3485,10 @@ namespace sgns
         }
 
         const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        if ( !snapshot.account )
+        {
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
         BOOST_OUTCOME_TRY( snapshot.account->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
 
         this->StateTransition( NodeState::INITIALIZING_PROCESSING );
@@ -3426,7 +3511,10 @@ namespace sgns
         }
 
         const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        if ( !snapshot.account || !snapshot.manager )
+        {
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
         if ( snapshot.account->GetUTXOManager().GetBalance() < funds )
         {
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
@@ -3486,8 +3574,7 @@ namespace sgns
         // Scope the escrow CRDT path through the task-carried escrow_path so the write here and
         // the PayEscrow -> FetchTransaction read stay symmetric; a public node's path equals the
         // raw lock_id byte-for-byte.
-        const std::string scoped_escrow_path =
-            processing::TaskKeys::ScopedKeyPath( private_network_id_, escrow_path );
+        const std::string scoped_escrow_path = processing::TaskKeys::ScopedKeyPath( private_network_id_, escrow_path );
         task.set_escrow_path( scoped_escrow_path );
 
         BOOST_OUTCOME_TRY( auto crdt_transaction,
@@ -3603,9 +3690,9 @@ namespace sgns
     {
         // Submission lease: see TransferFunds — a concurrent SelectAccount()
         // drains this call instead of stopping the manager mid-submission.
-        SubmissionLease                 lease( *this );
-        AccountServiceSnapshot          snapshot;
-        bool                            usable = false;
+        SubmissionLease        lease( *this );
+        AccountServiceSnapshot snapshot;
+        bool                   usable = false;
         {
             std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
             if ( !account_service_switching_ )
@@ -3663,7 +3750,10 @@ namespace sgns
     std::optional<std::string> GeniusNode::GetMnemonicOfActiveAccount() const
     {
         const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account ) return std::nullopt;
+        if ( !snapshot.account )
+        {
+            return std::nullopt;
+        }
         auto res = snapshot.account->LoadFromSecureStorage( "mnemonic" );
         if ( res.has_error() )
         {
@@ -3772,9 +3862,9 @@ namespace sgns
         // stopping this manager mid-flight and stranding the returned tx hash.
         // Acquired under lifecycle_mutex_ so lease ownership is atomic with the
         // snapshot validation in the same critical section.
-        SubmissionLease                 lease( *this );
-        AccountServiceSnapshot          snapshot;
-        bool                            usable = false;
+        SubmissionLease        lease( *this );
+        AccountServiceSnapshot snapshot;
+        bool                   usable = false;
         {
             std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
             if ( !account_service_switching_ )
@@ -3810,11 +3900,10 @@ namespace sgns
         return tx_id;
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::RecoverFromChild(
-        const std::string        &child_address,
-        uint64_t                  amount,
-        TokenID                   token_id,
-        std::chrono::milliseconds timeout )
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::RecoverFromChild( const std::string &child_address,
+                                                                                    uint64_t           amount,
+                                                                                    TokenID            token_id,
+                                                                                    std::chrono::milliseconds timeout )
     {
         BOOST_OUTCOME_TRY( auto &&tx_id, RecoverFromChild( child_address, amount, token_id ) );
 
@@ -3838,9 +3927,9 @@ namespace sgns
     {
         // Submission lease: see TransferFunds — a concurrent SelectAccount()
         // drains this call instead of stopping the manager mid-submission.
-        SubmissionLease                 lease( *this );
-        AccountServiceSnapshot          snapshot;
-        bool                            usable = false;
+        SubmissionLease        lease( *this );
+        AccountServiceSnapshot snapshot;
+        bool                   usable = false;
         {
             std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
             if ( !account_service_switching_ )
@@ -3870,16 +3959,15 @@ namespace sgns
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
 
-        BOOST_OUTCOME_TRY( auto tx_id,
-                            snapshot.manager->RecoverFromChild( child_address, amount, token_id ) );
+        BOOST_OUTCOME_TRY( auto tx_id, snapshot.manager->RecoverFromChild( child_address, amount, token_id ) );
 
         node_logger_->debug( "{}: transaction {} sent", __func__, tx_id );
         return tx_id;
     }
 
-    outcome::result<std::string> GeniusNode::RegisterChild( const std::string                   &main_address,
-                                                            SGTransaction::RegistrationMetadata  metadata,
-                                                            uint64_t                             sequence )
+    outcome::result<std::string> GeniusNode::RegisterChild( const std::string                  &main_address,
+                                                            SGTransaction::RegistrationMetadata metadata,
+                                                            uint64_t                            sequence )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
@@ -3892,8 +3980,8 @@ namespace sgns
         return tx_id;
     }
 
-    outcome::result<std::string> GeniusNode::RegisterChild( const std::string                   &main_address,
-                                                            SGTransaction::RegistrationMetadata  metadata )
+    outcome::result<std::string> GeniusNode::RegisterChild( const std::string                  &main_address,
+                                                            SGTransaction::RegistrationMetadata metadata )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
@@ -3934,10 +4022,10 @@ namespace sgns
         return tx_id;
     }
 
-    outcome::result<std::string> GeniusNode::ReplaceMain( const std::string                   &new_main_address,
-                                                          SGTransaction::RegistrationMetadata  metadata,
-                                                          uint64_t                             sequence,
-                                                          uint64_t                             supersedes_sequence )
+    outcome::result<std::string> GeniusNode::ReplaceMain( const std::string                  &new_main_address,
+                                                          SGTransaction::RegistrationMetadata metadata,
+                                                          uint64_t                            sequence,
+                                                          uint64_t                            supersedes_sequence )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
@@ -3945,14 +4033,15 @@ namespace sgns
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id,
-                          manager->ReplaceMain( new_main_address, std::move( metadata ), sequence, supersedes_sequence ) );
+        BOOST_OUTCOME_TRY(
+            auto tx_id,
+            manager->ReplaceMain( new_main_address, std::move( metadata ), sequence, supersedes_sequence ) );
         node_logger_->debug( "{}: replace-main transaction {} sent", __func__, tx_id );
         return tx_id;
     }
 
-    outcome::result<std::string> GeniusNode::ReplaceMain( const std::string                   &new_main_address,
-                                                          SGTransaction::RegistrationMetadata  metadata )
+    outcome::result<std::string> GeniusNode::ReplaceMain( const std::string                  &new_main_address,
+                                                          SGTransaction::RegistrationMetadata metadata )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
@@ -3978,9 +4067,8 @@ namespace sgns
         return tx_id;
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::RevokeChild(
-        const std::string        &child_address,
-        std::chrono::milliseconds timeout )
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::RevokeChild( const std::string        &child_address,
+                                                                               std::chrono::milliseconds timeout )
     {
         BOOST_OUTCOME_TRY( auto &&tx_id, RevokeChild( child_address ) );
 
@@ -4120,9 +4208,12 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        static constexpr std::string_view FUNC        = __func__;
-        const auto snapshot = SnapshotAccountServices();
-        if ( !snapshot.account || !snapshot.manager ) return;
+        static constexpr std::string_view FUNC     = __func__;
+        const auto                        snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager )
+        {
+            return;
+        }
         const auto account_tag = snapshot.account->GetAddress().substr( 0, 8 );
         node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}", account_tag, FUNC, task_id );
 
@@ -4211,7 +4302,10 @@ namespace sgns
                                if ( auto strong = weak_self.lock() )
                                {
                                    const auto snapshot = strong->SnapshotAccountServices();
-                                   if ( !snapshot.account ) return;
+                                   if ( !snapshot.account )
+                                   {
+                                       return;
+                                   }
                                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
                                                                 snapshot.account->GetAddress().substr( 0, 8 ),
                                                                 task_id );
@@ -4440,7 +4534,7 @@ namespace sgns
 
     std::string GeniusNode::GetAddress() const
     {
-        std::string address = "UNVAILABLE";
+        std::string address  = "UNVAILABLE";
         auto        snapshot = SnapshotAccountServices();
         if ( snapshot.account )
         {
@@ -4715,8 +4809,8 @@ namespace sgns
                 return strong->catchup_chains_;
             };
 
-            auto rpc_resolver = [weak_self = weak_from_this(), account_services](
-                                    const std::string &chain_id_str ) -> std::optional<std::string>
+            auto rpc_resolver = [weak_self = weak_from_this(),
+                                 account_services]( const std::string &chain_id_str ) -> std::optional<std::string>
             {
                 auto strong = weak_self.lock();
                 if ( !strong )
@@ -4736,10 +4830,10 @@ namespace sgns
 
             using BurnOutcome = evmwatcher::BridgeCatchupWatcher::BurnOutcome;
 
-            auto burn_processor = [weak_self = weak_from_this(), account_services](
-                                      const std::vector<eth::abi::AbiValue> &decoded_values,
-                                      const std::string                     &tx_hash_hex,
-                                      const std::string                     &chain_id_str ) -> BurnOutcome
+            auto burn_processor = [weak_self = weak_from_this(),
+                                   account_services]( const std::vector<eth::abi::AbiValue> &decoded_values,
+                                                      const std::string                     &tx_hash_hex,
+                                                      const std::string &chain_id_str ) -> BurnOutcome
             {
                 // Malformed input returns Retry rather than Processed: a stuck, loudly
                 // logged cursor is a far safer failure mode than silently dropping a burn
@@ -4836,8 +4930,7 @@ namespace sgns
                 std::move( burn_processor ) );
             {
                 std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
-                if ( account_service_switching_ ||
-                     account_services.generation != account_service_generation_ )
+                if ( account_service_switching_ || account_services.generation != account_service_generation_ )
                 {
                     node_logger_->debug(
                         "InitializeAndStartBridge: discarding catch-up watcher for retired generation" );

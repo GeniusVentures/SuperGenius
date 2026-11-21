@@ -204,6 +204,28 @@ else()
     )
 endif()
 
+# Phase 21 (21-02, MINT-02/MINT-04): adversarial+compat pairs for the mint
+# evidence layer — fail-closed mint identities and receipt/mint fact binding.
+addtest(mint_evidence_binding_test
+    mint_evidence_binding_test.cpp
+)
+
+target_link_libraries(mint_evidence_binding_test
+    genius_node_test
+)
+
+if(MSVC)
+    target_link_options(mint_evidence_binding_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(mint_evidence_binding_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(mint_evidence_binding_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 set(TRANSACTION_MANAGER_PENDING_LIFECYCLE_SOURCE transaction_manager_pending_lifecycle)
 set(TRANSACTION_MANAGER_PENDING_LIFECYCLE_TARGET transaction_manager_pending_lifecycle)
 addtest(transaction_manager_pending_lifecycle_test

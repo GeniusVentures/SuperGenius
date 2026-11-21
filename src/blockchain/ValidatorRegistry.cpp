@@ -282,9 +282,8 @@ namespace sgns
                                                           crdt::GlobalDB &new_db,
                                                           std::string     network_scope )
     {
-        auto old_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>(
-            old_db.GetBroadcaster()->GetDagSyncer() );
-        auto new_crdt = new_db.GetCRDTDataStore();
+        auto old_syncer = std::static_pointer_cast<crdt::GraphsyncDAGSyncer>( old_db.GetBroadcaster()->GetDagSyncer() );
+        auto new_crdt   = new_db.GetCRDTDataStore();
         if ( !new_crdt )
         {
             ValidatorRegistryLogger()->error( "{}: Missing broadcaster while migrating Validator CIDs", __func__ );
@@ -376,7 +375,6 @@ namespace sgns
     {
         return registry_cid_key_;
     }
-
 
     uint64_t ValidatorRegistry::MaxWeight( Role role ) const
     {
@@ -548,7 +546,7 @@ namespace sgns
         {
             const uint64_t numerator = result.total_voting_reputation * weight_config.slot_quorum_numerator_;
             result.threshold         = ( numerator + weight_config.slot_quorum_denominator_ - 1 ) /
-                                       weight_config.slot_quorum_denominator_;
+                               weight_config.slot_quorum_denominator_;
         }
 
         const auto public_contribution = [&]( const PublicHashGroups &groups )
@@ -782,7 +780,8 @@ namespace sgns
         return update_result.value().registry();
     }
 
-    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::LoadRegistryByCid( const std::string &cid ) const
+    outcome::result<ValidatorRegistry::RegistryUpdate> ValidatorRegistry::LoadUnverifiedRegistryUpdateByCid(
+        const std::string &cid ) const
     {
         ValidatorRegistryLogger()->trace( "{}: entry cid={}", __func__, cid );
 
@@ -813,10 +812,198 @@ namespace sgns
             }
 
             ValidatorRegistryLogger()->debug( "{}: Grabbing registry from cid {} and key={}", __func__, cid, key );
-            return decoded.value().registry();
+            return decoded.value();
         }
 
         return outcome::failure( std::errc::no_such_file_or_directory );
+    }
+
+    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::LoadUnverifiedRegistryByCid(
+        const std::string &cid ) const
+    {
+        auto update = LoadUnverifiedRegistryUpdateByCid( cid );
+        if ( update.has_error() )
+        {
+            return outcome::failure( update.error() );
+        }
+        return update.value().registry();
+    }
+
+    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::LoadVerifiedRegistryByCid(
+        const std::string &cid ) const
+    {
+        logger_->trace( "{}: entry cid={}", __func__, cid );
+
+        const auto fetch_update = [this]( const std::string &next_cid ) -> outcome::result<RegistryUpdate>
+        { return LoadUnverifiedRegistryUpdateByCid( next_cid ); };
+        // Chain-root termination is decided here, not inside
+        // VerifyUpdateClassified: the genesis branch there only runs while no
+        // cached registry exists, but a chain walk must be able to re-verify
+        // the genesis root on a node whose cache has since moved on.
+        const auto classify_update = [this]( const RegistryUpdate &update ) -> UpdateVerification
+        {
+            // The log name is inlined: __func__ inside a lambda expands to the
+            // lambda's call operator, which would mislabel the log line.
+            if ( update.prev_registry_hash().empty() )
+            {
+                auto signing_bytes = ComputeUpdateSigningBytes( update );
+                if ( signing_bytes.has_error() )
+                {
+                    logger_->error( "LoadVerifiedRegistryByCid: signing bytes computation failed for chain root" );
+                    return UpdateVerification::kInvalid;
+                }
+                return VerifyGenesisAuthoritySignature( update, signing_bytes.value() );
+            }
+            return VerifyUpdateClassified( update, /*enforce_time_window=*/false );
+        };
+
+        auto verified = VerifyRegistryChainClassified( cid, fetch_update, classify_update, verified_registry_memo_ );
+        if ( verified.has_error() )
+        {
+            logger_->warn( "{}: chain verification failed rule={} cid={}", __func__, verified.error().message(), cid );
+        }
+        return verified;
+    }
+
+    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::VerifyRegistryChainClassified(
+        const std::string                                                           &cid,
+        const std::function<outcome::result<RegistryUpdate>( const std::string & )> &fetch_update,
+        const std::function<UpdateVerification( const RegistryUpdate & )>           &classify_update,
+        VerifiedRegistryMemo                                                        &memo )
+    {
+        ValidatorRegistryLogger()->trace( "VerifyRegistryChainClassified: entry cid={}", cid );
+
+        std::set<std::string>                         visited_cids;
+        std::vector<std::pair<std::string, Registry>> walked_path;
+        Registry                                      head_registry;
+        bool                                          head_loaded = false;
+        std::string                                   current_cid = cid;
+
+        while ( true )
+        {
+            if ( memo.Contains( current_cid ) )
+            {
+                // Verified ancestor (or the head itself) terminates the walk.
+                if ( !head_loaded )
+                {
+                    auto memoized = memo.Lookup( current_cid );
+                    if ( memoized.has_value() )
+                    {
+                        head_registry = memoized.value();
+                        head_loaded   = true;
+                    }
+                    else
+                    {
+                        // Raced with an eviction between Contains and Lookup.
+                        ValidatorRegistryLogger()->warn(
+                            "VerifyRegistryChainClassified: memo entry evicted mid-walk cid={}",
+                            current_cid );
+                        return outcome::failure( std::errc::resource_unavailable_try_again );
+                    }
+                }
+                break;
+            }
+
+            if ( !visited_cids.insert( current_cid ).second )
+            {
+                // A prev chain that revisits a CID is a forged cycle: it can
+                // never root in the genesis authority, and looping would hang.
+                ValidatorRegistryLogger()->error( "VerifyRegistryChainClassified: cyclic prev chain rejected at cid={}",
+                                                  current_cid );
+                return outcome::failure( std::errc::permission_denied );
+            }
+
+            auto update_result = fetch_update( current_cid );
+            if ( update_result.has_error() )
+            {
+                ValidatorRegistryLogger()->warn( "VerifyRegistryChainClassified: update not synced yet cid={}",
+                                                 current_cid );
+                return outcome::failure( std::errc::resource_unavailable_try_again );
+            }
+
+            const RegistryUpdate &update = update_result.value();
+            if ( !head_loaded )
+            {
+                head_registry = update.registry();
+                head_loaded   = true;
+            }
+
+            switch ( classify_update( update ) )
+            {
+                case UpdateVerification::kInvalid:
+                    ValidatorRegistryLogger()->error(
+                        "VerifyRegistryChainClassified: update failed verification cid={}",
+                        current_cid );
+                    return outcome::failure( std::errc::permission_denied );
+                case UpdateVerification::kMissingDependency:
+                    ValidatorRegistryLogger()->warn(
+                        "VerifyRegistryChainClassified: update dependencies not synced yet cid={}",
+                        current_cid );
+                    return outcome::failure( std::errc::resource_unavailable_try_again );
+                case UpdateVerification::kValid:
+                    break;
+            }
+
+            walked_path.emplace_back( current_cid, update.registry() );
+
+            const std::string &prev_registry_cid = update.prev_registry_hash();
+            if ( prev_registry_cid.empty() )
+            {
+                // Genesis-anchored termination: the classifier already enforced
+                // the genesis-authority signature for an empty prev link.
+                break;
+            }
+            current_cid = prev_registry_cid;
+        }
+
+        // Memoize ancestor-first so FIFO eviction drops the oldest chain
+        // positions first and the most recently verified head survives longest.
+        for ( auto walked = walked_path.rbegin(); walked != walked_path.rend(); ++walked )
+        {
+            memo.Insert( walked->first, std::move( walked->second ) );
+        }
+
+        return head_registry;
+    }
+
+    void ValidatorRegistry::VerifiedRegistryMemo::Insert( const std::string &cid, Registry registry )
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        if ( verified_.emplace( cid, std::move( registry ) ).second )
+        {
+            insertion_order_.push_back( cid );
+            if ( insertion_order_.size() > kMaxVerifiedRegistryMemoEntries )
+            {
+                // Evict exactly the oldest entry: never a wholesale clear
+                // (a clear would let per-certificate replays re-walk chains).
+                verified_.erase( insertion_order_.front() );
+                insertion_order_.pop_front();
+            }
+        }
+    }
+
+    std::optional<ValidatorRegistry::Registry> ValidatorRegistry::VerifiedRegistryMemo::Lookup(
+        const std::string &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        const auto                  it = verified_.find( cid );
+        if ( it == verified_.end() )
+        {
+            return std::nullopt;
+        }
+        return it->second;
+    }
+
+    bool ValidatorRegistry::VerifiedRegistryMemo::Contains( const std::string &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return verified_.find( cid ) != verified_.end();
+    }
+
+    size_t ValidatorRegistry::VerifiedRegistryMemo::Size() const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return verified_.size();
     }
 
     outcome::result<ValidatorRegistry::RegistryUpdate> ValidatorRegistry::LoadRegistryUpdate() const
@@ -893,7 +1080,7 @@ namespace sgns
             gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
 
         crdt::HierarchicalKey registry_key{ registry_key_ };
-        auto registry_put = db_->Put( registry_key, update_buffer, { validator_topic_ } );
+        auto                  registry_put = db_->Put( registry_key, update_buffer, { validator_topic_ } );
         if ( registry_put.has_error() )
         {
             logger_->error( "{}: failed to store registry update in CRDT", __func__ );
@@ -1108,7 +1295,10 @@ namespace sgns
             return outcome::success();
         }
 
-        auto base_registry_result = LoadRegistryByCid( base_registry_cid );
+        // Consensus-critical load: strict. A base registry that fails chain
+        // verification aborts batch proposal creation; a not-yet-synced chain
+        // propagates the retryable error for the caller's retry machinery.
+        auto base_registry_result = LoadVerifiedRegistryByCid( base_registry_cid );
         if ( base_registry_result.has_error() )
         {
             return outcome::failure( base_registry_result.error() );
@@ -1162,8 +1352,7 @@ namespace sgns
         return submitter( subject_result.value() );
     }
 
-    ValidatorRegistry::BatchSubjectDecision ValidatorRegistry::EvaluateBatchSubject(
-        const ConsensusSubject &subject )
+    ValidatorRegistry::BatchSubjectDecision ValidatorRegistry::EvaluateBatchSubject( const ConsensusSubject &subject )
     {
         auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( subject );
         if ( payload_result.has_error() )
@@ -1180,9 +1369,20 @@ namespace sgns
         // perfectly valid batch (a permanent verdict), splitting the quorum across
         // honest nodes and stalling the epoch. A missing member record means "not
         // synced yet", not invalid — Pending lets the retry machinery converge.
-        auto registry_result = LoadRegistryByCid( payload.base_registry_cid() );
+        // Consensus-critical load: strict. An unauthorized (forged/self-
+        // certified) base registry is permanently invalid -- Reject, the same
+        // abort path an epoch mismatch takes. A not-yet-synced chain stays
+        // Pending so the retry machinery converges.
+        auto registry_result = LoadVerifiedRegistryByCid( payload.base_registry_cid() );
         if ( registry_result.has_error() )
         {
+            if ( registry_result.error() == std::errc::permission_denied )
+            {
+                logger_->error( "{}: base registry failed authorization verification cid={}",
+                                __func__,
+                                payload.base_registry_cid() );
+                return BatchSubjectDecision::Reject;
+            }
             return BatchSubjectDecision::Pending;
         }
         if ( registry_result.value().epoch() != payload.base_registry_epoch() )
@@ -1205,9 +1405,7 @@ namespace sgns
                     return BatchSubjectDecision::Reject;
                 }
                 // The member's durable record has not synced yet.
-                logger_->debug( "{}: member slot={} not yet available, pending",
-                                __func__,
-                                member_slot );
+                logger_->debug( "{}: member slot={} not yet available, pending", __func__, member_slot );
                 return BatchSubjectDecision::Pending;
             }
             if ( cert_result.value().registry_cid() != payload.base_registry_cid() ||
@@ -1251,12 +1449,23 @@ namespace sgns
             return BatchCertificateDecision::Reject;
         }
 
-        const auto &payload              = payload_result.value();
-        auto        base_registry_result = LoadRegistryByCid( payload.base_registry_cid() );
+        const auto &payload = payload_result.value();
+        // Consensus-critical load: strict. An unauthorized (forged/self-
+        // certified) base registry is permanently invalid -- Reject, the same
+        // abort path an epoch/certificate mismatch takes. A not-yet-synced
+        // chain stays Stalled so the retry machinery converges.
+        auto base_registry_result = LoadVerifiedRegistryByCid( payload.base_registry_cid() );
         if ( base_registry_result.has_error() )
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
+            if ( base_registry_result.error() == std::errc::permission_denied )
+            {
+                logger_->error( "{}: base registry failed authorization verification cid={}",
+                                __func__,
+                                payload.base_registry_cid() );
+                return BatchCertificateDecision::Reject;
+            }
             return BatchCertificateDecision::Stalled;
         }
         if ( base_registry_result.value().epoch() != payload.base_registry_epoch() ||
@@ -1466,23 +1675,23 @@ namespace sgns
         RegistryUpdate update = decoded_update.value();
         switch ( VerifyUpdateClassified( update, false ) )
         {
-        case UpdateVerification::kValid:
-            logger_->debug( "{}: update accepted", __func__ );
-            return crdt::CRDTDataFilter::ElementFilterResult::Accept();
-        case UpdateVerification::kMissingDependency:
-            // The update legitimately arrived before the data it was derived
-            // from (cross-delta arrival order is unordered). Stall the whole
-            // delta job instead of permanently dropping the element: the
-            // failed-root retry machinery reprocesses it once the dependency
-            // syncs, and no head is recorded meanwhile.
-            logger_->info( "{}: update dependencies not synced yet, stalling for retry: {}",
-                           __func__,
-                           element.key() );
-            return crdt::CRDTDataFilter::ElementFilterResult::Stall();
-        case UpdateVerification::kInvalid:
-        default:
-            logger_->error( "{}: verification failed, rejecting: {}", __func__, element.key() );
-            return crdt::CRDTDataFilter::ElementFilterResult::Reject();
+            case UpdateVerification::kValid:
+                logger_->debug( "{}: update accepted", __func__ );
+                return crdt::CRDTDataFilter::ElementFilterResult::Accept();
+            case UpdateVerification::kMissingDependency:
+                // The update legitimately arrived before the data it was derived
+                // from (cross-delta arrival order is unordered). Stall the whole
+                // delta job instead of permanently dropping the element: the
+                // failed-root retry machinery reprocesses it once the dependency
+                // syncs, and no head is recorded meanwhile.
+                logger_->info( "{}: update dependencies not synced yet, stalling for retry: {}",
+                               __func__,
+                               element.key() );
+                return crdt::CRDTDataFilter::ElementFilterResult::Stall();
+            case UpdateVerification::kInvalid:
+            default:
+                logger_->error( "{}: verification failed, rejecting: {}", __func__, element.key() );
+                return crdt::CRDTDataFilter::ElementFilterResult::Reject();
         }
     }
 
@@ -1548,8 +1757,8 @@ namespace sgns
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
-    ValidatorRegistry::UpdateVerification ValidatorRegistry::VerifyUpdateClassified(
-        const RegistryUpdate &update, bool enforce_time_window ) const
+    ValidatorRegistry::UpdateVerification ValidatorRegistry::VerifyUpdateClassified( const RegistryUpdate &update,
+                                                                                     bool enforce_time_window ) const
     {
         logger_->trace( "{}: entry validators={}", __func__, update.registry().validators().size() );
         if ( update.registry().validators().empty() )
@@ -1565,7 +1774,7 @@ namespace sgns
             return UpdateVerification::kInvalid;
         }
 
-        const std::string prev_registry_cid = update.prev_registry_hash();
+        const std::string       prev_registry_cid = update.prev_registry_hash();
         std::optional<Registry> base_registry_snapshot;
         std::string             current_id;
         {
@@ -1578,7 +1787,12 @@ namespace sgns
         bool needs_to_fetch_registry  = !base_registry || current_id.empty() || prev_registry_cid != current_id;
         if ( !prev_registry_cid.empty() && ( needs_to_fetch_registry ) )
         {
-            auto base_registry_result = LoadRegistryByCid( prev_registry_cid );
+            // Recursion guard (TRUST-01 Pitfall 2): verification internals must
+            // fetch the base registry through the RAW loader. Routing this
+            // through the verified loader would recurse: verifying the base
+            // would itself verify its own base, re-entering this function
+            // through LoadVerifiedRegistryByCid without terminating.
+            auto base_registry_result = LoadUnverifiedRegistryByCid( prev_registry_cid );
             if ( base_registry_result.has_error() )
             {
                 logger_->warn( "{}: base registry not synced yet cid={}", __func__, prev_registry_cid );
@@ -1591,22 +1805,7 @@ namespace sgns
         if ( !base_registry && prev_registry_cid.empty() )
         {
             logger_->debug( "{}: verifying genesis update", __func__ );
-            for ( const auto &signature : update.signatures() )
-            {
-                if ( signature.validator_id() != genesis_authority_ )
-                {
-                    continue;
-                }
-                if ( GeniusAccount::VerifySignature( signature.validator_id(),
-                                                     signature.signature(),
-                                                     signing_bytes.value() ) )
-                {
-                    logger_->info( "{}: genesis update verified", __func__ );
-                    return UpdateVerification::kValid;
-                }
-            }
-            logger_->error( "{}: genesis update verification failed", __func__ );
-            return UpdateVerification::kInvalid;
+            return VerifyGenesisAuthoritySignature( update, signing_bytes.value() );
         }
 
         if ( !base_registry || prev_registry_cid.empty() )
@@ -1642,9 +1841,9 @@ namespace sgns
             }
 
             Registry expected;
-            auto batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
-                                     ? ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() )
-                                     : outcome::failure( std::errc::invalid_argument );
+            auto     batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
+                                         ? ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() )
+                                         : outcome::failure( std::errc::invalid_argument );
             if ( batch_payload.has_value() )
             {
                 const auto &payload = batch_payload.value();
@@ -1709,9 +1908,7 @@ namespace sgns
                         if ( certificate_result.error() == std::errc::invalid_argument )
                         {
                             // Corrupt or slot-mismatched durable record: permanently invalid.
-                            logger_->error( "{}: corrupt member record for batch slot={}",
-                                            __func__,
-                                            member_slot );
+                            logger_->error( "{}: corrupt member record for batch slot={}", __func__, member_slot );
                             return UpdateVerification::kInvalid;
                         }
                         // The member durable record has not synced yet: stall so the
@@ -1770,9 +1967,10 @@ namespace sgns
                     logger_->error( "{}: certificate quorum not reached: {}", __func__, votes.error().message() );
                     return UpdateVerification::kInvalid;
                 }
-                expected   = BuildRegistryFromCertificate( *base_registry, certificate,
-                                                          votes.value().registered_votes,
-                                                          votes.value().unregistered_votes );
+                expected = BuildRegistryFromCertificate( *base_registry,
+                                                         certificate,
+                                                         votes.value().registered_votes,
+                                                         votes.value().unregistered_votes );
             }
             Registry provided = update.registry();
             NormalizeRegistry( provided );
@@ -1833,6 +2031,31 @@ namespace sgns
         }
 
         logger_->error( "{}: quorum not reached", __func__ );
+        return UpdateVerification::kInvalid;
+    }
+
+    ValidatorRegistry::UpdateVerification ValidatorRegistry::VerifyGenesisAuthoritySignature(
+        const RegistryUpdate       &update,
+        const std::vector<uint8_t> &signing_bytes ) const
+    {
+        if ( !update.prev_registry_hash().empty() )
+        {
+            logger_->error( "{}: chain-root check invoked on a non-root update", __func__ );
+            return UpdateVerification::kInvalid;
+        }
+        for ( const auto &signature : update.signatures() )
+        {
+            if ( signature.validator_id() != genesis_authority_ )
+            {
+                continue;
+            }
+            if ( GeniusAccount::VerifySignature( signature.validator_id(), signature.signature(), signing_bytes ) )
+            {
+                logger_->info( "{}: genesis update verified", __func__ );
+                return UpdateVerification::kValid;
+            }
+        }
+        logger_->error( "{}: genesis update verification failed", __func__ );
         return UpdateVerification::kInvalid;
     }
 
@@ -1908,9 +2131,9 @@ namespace sgns
         const uint64_t window_ms = weight_config_.certificate_timestamp_window_ms_;
         if ( window_ms > 0 )
         {
-            const auto now_ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     std::chrono::system_clock::now().time_since_epoch() )
-                                     .count();
+            const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::system_clock::now().time_since_epoch() )
+                                    .count();
             const auto cert_ms = static_cast<int64_t>( certificate.timestamp() );
             const auto diff    = std::llabs( now_ms - cert_ms );
             if ( cert_ms == 0 || static_cast<uint64_t>( diff ) > window_ms )

@@ -81,7 +81,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Execution order:** strictly 21 → 21.1 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 (numeric order = execution order; no planned overlap). Hard ordering constraints encoded: REL-02 (artifact verification) is satisfied in-phase at Phase 22 — its digest-verification CI step lands as an early plan, with or before that phase's first fork-riding change, because fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts; the per-phase adversarial+compat test-pair discipline applies to every security-fix phase even though the first-class apparatus (VER-01) and release gating (REL-01) arrive at Phase 25 — Phases 21-24's fixes carry their own adversarial tests in-phase per their criteria; Phase 26 is the dependency sink — GRID-03 consumes GRID-01/02/04 and MINT-01 in-phase plus authenticated transport (23) and mint identities (21); Phase 27 carries the complete-relay-vs-topology-contract decision gate; Phase 29 (return leg) is strictly last — RET-01 requires TRUST-01 (Phase 21) and BRIDGE-01/02 (Phase 24) closed and proven first.
 
-- [ ] **Phase 21: Consensus Trust & Mint Authorization** - Registry-CID authorization chain with a grandfather rule that keeps history re-validating; admission/equivocation audit; fail-closed chain-ids; legacy-v1 admission cutover; receipt-to-mint output binding (TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04)
+- [x] **Phase 21: Consensus Trust & Mint Authorization** - Registry-CID authorization chain with a grandfather rule that keeps history re-validating; admission/equivocation audit; fail-closed chain-ids; legacy-v1 admission cutover; receipt-to-mint output binding (TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04)
 - [ ] **Phase 21.1: Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED)** - Dedicated escrow-release V2 payment transaction with transfer-of-funds semantics and a Mint-style canonical Slot ID; replace payout-as-transfer and reuse existing arbitration, certificate binding, and duplicate handling (PAYSAFE-01..05)
 - [ ] **Phase 22: Wire & Ingestion Hardening (Fork)** - Length and nesting caps before allocation across the three fork readers; error-result hash parsing with fuzz coverage; thirdparty/zkLLVM digest verification + SHA-pinned actions landing with or before the first fork-riding change; first FORK-DELTA manifest + mixed-version interop-matrix run (WIRE-01, WIRE-02, REL-02)
 - [ ] **Phase 23: Gossip & DHT Authentication (Fork)** - Verify-before-forward on public topics with signing-key↔from binding and per-topic policy as data; DHT record validation with admission limits and request-bound nonces; before/after throughput benchmark (GOSSIP-01, GOSSIP-02)
@@ -249,7 +249,17 @@ Plans:
   4. A newly submitted self-signed legacy-v1 mint is rejected (adversarial test), while pre-cutover outputs remain spendable, a fresh node syncs to READY, and a restart recovers — admission gating only, never deserialization gating (compat twin) (MINT-03)
   5. A mint whose token ID, amount, or destination mismatches the burn receipt is rejected even when every RPC endpoint honestly reports the receipt (MINT-04)
 
-**Plans**: TBD
+**Plans**: 9/9 complete; verified 2026-10-21 (5/5 criteria).
+
+- [x] 21-01-PLAN.md
+- [x] 21-02-PLAN.md
+- [x] 21-03-PLAN.md
+- [x] 21-04-PLAN.md
+- [x] 21-05-PLAN.md
+- [x] 21-06-PLAN.md
+- [x] 21-07-PLAN.md
+- [x] 21-08-PLAN.md
+- [x] 21-09-PLAN.md
 
 *Planning note:* research flagged for this phase — the MINT-01 minimal-path question (does a certified task-result record already exist on the consensus-certificate path?), grandfather-rule design, and verdict-model (Reject/Defer/Accept) primitive placement. MINT-01's full entitlement binding is mapped to Phase 26 with the grid cluster.
 
@@ -439,7 +449,7 @@ Plans:
 | 18. TxPruner Service & First Real Prune | v1.2 (this branch) | 7/7 | Complete    | 2026-10-23 |
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
-| 21. Consensus Trust & Mint Authorization | v1.3 | 0/? | Not started | — |
+| 21. Consensus Trust & Mint Authorization | v1.3 | 9/9 | Complete | 2026-10-21 |
 | 21.1. Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED) | v1.3 | 0/8 | Planned    |  |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |

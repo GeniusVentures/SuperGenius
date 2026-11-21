@@ -28,8 +28,9 @@ namespace sgns::test
     inline std::string TrustAddressFromPrivateKey( const boost::filesystem::path &base_path,
                                                    const std::string             &private_key_hex )
     {
-        auto probe = GeniusAccount::NewFromPrivateKey(
-            TokenID::FromBytes( { 0x00 } ), private_key_hex.c_str(), base_path );
+        auto probe = GeniusAccount::NewFromPrivateKey( TokenID::FromBytes( { 0x00 } ),
+                                                       private_key_hex.c_str(),
+                                                       base_path );
         EXPECT_NE( probe, nullptr );
         return probe ? probe->GetAddress() : std::string{};
     }
@@ -37,15 +38,15 @@ namespace sgns::test
     /// Writes sgns_config.json with an explicit trust policy. Nodes fail closed without
     /// one (FATAL_TRUST_MISMATCH). Every node sharing a CRDT topic must carry identical
     /// values so all derive the same genesis fingerprint.
-    inline void WriteTrustedSgnsConfig( const boost::filesystem::path    &base_path,
-                                        const std::string                &node_type,
-                                        bool                              is_processor,
-                                        bool                              rpc_catchup,
-                                        const std::vector<std::string>   &peers,
-                                        const std::string                &bootstrapper,
-                                        uint64_t                          membership_threshold,
-                                        uint64_t                          burn_threshold,
-                                        std::optional<uint16_t>           network_id = std::nullopt )
+    inline void WriteTrustedSgnsConfig( const boost::filesystem::path  &base_path,
+                                        const std::string              &node_type,
+                                        bool                            is_processor,
+                                        bool                            rpc_catchup,
+                                        const std::vector<std::string> &peers,
+                                        const std::string              &bootstrapper,
+                                        uint64_t                        membership_threshold,
+                                        uint64_t                        burn_threshold,
+                                        std::optional<uint16_t>         network_id = std::nullopt )
     {
         boost::filesystem::create_directories( base_path );
         std::ofstream config( ( base_path / "sgns_config.json" ).string() );
@@ -57,9 +58,8 @@ namespace sgns::test
             // process-global network id, unlike an absent key.
             config << R"("net_id":)" << *network_id << R"(,"subnet_id":)" << *network_id << ',';
         }
-        config << R"("node_type":")" << node_type << R"(","is_processor":)"
-               << ( is_processor ? "true" : "false" ) << R"(,"rpc_catchup":)" << ( rpc_catchup ? "true" : "false" )
-               << R"(,"trusted_peers":[)";
+        config << R"("node_type":")" << node_type << R"(","is_processor":)" << ( is_processor ? "true" : "false" )
+               << R"(,"rpc_catchup":)" << ( rpc_catchup ? "true" : "false" ) << R"(,"trusted_peers":[)";
         for ( size_t i = 0; i < peers.size(); ++i )
         {
             if ( i != 0 )
@@ -68,9 +68,8 @@ namespace sgns::test
             }
             config << '"' << peers[i] << '"';
         }
-        config << R"(],"bootstrapper_node":")" << bootstrapper
-               << R"(","trusted_peer_quorum_threshold":)" << membership_threshold
-               << R"(,"burn_config_quorum_threshold":)" << burn_threshold << '}';
+        config << R"(],"bootstrapper_node":")" << bootstrapper << R"(","trusted_peer_quorum_threshold":)"
+               << membership_threshold << R"(,"burn_config_quorum_threshold":)" << burn_threshold << '}';
     }
 
     /// Single-node convenience: the node's own account (derived from private_key_hex) is the
@@ -117,7 +116,7 @@ namespace sgns::test
             // approval is therefore satisfied; retain failures for every other
             // condition so the helper remains fail-closed.
             if ( approved.has_error() &&
-                 approved.error() != securecrdt::SecureCrdt::Error::DUPLICATE_CANDIDATE_APPROVAL )
+                 approved.error() != sgns::securecrdt::SecureCrdt::Error::DUPLICATE_CANDIDATE_APPROVAL )
             {
                 ASSERT_FALSE( approved.has_error() ) << approved.error().message();
             }

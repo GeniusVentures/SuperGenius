@@ -384,7 +384,8 @@ public:
 
     void SetUp() override
     {
-        saved_net_ = version::GetNetworkID();
+        saved_net_       = version::GetNetworkID();
+        saved_authority_ = Blockchain::GetAuthorizedFullNodeAddress();
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
@@ -392,6 +393,7 @@ public:
     void TearDown() override
     {
         StopNetwork();
+        Blockchain::SetAuthorizedFullNodeAddress( saved_authority_ );
         version::SetNetworkId( saved_net_ );
     }
 
@@ -405,10 +407,11 @@ public:
     void StartNetworkOn( uint16_t net, const std::string &prefix )
     {
         version::SetNetworkId( net );
+        genesis_authority_address_.clear();
         network_         = Network{ StartPeer( prefix + "-validator-one", kPeerPorts[0] ),
-                                    StartPeer( prefix + "-validator-two", kPeerPorts[1] ),
-                                    StartPeer( prefix + "-validator-three", kPeerPorts[2] ),
-                                    StartPeer( prefix + "-passive", kPeerPorts[3] ) };
+                            StartPeer( prefix + "-validator-two", kPeerPorts[1] ),
+                            StartPeer( prefix + "-validator-three", kPeerPorts[2] ),
+                            StartPeer( prefix + "-passive", kPeerPorts[3] ) };
         network_started_ = true;
         ASSERT_TRUE( network_.first.blockchain && network_.second.blockchain && network_.third.blockchain &&
                      network_.passive.blockchain );
@@ -515,9 +518,11 @@ public:
         return outputs.size() == 1 && outputs.front().GetTxID().toReadableString() == mint.GetHash();
     }
 
-    uint16_t saved_net_ = version::DEV_NET_ID;
-    Network  network_;
-    bool     network_started_ = false;
+    uint16_t    saved_net_ = version::DEV_NET_ID;
+    std::string saved_authority_;
+    std::string genesis_authority_address_;
+    Network     network_;
+    bool        network_started_ = false;
 
 private:
     Peer StartPeer( const std::string &name, uint16_t port )
@@ -595,6 +600,13 @@ private:
             return peer;
         }
         EXPECT_TRUE( peer.account->GetUTXOManager().LoadUTXOs( peer.db->GetDataStore() ).has_value() );
+        // TRUST-01 verifies registry ancestry against the authority captured at
+        // construction. Every peer shares the first peer's registry signer.
+        if ( genesis_authority_address_.empty() )
+        {
+            genesis_authority_address_ = peer.account->GetAddress();
+        }
+        Blockchain::SetAuthorizedFullNodeAddress( genesis_authority_address_ );
         peer.blockchain = sgns::Blockchain::New( peer.db, peer.account, peer.pubsub, []( outcome::result<void> ) {} );
         EXPECT_TRUE( peer.blockchain );
         if ( !peer.blockchain )
@@ -713,6 +725,11 @@ private:
             std::chrono::seconds( 5 ),
             "every peer durably stored the validator registry",
             nullptr );
+        for ( auto *peer : Peers() )
+        {
+            const auto registry = peer->blockchain->GetValidatorRegistry();
+            ASSERT_TRUE( registry->LoadVerifiedRegistryByCid( registry->GetRegistryCid() ).has_value() );
+        }
     }
 
     static constexpr std::array<uint16_t, 4> kPeerPorts{ 54601, 54602, 54603, 54604 };
