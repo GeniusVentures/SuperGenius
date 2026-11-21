@@ -4,14 +4,14 @@ milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
 status: executing
-stopped_at: Completed 21.1-07-PLAN.md; next plan 21.1-08
-last_updated: "2026-11-21T16:06:32.480Z"
-last_activity: 2026-11-21 -- Completed plan 21.1-07; next plan 08
+stopped_at: Plan 21.1-07 Task 2 blocked at repeated restart/catch-up verification
+last_updated: "2026-11-21T16:20:17.044Z"
+last_activity: 2026-11-21 -- Plan 21.1-07 Task 2 recovery gate unresolved; resume plan 07
 progress:
   total_phases: 33
   completed_phases: 5
   total_plans: 47
-  completed_plans: 40
+  completed_plans: 39
   percent: 15
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 ## Current Position
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 8 of 8
-Status: Ready to execute
-Last activity: 2026-11-21 -- Completed plan 21.1-07; next plan 08
+Plan: 7 of 8
+Status: Verification blocked at plan 07 Task 2 restart/catch-up gate
+Last activity: 2026-11-21 -- Plan 21.1-07 Task 2 recovery gate unresolved; resume plan 07
 
-Progress: [█████████░] 87%
+Progress: [█████████░] 85%
 
 ## Historical v1.2 Roadmap Snapshot
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-21T16:06:32.474Z
-**Stopped At:** Completed 21.1-07-PLAN.md; next plan 21.1-08
-**Resume File:** None
+**Last session:** 2026-11-21T16:20:17.038Z
+**Stopped At:** Plan 21.1-07 Task 2 blocked at repeated restart/catch-up verification
+**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-07-PARTIAL.md
 
 ## Accumulated Context
 
@@ -160,7 +160,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 21.1 P04 | 33m30s recorded verification window | 3 tasks | 6 files |
 | Phase 21.1 P05 | 19m04s | 2 tasks | 5 files |
 | Phase 21.1 P06 | 21m19s | 3 tasks | 11 files |
-| Phase 21.1 P07 | 21m16s | 3 tasks | 3 files |
 
 ## Decisions
 
@@ -279,3 +278,7 @@ Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
 | verification | 13-VERIFICATION.md (29/32) | Documented — residuals map to discarded phase-14 scope; see v1.1-MILESTONE-AUDIT.md |
 | gap | ELM-01..08 | Dropped from v1.1 — cross-repo SGProcessingManager scope; see v1.1-MILESTONE-AUDIT.md |
 | gap | MIG-05 wiring | Partial — behavior-neutral revert d1f2a14ca; re-apply or amend records |
+
+### Blockers
+
+- Plan 21.1-07 Task 2 restart recovery gate is unresolved: repeated owned CTest retained canonical finality but one node lacked complete payout effects; see 21.1-07-PARTIAL.md.

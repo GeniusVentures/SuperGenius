@@ -2,8 +2,8 @@
   "phase": "21.1",
   "plan": "07",
   "execution_baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
-  "tested_head": "5913e722cc65e7bb4c92dff7017f1ec2341becd6",
-  "tested_head_scope": "Committed test source and inherited implementation built without reconfiguration; final named Task 1 and Task 2 gates passed.",
+  "tested_head": "5267fe748b45e0141debe4e92da0b8be4b1f05a1",
+  "tested_head_scope": "Current coordinated-restart counterexample; overall recovery verification is blocked. Earlier passing gates remain attributed to their original source.",
   "activation_status": "pending",
   "validator_inventory": {
     "external_status": "not_provided",
@@ -189,7 +189,7 @@
     }
   },
   "local_verification": {
-    "status": "passed_local_gates",
+    "status": "blocked_restart_recovery_gate",
     "execution_method": "Existing owned CTest targets with TEST_LAUNCHER, resource locks and RUN_SERIAL preserved.",
     "results": [
       {
@@ -202,7 +202,8 @@
           "FinalityFaultNetwork.EscrowReleaseSameHoldCrossPeerContentionPaysOnce",
           "FinalityFaultNetwork.EscrowReleaseDifferentHoldsRemainIndependent"
         ],
-        "timeout_seconds": 300
+        "timeout_seconds": 300,
+        "source_head": "5913e722cc65e7bb4c92dff7017f1ec2341becd6"
       },
       {
         "gate": "task_2_named_cases",
@@ -215,7 +216,8 @@
           "FinalityFaultNetwork.EscrowReleaseLegacyCertificateOutlivesProposalTTL",
           "FinalityFaultNetwork.EscrowReleasePendingIntentRebuildPreservesNonceAndHistory"
         ],
-        "timeout_seconds": 300
+        "timeout_seconds": 300,
+        "source_head": "5913e722cc65e7bb4c92dff7017f1ec2341becd6"
       },
       {
         "gate": "all_five_named_cases",
@@ -224,19 +226,53 @@
         "case_count": 5,
         "failures": 0,
         "timeout_seconds": 300,
-        "note": "An attempted GTEST_LIST_TESTS environment flag was ignored by this gtest build; this was an actual five-case execution, not a metadata-only enumeration."
+        "note": "An attempted GTEST_LIST_TESTS environment flag was ignored by this gtest build; this was an actual five-case execution, not a metadata-only enumeration.",
+        "source_head": "5913e722cc65e7bb4c92dff7017f1ec2341becd6"
       },
       {
         "gate": "compatibility_smoke_test",
         "ctest_target": "multi_node_finality_fault_compatibility_smoke_test",
         "elapsed_seconds": 1.37,
-        "passed": true
+        "passed": true,
+        "source_head": "5913e722cc65e7bb4c92dff7017f1ec2341becd6"
       },
       {
         "gate": "process_ownership_test",
         "ctest_target": "multi_node_finality_fault_process_ownership_test",
         "elapsed_seconds": 0.26,
-        "passed": true
+        "passed": true,
+        "source_head": "5913e722cc65e7bb4c92dff7017f1ec2341becd6"
+      },
+      {
+        "gate": "later_five_case_repetition",
+        "source_head": "5913e722cc65e7bb4c92dff7017f1ec2341becd6",
+        "ctest_elapsed_seconds": 65.64,
+        "case_count": 5,
+        "failures": 1,
+        "failed_case": "FinalityFaultNetwork.EscrowReleaseDelayedDeliveryRestartAndCatchupPaysOnce",
+        "boundary": "E reused-listener topology readiness, existing 5s condition",
+        "overall_passed": false
+      },
+      {
+        "gate": "coordinated_restart_two_repetitions",
+        "source_head": "5267fe748b45e0141debe4e92da0b8be4b1f05a1",
+        "ctest_elapsed_seconds": 67.82,
+        "repeat_count": 2,
+        "iterations": [
+          {
+            "iteration": 1,
+            "passed": false,
+            "case_elapsed_seconds": 45.854,
+            "boundary": "E canonical certificate present but one node lacked complete payment after existing 25s catch-up condition"
+          },
+          {
+            "iteration": 2,
+            "passed": true,
+            "case_elapsed_seconds": 20.862
+          }
+        ],
+        "overall_passed": false,
+        "xml_limit": "gtest XML contains only the passing last iteration; CTest exit8 and full log establish overall failure."
       }
     ],
     "signed_transaction_and_certificate_artifacts": [
@@ -906,7 +942,7 @@
       "P21_1_LEGACY_TTL old_hash=48da53aa5a5196e1f25cb8d5ce0638a419515a288d34b06f307d4b36fa832ea7 old_slot=acb83636a66929f73da8571f9127034279b9472e5d80db9e3fa313504d123efecc0100aff190a246a2c74f7ab59f4497be7a5d7c07e2b390fd96fb17de5e56c3:0 aged_ms=5400000 proposal_ttl_ms=180000 v2_hash=a35b5b311a2283b3bfa54fcf268232661e189a0b37c88a233fcd5bfc15cc53b3 v2_slot=escrow-release-v2:8bdaa2c736c361ad991a6d689367eafdedc385b7d8c2804b565082795258771b:0 cross_era_exclusivity=not-proven activation=pending",
       "P21_1_PENDING_REBUILD old_hash=e7ea0a8d9e0995ffdabc3ef62626f33322b8a05265d7b826c7f0bd087a2d2665 old_slot=e884a84cfeccd353f28491531907d15dbd8c28d45a178e4e73bbfbfd2982100ddb19bef4a1ec642abdc99befd8f45851012456aced9cb6f0cef934afd4befa2e:0 reused_nonce=0 v2_hash=0c7c5f83aaffd007ac97a308c8c0d9d1ce8aa8a99d23955b872850eaa8777a90 v2_slot=escrow-release-v2:75ad8443e8ecf9367432d753263dd0cc2b96c2382d1edf79e5c7358c71fcc23e:0 old_signed_history=preserved results=complete"
     ],
-    "source_sha256": "054dd62ed1150e8515cbe1d7d84a164eff2f32e602ac5f322da5f169f015ec9c",
+    "source_sha256": "5ddf74b295e470c8a2f710e18f91d829cf6d4fbfa7c668f711f43582627f2655",
     "artifact_logs": [
       "/tmp/phase21-1-07-task1-evidence.log",
       "/tmp/phase21-1-07-task2-evidence.log",
@@ -916,8 +952,27 @@
       "/tmp/phase21-1-07-tidy-complete.log",
       "/tmp/phase21-1-07-list.log",
       "/tmp/phase21-1-07-all-final-xunit.xml",
-      "/tmp/phase21-1-07-ownership.log"
-    ]
+      "/tmp/phase21-1-07-ownership.log",
+      "/tmp/phase21-1-07-list-metadata.log",
+      "/tmp/phase21-1-07-repeat-failure-xunit.xml",
+      "/tmp/phase21-1-07-restart-counterexample.log",
+      "/tmp/phase21-1-07-restart-last-iteration-xunit.xml",
+      "/tmp/phase21-1-07-build-restart.log",
+      "/tmp/phase21-1-07-tidy-restart.log"
+    ],
+    "recovery_gate": {
+      "status": "blocked",
+      "canonical_conflict_reported": false,
+      "second_payment_reported": false,
+      "complete_effects_convergence_proven": false,
+      "journal_state_captured": false,
+      "next_step": "Capture the existing certificate journal entry and per-node exact spender/output records at shutdown/reopen, then diagnose the owning application/recovery path.",
+      "hypotheses": [
+        "Processing callback lease survives immediate restart",
+        "Snapshotted weak-owner callback returns without applying while generic callback completion retires work"
+      ],
+      "hypotheses_proven": false
+    }
   },
   "escrow_and_pending_disposition": {
     "status": "pending_external_inventory_and_operator_review",
@@ -952,6 +1007,7 @@
   },
   "operator_decision": null,
   "missing_evidence": [
+    "Resolved local restart/catch-up recovery gate with exact certificate work-journal and per-node effect state across shutdown/reopen.",
     "Complete external participating validator/submitter/passive/offline roster and node identities.",
     "Deployed build/source/executable/configuration identities and all-validator fixed-build readiness.",
     "Authorized external registry CID/epoch/full weighted membership and genesis-rooted update ancestry.",

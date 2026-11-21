@@ -37,3 +37,23 @@
   missing-hold/certificate pending cases run through tag-10 dispatch and the
   manager parser. Historical Transfer replay still requires private exact
   canonical evidence; no fresh backdated Transfer escrow exception exists.
+
+## Plan 21.1-07 — Blocking Recovery Gate
+
+- Initial named gates and one complete five-case execution passed, but a later
+  repetition missed E's existing 5-second topology barrier after partial restart
+  (65.64s CTest, 4/5 passing cases). Logs show crossed reconnect handshakes.
+- Test-only counterexample `5267fe748` replaces E's partial restart with the
+  existing all-owner `RestartAndReconnect`. Its two-repeat focused gate failed
+  overall (67.82s): iteration 1 retained valid canonical payout certificates but
+  one node lacked complete payment effects after the 25-second catch-up
+  condition; iteration 2 passed in 20.862s. The last-iteration XML is insufficient
+  to describe the failed CTest result. No production fix is claimed.
+- Resume Task 2 by capturing the existing certificate work-journal entry and
+  exact per-node hold-spender/output state at shutdown/reopen. A retained
+  Processing lease versus completion of a snapshotted weak-owner callback are
+  hypotheses only; the exact journal state was not captured. Do not add a retry
+  loop, timeout extension, new store, protocol fence or evidence clearing.
+- Full logs: `/tmp/phase21-1-07-list-metadata.log` and
+  `/tmp/phase21-1-07-restart-counterexample.log`. Completion is deliberately
+  withheld; `21.1-07-PARTIAL.md` replaces the premature completion summary.
