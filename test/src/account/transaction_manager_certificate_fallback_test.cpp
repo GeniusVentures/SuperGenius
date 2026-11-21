@@ -26,6 +26,7 @@
 #include "transaction/PruneEligibility.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "account/RegistrationTransaction.hpp"
 #include "account/GeniusAccount.hpp"
@@ -410,6 +411,24 @@ namespace
                                                                             { { burn_hash.value(), 0, {} } },
                                                                             source_address ) );
     }
+
+    /// @brief Creates a genuine processor-signed hold payment with arbitrary entitled recipients.
+    std::shared_ptr<EscrowReleaseTransactionV2> MakeRelease( GeniusAccount              &signer,
+                                                             const base::Hash256        &hold,
+                                                             uint64_t                    nonce,
+                                                             std::vector<OutputDestInfo> outputs )
+    {
+        InputUTXOInfo input{ hold, 0, {} };
+        input.signature_ = signer.Sign( input.SerializeForSigning() );
+        SGTransaction::DAGStruct dag;
+        dag.set_source_addr( signer.GetAddress() );
+        dag.set_nonce( nonce );
+        dag.set_timestamp( 1 );
+        auto tx = std::make_shared<EscrowReleaseTransactionV2>(
+            EscrowReleaseTransactionV2::New( { input }, std::move( outputs ), dag ) );
+        tx->MakeSignature( signer );
+        return tx;
+    }
 } // anonymous namespace
 
 /**
@@ -552,7 +571,7 @@ public:
         }
 
         const auto subject = ConsensusManager::CreateNonceSubject(
-            account_->GetAddress(),
+            transaction->GetSrcAddress(),
             transaction->GetNonce(),
             transaction->GetHash(),
             embedded_override.value_or( transaction->SerializeToEmbeddedTransaction() ),
@@ -599,6 +618,31 @@ public:
         crdt::GlobalDB::Buffer value;
         value.put( serialized );
         ASSERT_TRUE( db_->Put( { "/cert/" + slot }, value, {} ).has_value() );
+    }
+
+    /// @brief Seeds a real certified hold and its unspent ledger output.
+    std::shared_ptr<EscrowTransaction> SeedEscrowHold( uint64_t nonce )
+    {
+        SGTransaction::DAGStruct dag;
+        dag.set_source_addr( account_->GetAddress() );
+        dag.set_nonce( nonce );
+        dag.set_timestamp( 1 );
+        const std::string owner = "0x" + std::string( 64, 'e' );
+        auto              hold  = std::make_shared<EscrowTransaction>(
+            EscrowTransaction::New( { {}, { { 17, owner, kTestTokenId } } }, 17, dag ) );
+        hold->MakeSignature( *account_ );
+        const auto certificate = BuildSignedCertificate( hold );
+        EXPECT_TRUE( certificate.has_value() );
+        if ( certificate.has_error() )
+        {
+            return nullptr;
+        }
+        PersistTransaction( hold );
+        PersistCertificateAtSlot( hold->GetSlotID(), certificate.value() );
+        const auto hash = base::Hash256::fromHex( hold->GetHash() ).value();
+        EXPECT_TRUE(
+            account_->GetUTXOManager().PutUTXO( GeniusUTXO( hash, 0, 17, kTestTokenId, owner ), owner ).has_value() );
+        return hold;
     }
 
     outcome::result<void> FetchAndProcess( const std::shared_ptr<GeniusTransaction> &transaction )
@@ -1075,6 +1119,83 @@ TEST_F( CertificateFallbackTest, LegacyTransferPayoutReplaysOnlyWithExactCanonic
         EXPECT_EQ( output->GetTokenID(), kTestTokenId );
         EXPECT_EQ( ledger.GetBalance(), balance + 17U );
     }
+}
+
+TEST_F( CertificateFallbackTest, SharedEscrowReleaseSlotConfirmsOnlyTheCertifiedTransaction )
+{
+    CertificateFallbackTestAccess::ParkRoundTimer( CertificateFallbackTestAccess::ConsensusManagerOf( *blockchain_ ) );
+    const auto peer = GeniusAccount::NewEphemeral( kTestTokenId );
+    ASSERT_TRUE( peer );
+    const auto producer = SeedEscrowHold( 69 );
+    ASSERT_TRUE( producer );
+    const auto                        hold = base::Hash256::fromHex( producer->GetHash() ).value();
+    const std::vector<OutputDestInfo> outputs{ { 17, account_->GetAddress(), kTestTokenId } };
+    const auto                        winner = MakeRelease( *account_, hold, 70, outputs );
+    const auto                        loser  = MakeRelease( *peer, hold, 91, outputs );
+    ASSERT_NE( winner->GetSrcAddress(), loser->GetSrcAddress() );
+    ASSERT_NE( winner->GetNonce(), loser->GetNonce() );
+    ASSERT_NE( winner->dag_st.signature(), loser->dag_st.signature() );
+    ASSERT_NE( winner->GetHash(), loser->GetHash() );
+    ASSERT_EQ( winner->GetSlotID(), loser->GetSlotID() );
+    ASSERT_TRUE( winner->CheckHash() );
+    ASSERT_TRUE( loser->CheckHash() );
+    const auto certificate = BuildSignedCertificate( winner );
+    ASSERT_TRUE( certificate.has_value() );
+    EXPECT_EQ( CertificateFallbackTestAccess::GetExpectedCertificateSlotKey( certificate.value() ),
+               "/cert/" + winner->GetSlotID() );
+    PersistCertificateAtSlot( winner->GetSlotID(), certificate.value() );
+    for ( const auto &contender : { winner, loser } )
+    {
+        const auto loaded = blockchain_->GetCertificateBySlot( contender->GetSlotID() );
+        ASSERT_TRUE( loaded.has_value() );
+        EXPECT_EQ( loaded.value().SerializeAsString(), certificate.value().SerializeAsString() );
+        EXPECT_TRUE( TransactionManager::CertificateMatchesTransaction( loaded.value(), *winner ) );
+        EXPECT_FALSE( TransactionManager::CertificateMatchesTransaction( loaded.value(), *loser ) );
+    }
+    for ( int mutation = 0; mutation != 7; ++mutation )
+    {
+        auto embedded = winner->SerializeToEmbeddedTransaction();
+        auto source   = winner->GetSrcAddress();
+        auto nonce    = winner->GetNonce();
+        auto hash     = winner->GetHash();
+        switch ( mutation )
+        {
+            case 0:
+                embedded.mutable_escrow_release_v2()->mutable_utxo_params()->mutable_outputs( 0 )->set_encrypted_amount(
+                    16 );
+                break;
+            case 1:
+                embedded.mutable_escrow_release_v2()->mutable_dag_struct()->set_data_hash( loser->GetHash() );
+                break;
+            case 2:
+                embedded.mutable_escrow_release_v2()->mutable_dag_struct()->set_source_addr( loser->GetSrcAddress() );
+                break;
+            case 3:
+                embedded.mutable_escrow_release_v2()->mutable_dag_struct()->set_nonce( loser->GetNonce() );
+                break;
+            case 4:
+                source = loser->GetSrcAddress();
+                break;
+            case 5:
+                nonce = loser->GetNonce();
+                break;
+            case 6:
+                hash = loser->GetHash();
+                break;
+            default:
+                FAIL() << "unexpected certificate mutation";
+        }
+        const auto forged = BuildCertificate( MakeNonceSubject( source, nonce, hash, embedded ), "forged" );
+        EXPECT_FALSE( TransactionManager::CertificateMatchesTransaction( forged, *winner ) ) << mutation;
+    }
+    ASSERT_TRUE( CertificateFallbackTestAccess::OnConsensusCertificate( *tm_, winner->GetHash(), certificate.value() )
+                     .has_value() );
+    const auto hash = base::Hash256::fromHex( winner->GetHash() ).value();
+    EXPECT_EQ( account_->GetUTXOManager().GetOutPointSpender( hold, 0 ), std::optional{ hash } );
+    EXPECT_FALSE( account_->GetUTXOManager()
+                      .GetUnconsumedUTXO( base::Hash256::fromHex( loser->GetHash() ).value(), 0 )
+                      .has_value() );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 17U );
 }
 
 TEST_F( CertificateFallbackTest, SharedMintSlotConfirmsOnlyTheCertifiedTransaction )

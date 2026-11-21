@@ -11,6 +11,9 @@
 #include "blockchain/Consensus.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/proto/SGTransaction.pb.h"
+#include "account/EscrowReleaseTransactionV2.hpp"
+#include "account/GeniusAccount.hpp"
+#include "transaction/TransactionConsensusHandler.hpp"
 #include "transaction/TransactionManager.hpp"
 
 #include <optional>
@@ -37,6 +40,42 @@ namespace sgns
 
 namespace
 {
+    /// @brief Signs the actual hold input and payout envelope for one processor.
+    EscrowReleaseTransactionV2 MakeSignedRelease( GeniusAccount     &signer,
+                                                  const std::string &hold_hash,
+                                                  uint64_t           nonce,
+                                                  uint64_t           amount = 17 )
+    {
+        InputUTXOInfo input{ base::Hash256::fromHex( hold_hash ).value(), 0, {} };
+        input.signature_ = signer.Sign( input.SerializeForSigning() );
+        SGTransaction::DAGStruct dag;
+        dag.set_source_addr( signer.GetAddress() );
+        dag.set_nonce( nonce );
+        dag.set_timestamp( 1 );
+        auto tx = EscrowReleaseTransactionV2::New( { input },
+                                                   { { amount, signer.GetAddress(), TokenID::FromBytes( { 0 } ) } },
+                                                   dag );
+        tx.MakeSignature( signer );
+        return tx;
+    }
+
+    /// @brief Builds the real nonce subject around a signed V2 payment.
+    ConsensusProposal ReleaseProposal( const EscrowReleaseTransactionV2 &tx, const std::string &proposal_id )
+    {
+        const auto subject = ConsensusManager::CreateNonceSubject( tx.GetSrcAddress(),
+                                                                   tx.GetNonce(),
+                                                                   tx.GetHash(),
+                                                                   tx.SerializeToEmbeddedTransaction(),
+                                                                   std::nullopt,
+                                                                   std::nullopt );
+        assert( subject.has_value() );
+        ConsensusProposal proposal;
+        proposal.set_proposal_id( proposal_id );
+        proposal.set_proposer_id( tx.GetSrcAddress() );
+        *proposal.mutable_subject() = subject.value();
+        return proposal;
+    }
+
     /// @brief Build a NonceSubject proto with a MintV2 embedded transaction.
     NonceSubject MakeMintV2NonceSubject(
         const std::string &chain_id,
@@ -131,29 +170,69 @@ class ConsensusSlotKeyTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        ConsensusManager::RegisterSlotKeyHandler(
-            NONCE_SUBJECT_TYPE,
-            []( const ConsensusManager::Subject &subject ) -> std::string
-            {
-                auto nonce = ConsensusManager::DecodeNonceSubject( subject );
-                if ( nonce.has_value() &&
-                     nonce.value().transaction().transaction_case() !=
-                         EmbeddedTransaction::TRANSACTION_NOT_SET )
-                {
-                    auto tx = TransactionManager::DeSerializeEmbeddedTransaction(
-                        nonce.value().transaction() );
-                    if ( tx.has_value() )
-                    {
-                        return tx.value()->GetSlotID();
-                    }
-                }
-                return subject.account_id() + ":" +
-                       std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
-            } );
+        TransactionConsensusHandler::RegisterSlotKeyHandler();
     }
 };
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
+
+TEST_F( ConsensusSlotKeyTest, EscrowReleaseSlotIgnoresProposalEnvelope )
+{
+    const auto first  = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+    const auto second = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+    ASSERT_TRUE( first );
+    ASSERT_TRUE( second );
+    const auto winner    = MakeSignedRelease( *first, kBurnHash1, 5 );
+    const auto contender = MakeSignedRelease( *second, kBurnHash1, 91 );
+    EXPECT_NE( winner.GetSrcAddress(), contender.GetSrcAddress() );
+    EXPECT_NE( winner.GetNonce(), contender.GetNonce() );
+    EXPECT_NE( winner.dag_st.signature(), contender.dag_st.signature() );
+    EXPECT_NE( winner.GetHash(), contender.GetHash() );
+    ASSERT_TRUE( winner.CheckHash() );
+    ASSERT_TRUE( contender.CheckHash() );
+    const auto winner_proposal    = ReleaseProposal( winner, "winner" );
+    const auto contender_proposal = ReleaseProposal( contender, "contender" );
+    EXPECT_NE( winner_proposal.SerializeAsString(), contender_proposal.SerializeAsString() );
+    EXPECT_EQ( winner.GetSlotID(), contender.GetSlotID() );
+    EXPECT_EQ( winner.GetSlotID(), ConsensusSlotKeyTestAccess::GetSlotKey( winner_proposal ) );
+    EXPECT_EQ( winner.GetSlotID(), ConsensusSlotKeyTestAccess::GetSlotKey( contender_proposal ) );
+    for ( const auto *tx : { &winner, &contender } )
+    {
+        const auto raw      = EscrowReleaseTransactionV2::DeSerializeByteVector( tx->SerializeByteVector() );
+        const auto embedded = TransactionManager::DeSerializeEmbeddedTransaction(
+            tx->SerializeToEmbeddedTransaction() );
+        ASSERT_TRUE( raw );
+        ASSERT_TRUE( embedded.has_value() );
+        ASSERT_TRUE( std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( embedded.value() ) );
+        EXPECT_EQ( raw->GetSlotID(), winner.GetSlotID() );
+        EXPECT_EQ( embedded.value()->GetSlotID(), winner.GetSlotID() );
+        EXPECT_EQ( raw->SerializeByteVector(), tx->SerializeByteVector() );
+        EXPECT_EQ( embedded.value()->SerializeByteVector(), tx->SerializeByteVector() );
+    }
+}
+
+TEST_F( ConsensusSlotKeyTest, EscrowReleaseDifferentHoldsHaveDifferentSlots )
+{
+    const auto signer = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+    ASSERT_TRUE( signer );
+    const auto first  = MakeSignedRelease( *signer, kBurnHash1, 5 );
+    const auto second = MakeSignedRelease( *signer, kBurnHash2, 6 );
+    EXPECT_NE( first.GetSlotID(), second.GetSlotID() );
+    EXPECT_NE( ConsensusSlotKeyTestAccess::GetSlotKey( ReleaseProposal( first, "first" ) ),
+               ConsensusSlotKeyTestAccess::GetSlotKey( ReleaseProposal( second, "second" ) ) );
+}
+
+TEST_F( ConsensusSlotKeyTest, EscrowReleaseChangedOutputsCannotEscapeSlot )
+{
+    const auto signer = GeniusAccount::NewEphemeral( TokenID::FromBytes( { 0 } ) );
+    ASSERT_TRUE( signer );
+    const auto first   = MakeSignedRelease( *signer, kBurnHash1, 5 );
+    const auto changed = MakeSignedRelease( *signer, kBurnHash1, 6, 16 );
+    EXPECT_NE( first.GetHash(), changed.GetHash() );
+    EXPECT_EQ( first.GetSlotID(), changed.GetSlotID() );
+    EXPECT_EQ( ConsensusSlotKeyTestAccess::GetSlotKey( ReleaseProposal( first, "first" ) ),
+               ConsensusSlotKeyTestAccess::GetSlotKey( ReleaseProposal( changed, "changed" ) ) );
+}
 
 TEST_F( ConsensusSlotKeyTest, DifferentBurnHashesProduceDifferentKeys )
 {
