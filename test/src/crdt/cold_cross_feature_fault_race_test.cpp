@@ -3810,3 +3810,230 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_PeerBudgetVsEvidenceTerminality_Ref
     manager_->Stop();
     manager_ = nullptr;
 }
+
+// ---------------------------------------------------------------------------
+// X10 (plan 19-04 Task 1): the suite-end audit walk + counter teeth.
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief X10: the end-state audit + proven-loud detectors (the v1.1
+ *        SuiteEnd posture, closed over the v1.2 evidence trichotomy) -
+ *        hazards: ALL THREE, asserted loudly at the suite boundary.
+ *
+ * AUDIT LEG: the legal-state trichotomy reconstructed one-per-class (the
+ * per-case fixtures are fresh by construction, so the audit walks the
+ * matrix's three END STATES, the v1.1 SuiteEnd shape): (a) hot-present -
+ * resolves with the original bytes and ZERO S3 traffic; (b)
+ * cold-resident-without-evidence - journal Durable, hot bytes stripped,
+ * NoEvidence, resolves from the local cold tier with zero S3 traffic;
+ * (c) evidenced-absent - the /prune/blk row present, every tier's bytes
+ * gone, the TERMINAL refusal (never a not-found shape).
+ *
+ * EMPTY BASELINE (the $COVERAGE TEST-02 empty edge for the audit
+ * surface): an enrolled-but-empty topic's forced walk completes with
+ * EVERY counter zero, and a GC pass over the no-orphan store reports
+ * zero candidates and zero exemptions - never-healthy-by-omission works
+ * both ways.
+ *
+ * BYTE-FLIP TEETH (the v1.1 CorruptAssertionHasTeeth_ByteFlipStillCorrupt
+ * pattern verbatim; runs AFTER the audit - the flipped object is
+ * case-local): one cold object's VALUE byte-flipped through the fake's
+ * flip kit - the cold chain refuses it with COLD_STORAGE_CORRUPT; the
+ * flipped bytes are NEVER served as good history.
+ *
+ * COUNTER TEETH (the gw tx world): the VALUE_PRESENT_INVARIANT_VIOLATION
+ * class - the sanctioned /prune/tx marker (WritePrunedEntryForTest,
+ * the production record shape) written while the value is STILL present
+ * (the injected violation of the value-XOR-marker invariant) - the
+ * lookup surfaces the class LOUDLY (never guesses which side is right),
+ * and the recovery consult (CanRestoreElement) fails closed on it.
+ * These legs are their own teeth (they assert FIRING, not
+ * red-by-design) and are NOT gated behind SGNS_CROSS_RACE_RED_ARMS_ENABLE.
+ */
+TEST_F( ColdCrossFeatureFaultRaceTest, Cross_SuiteEnd_AuditWalkAndCounterTeeth )
+{
+    LogKnobs( "X10" );
+
+    auto bytes_of = []( const auto &node ) {
+        const auto content = node->content();
+        return std::vector<uint8_t>( content.begin(), content.end() );
+    };
+
+    auto manager = MakeManager();
+    manager->Start();
+    crdt_->AddTopicName( "topic" );
+    crdt_->AddTopicName( "x10empty" );
+
+    // ---- EMPTY BASELINE FIRST (the true zero-CID moment - the audit's
+    // own classes are not in the walk universe yet): the zero-CID audit
+    // surface with every counter zero.
+    {
+        auto queued = crdt_->RequestForcedWalk(
+            { "x10empty" },
+            []( const sgns::crdt::CrdtDatastore::Element & ) -> outcome::result<bool> { return true; },
+            1000U );
+        ASSERT_TRUE( queued.has_value() );
+        ASSERT_TRUE( PollUntil( [&] {
+                         return crdt_->GetForcedWalkStatus().state
+                                == sgns::crdt::CrdtDatastore::ForcedWalkState::Completed;
+                     },
+                     std::chrono::milliseconds( 30000 ) ) )
+            << "baseline: the empty-topic walk never completed";
+        const auto status = crdt_->GetForcedWalkStatus();
+        EXPECT_EQ( status.state, sgns::crdt::CrdtDatastore::ForcedWalkState::Completed );
+        EXPECT_EQ( status.visited, 0u );
+        EXPECT_EQ( status.fetched, 0u );
+        EXPECT_EQ( status.restored, 0u );
+        EXPECT_EQ( status.skipped_pruned, 0u );
+        EXPECT_EQ( status.walk_gaps, 0u );
+        EXPECT_EQ( status.errors, 0u )
+            << "baseline: never-healthy-by-omission works BOTH ways - the "
+               "zero-CID audit reports every counter zero";
+    }
+    {
+        const auto candidates = manager->GcPassOnce();
+        EXPECT_TRUE( candidates.empty() ) << "baseline: an empty store nominates nothing";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 0u );
+    }
+
+    // ---- Seed the three classes (oracle bytes captured pre-mutation).
+    // (a) hot-present.
+    const CID hot_head = PublishElement( "x10/audit/hot", "hot-value" );
+    {
+        auto oracle = dagsyncer_->GetNodeWithoutRequest( hot_head );
+        ASSERT_TRUE( oracle.has_value() );
+    }
+    // (b) cold-resident-without-evidence.
+    const CID cold_local = PublishElement( "x10/audit/cold", "cold-value" );
+    WaitAllDurable( { Cid( cold_local ) } );
+    std::vector<uint8_t> cold_content;
+    {
+        auto oracle = dagsyncer_->GetNodeWithoutRequest( cold_local );
+        ASSERT_TRUE( oracle.has_value() );
+        cold_content = bytes_of( oracle.value() );
+    }
+    RemoveHotCopy( cold_local );
+    // (c) evidenced-absent.
+    const CID gone = PublishElement( "x10/audit/gone", "gone-value" );
+    WaitAllDurable( { Cid( gone ) } );
+    RemoveHotCopy( gone );
+    {
+        auto deleted = fake_->Delete( XDeriveTestKey( Cid( gone ) ) );
+        ASSERT_TRUE( deleted.has_value() );
+        auto evicted = shared_local_->EvictLocal( Cid( gone ) );
+        ASSERT_TRUE( evicted.has_value() );
+    }
+    SeedPruneEvidence( gone );
+
+    // ---- THE AUDIT WALK: each CID in exactly one legal state.
+    // (a) hot-present: original bytes, zero S3 traffic, no evidence row.
+    EXPECT_TRUE( HotBytesPresent( hot_head ) );
+    EXPECT_FALSE( EvidenceInStore( hot_head ) );
+    {
+        const uint64_t gets_before = timing_->OpCount( S3Op::Get );
+        auto resolved = dagsyncer_->GetNodeWithoutRequest( hot_head );
+        ASSERT_TRUE( resolved.has_value() ) << "audit (a): the hot head must resolve";
+        EXPECT_EQ( timing_->OpCount( S3Op::Get ), gets_before )
+            << "audit (a): hot-present resolves with ZERO S3 traffic";
+    }
+    // (b) cold-resident-without-evidence: Durable journal, local-cold
+    // resolution, zero S3 traffic, no evidence row.
+    EXPECT_FALSE( HotBytesPresent( cold_local ) );
+    EXPECT_FALSE( EvidenceInStore( cold_local ) );
+    {
+        auto state = manager->GetUploadState( Cid( cold_local ) );
+        ASSERT_TRUE( state.has_value() );
+        EXPECT_EQ( state.value(), UploadState::UploadedDurable )
+            << "audit (b): the cold-resident journal record reads Durable";
+        const uint64_t gets_before = timing_->OpCount( S3Op::Get );
+        auto resolved = dagsyncer_->GetNodeWithoutRequest( cold_local );
+        ASSERT_TRUE( resolved.has_value() ) << "audit (b): the cold-local block must resolve";
+        EXPECT_EQ( bytes_of( resolved.value() ), cold_content )
+            << "audit (b): the original bytes, CID-verified";
+        EXPECT_EQ( timing_->OpCount( S3Op::Get ), gets_before )
+            << "audit (b): cold-local resolves with ZERO S3 traffic";
+    }
+    // (c) evidenced-absent: the evidence row is the verdict - the
+    // terminal refusal, never a not-found shape.
+    EXPECT_TRUE( EvidenceInStore( gone ) );
+    EXPECT_FALSE( HotBytesPresent( gone ) );
+    {
+        auto refused = dagsyncer_->GetNodeWithoutRequest( gone );
+        ASSERT_TRUE( refused.has_error() ) << "audit (c): the evidenced CID must refuse";
+        EXPECT_EQ( refused.error(), sgns::crdt::GraphsyncDAGSyncer::Error::HISTORY_PRUNED_LOCALLY )
+            << "audit (c): evidenced-absent is the TERMINAL refusal - never "
+               "not-found-shaped";
+    }
+
+    // ---- EMPTY BASELINE removed from here (moved before the seeding -
+    // the audit's own evidenced-absent class would otherwise legitimately
+    // count as an exempted gap and pollute the zero-counter claim).
+
+    // ---- AUDIT x GC COHERENCE: the audit's evidenced-absent class is an
+    // exempted LEAF to the GC walk - never an abort (the exemption doing
+    // its job at the suite boundary, observed once on the seeded state).
+    {
+        const auto candidates = manager->GcPassOnce();
+        EXPECT_TRUE( candidates.empty() )
+            << "coherence: the audited chain is head-reachable - nothing nominated";
+        EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 0u );
+        EXPECT_GE( manager->GetStatus().gc_last_pass_exempted, 1u )
+            << "coherence: the evidenced-absent cid is an exempted leaf, never "
+               "a pass abort";
+    }
+
+    // ---- BYTE-FLIP TEETH (after the audit; the object is case-local).
+    {
+        const CID flip = PublishElement( "x10/teeth/flip", "flip-value" );
+        WaitAllDurable( { Cid( flip ) } );
+        RemoveHotCopy( flip );
+        auto evicted = shared_local_->EvictLocal( Cid( flip ) );
+        ASSERT_TRUE( evicted.has_value() );
+
+        fake_->SetFlipBytesForKey( XDeriveTestKey( Cid( flip ) ), true );
+        auto served = dagsyncer_->GetNodeWithoutRequest( flip );
+        fake_->SetFlipBytesForKey( XDeriveTestKey( Cid( flip ) ), false );
+
+        ASSERT_TRUE( served.has_error() )
+            << "teeth: byte-flipped cold bytes must NEVER be served as good "
+               "history - the zero-Corrupt assertions across this suite are "
+               "honest only if this refuses";
+        EXPECT_EQ( served.error(),
+                   sgns::crdt::GraphsyncDAGSyncer::Error::COLD_STORAGE_CORRUPT );
+    }
+
+    manager_->Stop();
+    manager_ = nullptr;
+
+    // ---- COUNTER TEETH (the gw tx world: the VALUE_PRESENT class).
+    {
+        BuildTxStack();
+        auto spender = MakeXTransfer( 101, 0 );
+        SeedXTransaction( spender );
+        const std::string path = sgns::TransactionManager::GetTransactionPath( *spender );
+        const std::string hash = path.substr( path.find_last_of( '/' ) + 1 );
+
+        // The injected violation: the SANCTIONED marker entry written while
+        // the value is STILL present (the value-XOR-marker invariant
+        // broken test-side - the state the Phase 18 same-batch write makes
+        // atomically impossible in production).
+        SGTransaction::PrunedTransactionRecord record;
+        record.set_tx_path( path );
+        auto written = sgns::PruneEligibility::WritePrunedEntryForTest( *gw_db_, hash, record );
+        ASSERT_TRUE( written.has_value() );
+
+        // THE LOUD COUNTER: the lookup surfaces the class, never guesses.
+        auto verdict = sgns::PruneEligibility::LookupPrunedEntry( *gw_db_, hash );
+        ASSERT_TRUE( verdict.has_value() );
+        EXPECT_EQ( verdict.value().first, sgns::PrunedLookup::VALUE_PRESENT_INVARIANT_VIOLATION )
+            << "teeth: marker + value coexistence surfaces the loud "
+               "VALUE_PRESENT_INVARIANT_VIOLATION class - the detector is "
+               "loud, not latent";
+
+        // And the recovery consult fails CLOSED on the violation state.
+        auto restore = sgns::PruneEligibility::CanRestoreElement( *gw_db_, path );
+        EXPECT_TRUE( restore.has_error() )
+            << "teeth: the violation state fails the recovery consult closed";
+    }
+}
