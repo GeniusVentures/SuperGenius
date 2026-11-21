@@ -10,6 +10,9 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
 #include "account/EscrowReleaseTransactionV2.hpp"
+#include "account/EscrowReleaseTransaction.hpp"
+#include "account/EscrowTransaction.hpp"
+#include "account/TransferTransaction.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crypto/hasher.hpp"
 #include "base/hexutil.hpp"
@@ -305,6 +308,8 @@ namespace
             }
             const auto marker = DecodeRelease( "escrow-release", raw.value() );
             ASSERT_NE( marker, nullptr );
+            const auto typed = std::dynamic_pointer_cast<EscrowReleaseTransaction>( marker );
+            ASSERT_NE( typed, nullptr );
             EXPECT_EQ( marker->SerializeByteVector(), raw.value() );
             EXPECT_EQ( marker->GetType(), "escrow-release" );
             EXPECT_EQ( marker->GetTransactionSpecificPath(), "escrow-release" );
@@ -331,6 +336,19 @@ namespace
             EXPECT_EQ( wire.release_address(), "historical-release-address" );
             EXPECT_EQ( wire.escrow_source(), std::string( 128, 'b' ) );
             EXPECT_EQ( wire.original_escrow_hash(), std::string( 64, 'c' ) );
+            EXPECT_EQ( typed->GetReleaseAmount(), wire.release_amount() );
+            EXPECT_EQ( typed->GetReleaseAddress(), wire.release_address() );
+            EXPECT_EQ( typed->GetEscrowSource(), wire.escrow_source() );
+            EXPECT_EQ( typed->GetOriginalEscrowHash(), wire.original_escrow_hash() );
+            EXPECT_EQ( typed->GetTopics(),
+                       ( std::unordered_set<std::string>{ std::string( fixture::SOURCE ), std::string( 128, 'b' ) } ) );
+            const auto created = EscrowReleaseTransaction::New( typed->GetUTXOParameters(),
+                                                                typed->GetReleaseAmount(),
+                                                                typed->GetReleaseAddress(),
+                                                                typed->GetEscrowSource(),
+                                                                typed->GetOriginalEscrowHash(),
+                                                                typed->dag_st );
+            EXPECT_EQ( created.SerializeByteVector(), raw.value() );
             ASSERT_EQ( wire.utxo_params().inputs_size(), 1 );
             EXPECT_EQ( wire.utxo_params().inputs( 0 ).tx_id_hash(), std::string( 64, 'a' ) );
             EXPECT_EQ( wire.utxo_params().inputs( 0 ).output_index(), 3 );
@@ -357,6 +375,12 @@ namespace
             ASSERT_NE( restored, nullptr );
             EXPECT_EQ( restored->SerializeByteVector(), raw.value() );
             EXPECT_TRUE( restored->CheckSignature() );
+
+            wire.set_release_amount( wire.release_amount() + 1 );
+            const auto tampered = DecodeRelease( "escrow-release", MessageBytes( wire ) );
+            ASSERT_NE( tampered, nullptr );
+            EXPECT_FALSE( tampered->CheckHash() );
+            EXPECT_FALSE( tampered->CheckSignature() );
         }
     }
 
@@ -375,7 +399,16 @@ namespace
         const auto payment_bytes = MessageBytes( SignedPaymentWire( *account, 2 ) );
         const auto payment       = DecodeReleaseV2( payment_bytes );
         ASSERT_NE( payment, nullptr );
+        EXPECT_NE( std::dynamic_pointer_cast<EscrowReleaseTransaction>( legacy ), nullptr );
+        EXPECT_EQ( std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( legacy ), nullptr );
+        EXPECT_EQ( std::dynamic_pointer_cast<EscrowTransaction>( legacy ), nullptr );
+        EXPECT_EQ( std::dynamic_pointer_cast<TransferTransaction>( legacy ), nullptr );
+        EXPECT_NE( std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( payment ), nullptr );
+        EXPECT_EQ( std::dynamic_pointer_cast<EscrowReleaseTransaction>( payment ), nullptr );
+        EXPECT_EQ( std::dynamic_pointer_cast<EscrowTransaction>( payment ), nullptr );
+        EXPECT_EQ( std::dynamic_pointer_cast<TransferTransaction>( payment ), nullptr );
         EXPECT_EQ( DecodeRelease( "escrow-release", payment_bytes ), nullptr );
+        EXPECT_EQ( DecodeRelease( "escrow-release", { 0xff } ), nullptr );
         EXPECT_NE( legacy->GetType(), payment->GetType() );
         EXPECT_NE( legacy->GetType(), "escrow-hold" );
         EXPECT_EQ( legacy->SerializeToEmbeddedTransaction().transaction_case(), EmbeddedTransaction::kEscrowRelease );
