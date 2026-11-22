@@ -13280,5 +13280,311 @@
         "sha256": "a0f96d7e0752fd66318be05517a9dae3daf07dd5cf05f80b547c0e8e1aded69f"
       }
     ]
+  },
+  "resumed_verification": {
+    "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+    "scope": "CR-04 cleanup repair and focused lifecycle evidence; broader bridge/network/full-suite gates pending. Original final_phase_verification remains historical at its recorded source head.",
+    "technical_readiness": "pending_network_full_reruns",
+    "cr04": {
+      "baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
+      "incoming_head": "4170b7f98",
+      "source_head_before": "5d7effc4c934855e461550f1bca60fa62f749c45",
+      "red_commit": "aff9d277f",
+      "green_commit": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+      "owned_paths": [
+        "src/transaction/TransactionManager.cpp",
+        "src/transaction/TransactionManager.hpp",
+        "test/src/account/transaction_manager_pending_lifecycle_test.cpp"
+      ],
+      "scope": "CR-04 local ordinary-input cleanup on queued rollback after UNCONFIRMED, preserving confirmed effects and a nonce reserved again after expiry",
+      "measurements": {
+        "red-final": {
+          "tests": "2",
+          "failures": "2",
+          "disabled": "0",
+          "errors": "0",
+          "time": "1.502",
+          "timestamp": "2026-11-22T15:31:58.760",
+          "name": "AllTests",
+          "xml": "/tmp/phase21-1-cr04-red-final.xml",
+          "ctest_log": "/tmp/phase21-1-cr04-red-final-ctest.log",
+          "ctest_total_seconds": 2.95
+        },
+        "green-focused": {
+          "tests": "2",
+          "failures": "0",
+          "disabled": "0",
+          "errors": "0",
+          "time": "1.542",
+          "timestamp": "2026-11-22T15:34:32.598",
+          "name": "AllTests",
+          "xml": "/tmp/phase21-1-cr04-green-focused.xml",
+          "ctest_log": "/tmp/phase21-1-cr04-green-focused-ctest.log",
+          "ctest_seconds": 2.68,
+          "ctest_total_seconds": 2.72
+        },
+        "green-full": {
+          "tests": "45",
+          "failures": "0",
+          "disabled": "0",
+          "errors": "0",
+          "time": "15.869",
+          "timestamp": "2026-11-22T15:34:44.810",
+          "name": "AllTests",
+          "xml": "/tmp/phase21-1-cr04-green-full.xml",
+          "ctest_log": "/tmp/phase21-1-cr04-green-full-ctest.log",
+          "ctest_seconds": 15.9,
+          "ctest_total_seconds": 15.93
+        }
+      },
+      "build": {
+        "command": "cmake --build build/OSX/Release --target transaction_manager_pending_lifecycle_test -j4",
+        "elapsed_seconds": 93.67,
+        "exit_code": 0,
+        "warning_strings": 0,
+        "error_strings": 0,
+        "log": "/tmp/phase21-1-cr04-green-build.log"
+      },
+      "tidy": {
+        "results": "/tmp/phase21-1-cr04-green-tidy-results.json",
+        "required_diagnostics": 0,
+        "notes": "Configured full checks exit 0 for both translation units with changed header included. Four existing naming-option configuration warnings per unit and recommended cognitive-complexity diagnostics remain; no Required findings."
+      },
+      "format": {
+        "results": "/tmp/phase21-1-cr04-green-format.json",
+        "changed_line_replacements": 0
+      },
+      "review": "Independent read-only source/diff review found no concrete concern; no native checks run by reviewer.",
+      "boundary": "Only focused lifecycle target tested here. Broad bridge/network/full suite, phase completion and activation remain outside this result.",
+      "format_supplement": {
+        "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
+        "command": "git clang-format --binary /opt/homebrew/bin/clang-format --diff 8373ed7260aa8d10e5c988a4e205604e87533f13 -- src/transaction/TransactionManager.cpp src/transaction/TransactionManager.hpp test/src/account/transaction_manager_pending_lifecycle_test.cpp",
+        "exit_code": 0,
+        "output_path": "/tmp/phase21-1-cr04-git-clang-format.diff",
+        "output": "clang-format did not modify any files\n",
+        "source_sha256": {
+          "src/transaction/TransactionManager.cpp": "f1fd8a3c132fbfe189bba0ffeb021960569458b534ca487b182468d43f5d05cf",
+          "src/transaction/TransactionManager.hpp": "2e568102670fe3970d2257bcd037ec1e89a95acbc279f5725eb0bcc5a6facbed",
+          "test/src/account/transaction_manager_pending_lifecycle_test.cpp": "d2405fb9bcaf00a6ac92b5991fb95f08de9925f339d91f6ce1937f707e932077"
+        }
+      }
+    },
+    "independent_review": {
+      "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+      "status": "clean",
+      "current_findings": 0,
+      "scope": "Three CR-04 files re-reviewed, prior cumulative phase review retained; broad native and operator gates separate",
+      "report": "21.1-REVIEW.md"
+    },
+    "bridge_reruns": {
+      "created_utc": "2026-11-22T18:43:49.752224+00:00",
+      "source_head_end": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+      "build": {
+        "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "mode": "build",
+        "target": "build",
+        "command": [
+          "cmake",
+          "--build",
+          "build/OSX/Release",
+          "--target",
+          "bridge_race_single_burn_test",
+          "bridge_race_batch_test",
+          "bridge_race_fault_rpc_test",
+          "-j4"
+        ],
+        "cwd": "/Users/henriqueklein/gnus/SuperGNUS",
+        "start_utc": "2026-11-22T18:38:02.059535+00:00",
+        "start_monotonic": 1476469.490410666,
+        "prior_native_xunit": null,
+        "pid": 55698,
+        "exit_code": 0,
+        "end_utc": "2026-11-22T18:39:06.649350+00:00",
+        "end_monotonic": 1476534.083312375,
+        "elapsed_monotonic_seconds": 64.59290170902386
+      },
+      "tests": [
+        {
+          "target": "bridge_race_single_burn_test",
+          "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+          "exit_code": 0,
+          "start_utc": "2026-11-22T18:39:14.141702+00:00",
+          "end_utc": "2026-11-22T18:40:18.489256+00:00",
+          "elapsed_monotonic_seconds": 64.35016699996777,
+          "ctest_seconds": 64.29,
+          "ctest_xml_attributes": {
+            "name": "(empty)",
+            "tests": "1",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "0",
+            "hostname": "",
+            "time": "64",
+            "timestamp": "2026-11-22T15:39:14"
+          },
+          "native_xunit_fresh": true,
+          "native_attributes": {
+            "tests": "1",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "63.003",
+            "timestamp": "2026-11-22T15:39:15.469",
+            "name": "AllTests"
+          },
+          "actual_enabled_cases": 1,
+          "passed_cases": 1,
+          "failed_cases": 0,
+          "skipped_cases": 0,
+          "disabled_cases": 0,
+          "cases": [
+            {
+              "suite": "BridgeRaceE2ETest",
+              "name": "SingleContestedBurnExactlyOnce",
+              "file": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_race/bridge_race_single_burn_test.cpp",
+              "line": "19",
+              "status": "run",
+              "result": "completed",
+              "time": "28.187",
+              "timestamp": "2026-11-22T15:39:34.366",
+              "classname": "BridgeRaceE2ETest",
+              "failures": [],
+              "skips": []
+            }
+          ]
+        },
+        {
+          "target": "bridge_race_batch_test",
+          "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+          "exit_code": 0,
+          "start_utc": "2026-11-22T18:40:35.392710+00:00",
+          "end_utc": "2026-11-22T18:41:56.046312+00:00",
+          "elapsed_monotonic_seconds": 80.65688804117963,
+          "ctest_seconds": 80.58,
+          "ctest_xml_attributes": {
+            "name": "(empty)",
+            "tests": "1",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "0",
+            "hostname": "",
+            "time": "80",
+            "timestamp": "2026-11-22T15:40:35"
+          },
+          "native_xunit_fresh": true,
+          "native_attributes": {
+            "tests": "1",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "79.338",
+            "timestamp": "2026-11-22T15:40:36.663",
+            "name": "AllTests"
+          },
+          "actual_enabled_cases": 1,
+          "passed_cases": 1,
+          "failed_cases": 0,
+          "skipped_cases": 0,
+          "disabled_cases": 0,
+          "cases": [
+            {
+              "suite": "BridgeRaceE2ETest",
+              "name": "BatchBurnsNoInterference",
+              "file": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_race/bridge_race_batch_test.cpp",
+              "line": "27",
+              "status": "run",
+              "result": "completed",
+              "time": "40.825",
+              "timestamp": "2026-11-22T15:40:56.708",
+              "classname": "BridgeRaceE2ETest",
+              "failures": [],
+              "skips": []
+            }
+          ]
+        },
+        {
+          "target": "bridge_race_fault_rpc_test",
+          "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+          "exit_code": 0,
+          "start_utc": "2026-11-22T18:42:02.377853+00:00",
+          "end_utc": "2026-11-22T18:43:21.084666+00:00",
+          "elapsed_monotonic_seconds": 78.71001933282241,
+          "ctest_seconds": 78.65,
+          "ctest_xml_attributes": {
+            "name": "(empty)",
+            "tests": "1",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "0",
+            "hostname": "",
+            "time": "78",
+            "timestamp": "2026-11-22T15:42:02"
+          },
+          "native_xunit_fresh": true,
+          "native_attributes": {
+            "tests": "2",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "77.395",
+            "timestamp": "2026-11-22T15:42:03.669",
+            "name": "AllTests"
+          },
+          "actual_enabled_cases": 2,
+          "passed_cases": 2,
+          "failed_cases": 0,
+          "skipped_cases": 0,
+          "disabled_cases": 0,
+          "cases": [
+            {
+              "suite": "BridgeRaceE2ETest",
+              "name": "AllSlotsDistinctStillReachesQuorum",
+              "file": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_race/bridge_race_fault_rpc_test.cpp",
+              "line": "189",
+              "status": "run",
+              "result": "completed",
+              "time": "11.746",
+              "timestamp": "2026-11-22T15:42:21.950",
+              "classname": "BridgeRaceE2ETest",
+              "failures": [],
+              "skips": []
+            },
+            {
+              "suite": "BridgeRaceE2ETest",
+              "name": "DirectSlotFailureFailClosesMint",
+              "file": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_race/bridge_race_fault_rpc_test.cpp",
+              "line": "231",
+              "status": "run",
+              "result": "completed",
+              "time": "30.404",
+              "timestamp": "2026-11-22T15:42:33.696",
+              "classname": "BridgeRaceE2ETest",
+              "failures": [],
+              "skips": []
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "Only the assigned three bridge targets were built and run; no full suite or additional gate was run.",
+        "The prior single-burn timeout cause remains unproven despite this fresh complete passing run.",
+        "Any preserved prior-native-xunit.xml is historical. Native results count only when native_xunit_fresh is true.",
+        "LastTestsFailed.log can be stale after passing invocations and is not used as a fresh outcome."
+      ],
+      "totals": {
+        "targets": 3,
+        "actual_enabled_cases": 4,
+        "passed_cases": 4,
+        "failed_cases": 0,
+        "skipped_cases": 0,
+        "disabled_cases": 0,
+        "elapsed_monotonic_seconds": 223.7170743739698
+      },
+      "build_warning_count": 0
+    },
+    "complete_separate_network_gate": "pending",
+    "unfiltered_full_release_suite": "pending",
+    "activation_unchanged": "pending; operator_decision=null; external inventory/evidence still missing; no operational changes"
   }
 }

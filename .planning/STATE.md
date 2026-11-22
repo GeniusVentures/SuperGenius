@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
-status: Plan 08 technical continuation interrupted; CR-04 UNCONFIRMED reservation cleanup blocks bridge and broad reruns; operator 08-2 pending
-stopped_at: Plan 21.1-08 interrupted at 5d7effc4c; CR-04 cleanup fix and bridge/broad reruns remain
-last_updated: "2026-11-22T18:12:42.552Z"
-last_activity: "2026-11-22 -- Continuation at 5d7effc4c: payout fixtures 14/14, lifecycle 43/43 and focused probe pass; review found reservation cleanup blocker before reruns"
+status: Plan 08 technical continuation active; CR-04 repaired, review clean, 45 lifecycle and all 4 bridge cases pass; network/full reruns pending; operator 08-2 pending
+stopped_at: Plan 21.1-08 active at 1c6dfa69c; CR-04 fixed and review clean; bridge 4/4 pass; network/full reruns remain
+last_updated: '2026-11-22T18:38:13.129818+00:00'
+last_activity: "2026-11-22 -- CR-04 fixed at 1c6dfa69c: two deterministic regressions, full 45-case lifecycle and 4 bridge cases pass; review/build/Required lint/format clear; network/full gates remain"
 progress:
   total_phases: 33
   completed_phases: 5
@@ -31,8 +31,8 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
 Plan: 8 of 8 (task 1 measurements recorded; task 2 pending; 7/8 plans completed)
-Status: Plan 08 technical continuation interrupted; CR-04 UNCONFIRMED reservation cleanup blocks bridge and broad reruns; operator 08-2 pending
-Last activity: 2026-11-22 -- Continuation at 5d7effc4c: payout fixtures 14/14, lifecycle 43/43 and focused probe pass; review found reservation cleanup blocker before reruns
+Status: Plan 08 technical continuation active; CR-04 repaired, review clean, 45 lifecycle and all 4 bridge cases pass; network/full reruns pending; operator 08-2 pending
+Last activity: 2026-11-22 -- CR-04 fixed at 1c6dfa69c: two deterministic regressions, full 45-case lifecycle and 4 bridge cases pass; review/build/Required lint/format clear; network/full gates remain
 
 Progress: [█████████░] 87%
 
@@ -85,7 +85,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 ## Session
 
 **Last session:** 2026-11-22T18:12:42.541Z
-**Stopped At:** Plan 21.1-08 interrupted at 5d7effc4c; CR-04 cleanup fix and bridge/broad reruns remain
+**Stopped At:** Plan 21.1-08 active at 1c6dfa69c; CR-04 fixed and review clean; bridge 4/4 pass; network/full reruns remain
 **Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-08-CONTINUATION.md
 
 ## Accumulated Context
