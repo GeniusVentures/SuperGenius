@@ -13284,7 +13284,7 @@
   "resumed_verification": {
     "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
     "scope": "CR-04 cleanup repair and focused lifecycle evidence; broader bridge/network/full-suite gates pending. Original final_phase_verification remains historical at its recorded source head.",
-    "technical_readiness": "pending_network_full_reruns",
+    "technical_readiness": "pending_unfiltered_full_release_suite",
     "cr04": {
       "baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
       "incoming_head": "4170b7f98",
@@ -13583,8 +13583,143 @@
       },
       "build_warning_count": 0
     },
-    "complete_separate_network_gate": "pending",
-    "unfiltered_full_release_suite": "pending",
-    "activation_unchanged": "pending; operator_decision=null; external inventory/evidence still missing; no operational changes"
+    "complete_separate_network_gate": {
+      "exit_code": 0,
+      "started": "2026-11-22T19:02:03.612131+00:00",
+      "finished": "2026-11-22T19:05:18.242020+00:00",
+      "elapsed_seconds": 194.63803162495606,
+      "source_start": {
+        "head": "ad406168c99003b77fdf8d9b7e4293339dcc585d",
+        "last_source_commit": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "source_digest": "32efb7b897117c1298e90d9977245d6ddec6641d6a1d70c66708bcc3022d5a51",
+        "file_count": 967,
+        "gitlinks": [
+          {
+            "path": "ProofSystem",
+            "head": "a107566e745797f821d18d84994d4280b84f1cdc"
+          },
+          {
+            "path": "SGProcessingManager",
+            "head": "89d161b08f7995e924792ecf900c1ed0e50b58aa"
+          }
+        ]
+      },
+      "source_end": {
+        "head": "ad406168c99003b77fdf8d9b7e4293339dcc585d",
+        "last_source_commit": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "source_digest": "32efb7b897117c1298e90d9977245d6ddec6641d6a1d70c66708bcc3022d5a51",
+        "file_count": 967,
+        "gitlinks": [
+          {
+            "path": "ProofSystem",
+            "head": "a107566e745797f821d18d84994d4280b84f1cdc"
+          },
+          {
+            "path": "SGProcessingManager",
+            "head": "89d161b08f7995e924792ecf900c1ed0e50b58aa"
+          }
+        ]
+      },
+      "source_identity_unchanged": true,
+      "ctest": {
+        "targets": 3,
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "not_run": 0
+      },
+      "gtest": {
+        "enabled": 15,
+        "ran": 15,
+        "passed": 15,
+        "failed": 0,
+        "skipped": 0,
+        "disabled": 0,
+        "targets": 2,
+        "complete": true,
+        "incomplete_targets": [],
+        "unclassified_targets": [],
+        "ambiguous_invocations": []
+      },
+      "non_gtest_targets": [
+        "multi_node_finality_fault_process_ownership_test"
+      ],
+      "target_inventory": {
+        "expected_count": 3,
+        "observed_count": 3,
+        "missing": [],
+        "unexpected": [],
+        "duplicates": [],
+        "exact_set_once": true
+      },
+      "all_five_escrow_and_restart_probe_cases_passed": true,
+      "summary": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-case-summary.json",
+      "coverage": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-required-coverage.json",
+      "manifest": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-artifact-manifest.json"
+    },
+    "unfiltered_full_release_suite": {
+      "status": "running",
+      "started_utc": "2026-11-22T19:05:45.432403+00:00",
+      "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+      "checkout_head_start": "ad406168c99003b77fdf8d9b7e4293339dcc585d",
+      "metadata": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release.json",
+      "log": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release.log",
+      "completed_result": null
+    },
+    "activation_unchanged": "pending; operator_decision=null; external inventory/evidence still missing; no operational changes",
+    "registered_target_build": {
+      "exit_code": 0,
+      "started": "2026-11-22T18:46:18.715881+00:00",
+      "finished": "2026-11-22T19:00:52.891912+00:00",
+      "elapsed_seconds": 874.2127054999582,
+      "source_start": {
+        "head": "ad406168c99003b77fdf8d9b7e4293339dcc585d",
+        "last_source_commit": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "source_digest": "32efb7b897117c1298e90d9977245d6ddec6641d6a1d70c66708bcc3022d5a51",
+        "file_count": 967,
+        "gitlinks": [
+          {
+            "path": "ProofSystem",
+            "head": "a107566e745797f821d18d84994d4280b84f1cdc"
+          },
+          {
+            "path": "SGProcessingManager",
+            "head": "89d161b08f7995e924792ecf900c1ed0e50b58aa"
+          }
+        ]
+      },
+      "source_end": {
+        "head": "ad406168c99003b77fdf8d9b7e4293339dcc585d",
+        "last_source_commit": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "source_digest": "32efb7b897117c1298e90d9977245d6ddec6641d6a1d70c66708bcc3022d5a51",
+        "file_count": 967,
+        "gitlinks": [
+          {
+            "path": "ProofSystem",
+            "head": "a107566e745797f821d18d84994d4280b84f1cdc"
+          },
+          {
+            "path": "SGProcessingManager",
+            "head": "89d161b08f7995e924792ecf900c1ed0e50b58aa"
+          }
+        ]
+      },
+      "source_identity_unchanged": true,
+      "debug_cache_available": false,
+      "targets": 163,
+      "compiler_errors": 0,
+      "existing_warnings": 8,
+      "new_or_unclassified_warnings": 0,
+      "metadata": "/tmp/phase21-1-cr04-final-20261122T184600Z/build-all-registered.json",
+      "warning_classification": "/tmp/phase21-1-cr04-final-20261122T184600Z/build-warning-classification.json",
+      "manifest": "/tmp/phase21-1-cr04-final-20261122T184600Z/build-artifact-manifest.json"
+    },
+    "approval_review_resolution": {
+      "initial_rejected_action": "delegated complete network battery",
+      "reason": "Reviewer treated original three-bridge-only task as scope limit",
+      "rejection_record": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-approval-rejection.json",
+      "resolution": "Root inspected unchanged script and Plan08 Task1 network/full-suite commands against existing explicit execute-phase authorization. Root network and full-suite tool calls approved; root owns native sessions. No worker retry or bypass.",
+      "network_started_utc": "2026-11-22T19:02:03.612131+00:00"
+    }
   }
 }
