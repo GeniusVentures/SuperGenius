@@ -56,6 +56,13 @@ namespace sgns
             manager.EnqueueTransaction( { std::move( batch ), std::move( crdt_transaction ) } );
         }
 
+        static void EnqueueBatch( TransactionManager                      &manager,
+                                  TransactionManager::TransactionBatch     batch,
+                                  std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
+        {
+            manager.EnqueueTransaction( { std::move( batch ), std::move( crdt_transaction ) } );
+        }
+
         static void TickOnce( TransactionManager &manager )
         {
             manager.TickOnce();
@@ -72,13 +79,13 @@ namespace sgns
 
         static outcome::result<void> SendQueuedTransaction( TransactionManager &manager )
         {
-            std::lock_guard lock( manager.mutex_m );
+            const std::scoped_lock lock( manager.mutex_m );
             return manager.SendTransactionItem( manager.tx_queue_m.front() );
         }
 
         static outcome::result<void> RollbackQueuedTransaction( TransactionManager &manager )
         {
-            std::lock_guard lock( manager.mutex_m );
+            const std::scoped_lock lock( manager.mutex_m );
             return manager.RollbackTransactions( manager.tx_queue_m.front() );
         }
 
@@ -1984,13 +1991,47 @@ TEST_F( TransactionManagerCertificateHistoryTest, CertifiedCompetitorBeforeSendK
     EXPECT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *transaction ) ).has_error() );
 }
 
+TEST_F( TransactionManagerCertificateHistoryTest, TerminalBatchMemberRetiresUnpublishedAtomicBatch )
+{
+    const auto                        terminal = MakeTransaction();
+    const auto                        unsent   = MakeSubmissionTransaction( account_->ReserveNextNonce() );
+    const sgns::crdt::HierarchicalKey sentinel_key( "/recovery/atomic-batch-sentinel" );
+    auto                              atomic_transaction = db_->BeginTransaction();
+    sgns::crdt::GlobalDB::Buffer      sentinel;
+    sentinel.put( "must-remain-uncommitted" );
+    ASSERT_TRUE( atomic_transaction->Put( sentinel_key, std::move( sentinel ) ).has_value() );
+    sgns::TransactionManagerPendingLifecycleTestAccess::EnqueueBatch(
+        *manager_,
+        { { terminal, std::nullopt }, { unsent, std::nullopt } },
+        std::move( atomic_transaction ) );
+    StoreCertificate( terminal );
+    StoreTransaction( terminal );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::ProcessIncomingTransaction( *manager_, terminal )
+                     .has_value() );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( terminal->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), terminal->GetAmount() );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( unsent->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+    EXPECT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *unsent ) ).has_error() );
+    EXPECT_TRUE( db_->Get( sentinel_key ).has_error() );
+    EXPECT_EQ( account_->ReserveNextNonce(), unsent->GetNonce() );
+}
+
 TEST_F( TransactionManagerPreviousHashTest, PublishFailureRollbackPreservesSubsequentlyCertifiedEffects )
 {
     const auto hold      = MakeCertifiedHold();
     const auto hold_hash = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
     auto      &ledger    = account_->GetUTXOManager();
     const auto funding   = ledger.GetUnconsumedUTXO( hold_hash, 0 );
-    ASSERT_TRUE( funding.has_value() );
+    if ( !funding.has_value() )
+    {
+        FAIL() << "certified hold must produce its funding output";
+    }
     const auto transaction           = MakePaymentTransfer( funding.value(),
                                                             { { hold->GetAmount(), account_->GetAddress(), kTokenId } },
                                                   funding->GetOwnerAddress() );
