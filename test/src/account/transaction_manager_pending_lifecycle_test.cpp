@@ -89,6 +89,29 @@ namespace sgns
             return manager.RollbackTransactions( manager.tx_queue_m.front() );
         }
 
+        static void StageQueuedPartner( TransactionManager                      &manager,
+                                        std::shared_ptr<GeniusTransaction>       partner,
+                                        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
+        {
+            ASSERT_TRUE(
+                manager.ChangeTransactionState( partner, TransactionManager::TransactionStatus::CREATED ).has_value() );
+            const std::scoped_lock lock( manager.mutex_m );
+            ASSERT_EQ( manager.tx_queue_m.size(), 1U );
+            manager.tx_queue_m.front().first.emplace_back( std::move( partner ), std::nullopt );
+            manager.tx_queue_m.front().second = std::move( crdt_transaction );
+        }
+
+        static size_t QueuedTransactionCount( TransactionManager &manager )
+        {
+            const std::scoped_lock lock( manager.mutex_m );
+            return manager.tx_queue_m.size();
+        }
+
+        static void OnProposalTimeoutCleanup( TransactionManager &manager, const std::string &tx_hash )
+        {
+            manager.consensus_m_->OnProposalTimeoutCleanup( tx_hash );
+        }
+
         static void RunInitializeUTXOs( TransactionManager &manager )
         {
             ASSERT_TRUE( manager.InitializeUTXOs().has_value() );
@@ -547,6 +570,11 @@ namespace
     };
 
     class TransactionDeletionRecoveryTest : public TransactionManagerPreviousHashTest
+    {
+    };
+
+    class TransactionManagerUnconfirmedCleanupTest : public TransactionManagerCertificateHistoryTest,
+                                                     public testing::WithParamInterface<bool>
     {
     };
 } // namespace
@@ -2021,6 +2049,110 @@ TEST_F( TransactionManagerCertificateHistoryTest, TerminalBatchMemberRetiresUnpu
     EXPECT_TRUE( db_->Get( sentinel_key ).has_error() );
     EXPECT_EQ( account_->ReserveNextNonce(), unsent->GetNonce() );
 }
+
+TEST_P( TransactionManagerUnconfirmedCleanupTest, RetiresExpiredOrdinaryInputsWithoutPublishingBatch )
+{
+    const auto funding = MakeTransaction( 0 );
+    StoreCertificate( funding );
+    StoreTransaction( funding );
+    ProcessStoredTransaction( funding );
+    auto      &ledger       = account_->GetUTXOManager();
+    const auto funding_hash = sgns::base::Hash256::fromReadableString( funding->GetHash() ).value();
+    ASSERT_EQ( ledger.GetOutPointState( funding_hash, 0 ), sgns::UTXOManager::UTXOState::UTXO_READY );
+
+    std::string transaction_id;
+    if ( GetParam() )
+    {
+        const auto held = manager_->HoldEscrow( funding->GetAmount(), "unconfirmed-cleanup" );
+        ASSERT_TRUE( held.has_value() );
+        transaction_id = held.value().first;
+    }
+    else
+    {
+        const auto transferred = manager_->TransferFunds( funding->GetAmount(), account_->GetAddress(), kTokenId );
+        ASSERT_TRUE( transferred.has_value() );
+        transaction_id = transferred.value();
+    }
+    const auto transaction = FindOutgoingTransaction( transaction_id );
+    ASSERT_TRUE( transaction );
+    const auto params = transaction->GetUTXOParametersOpt();
+    if ( !params.has_value() )
+    {
+        FAIL() << "ordinary transaction must contain UTXO parameters";
+    }
+    ASSERT_EQ( params->first.size(), 1U );
+    ASSERT_EQ( params->first.front().txid_hash_, funding_hash );
+    ASSERT_EQ( params->first.front().output_idx_, 0U );
+    ASSERT_TRUE( ledger.IsOutPointReserved( funding_hash, 0 ) );
+
+    const auto                        partner = MakeSubmissionTransaction( account_->ReserveNextNonce() );
+    const sgns::crdt::HierarchicalKey sentinel_key( "/recovery/unconfirmed-batch-sentinel" );
+    auto                              atomic_transaction = db_->BeginTransaction();
+    sgns::crdt::GlobalDB::Buffer      sentinel;
+    sentinel.put( "must-remain-uncommitted" );
+    ASSERT_TRUE( atomic_transaction->Put( sentinel_key, std::move( sentinel ) ).has_value() );
+    sgns::TransactionManagerPendingLifecycleTestAccess::StageQueuedPartner( *manager_,
+                                                                            partner,
+                                                                            std::move( atomic_transaction ) );
+    ASSERT_TRUE(
+        sgns::TransactionManagerPendingLifecycleTestAccess::ProcessIncomingTransaction( *manager_, transaction )
+            .has_value() );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( transaction_id ),
+               sgns::TransactionManager::TransactionStatus::VERIFYING );
+    sgns::TransactionManagerPendingLifecycleTestAccess::OnProposalTimeoutCleanup( *manager_, transaction_id );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( transaction_id ),
+               sgns::TransactionManager::TransactionStatus::UNCONFIRMED );
+    ASSERT_TRUE( ledger.IsOutPointReserved( funding_hash, 0 ) );
+    // Expiry already released this nonce; rollback must not release its new owner.
+    ASSERT_EQ( account_->ReserveNextNonce(), transaction->GetNonce() );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::QueuedTransactionCount( *manager_ ), 0U );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction_id ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( partner->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+    EXPECT_TRUE( db_->Get( sentinel_key ).has_error() );
+    EXPECT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *transaction ) ).has_error() );
+    EXPECT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *partner ) ).has_error() );
+    const auto transaction_hash = sgns::base::Hash256::fromReadableString( transaction_id ).value();
+    EXPECT_FALSE( ledger.GetOutPointState( transaction_hash, 0 ).has_value() );
+    EXPECT_FALSE( ledger.GetOutPointSpender( funding_hash, 0 ).has_value() );
+    EXPECT_EQ( account_->GetProposedNonce(), partner->GetNonce() );
+    account_->ReleaseNonce( transaction->GetNonce() );
+    EXPECT_EQ( account_->ReserveNextNonce(), transaction->GetNonce() );
+    account_->ReleaseNonce( transaction->GetNonce() );
+    EXPECT_FALSE( ledger.IsOutPointReserved( funding_hash, 0 ) );
+    ASSERT_EQ( ledger.GetOutPointState( funding_hash, 0 ), sgns::UTXOManager::UTXOState::UTXO_READY );
+    EXPECT_TRUE( ledger.CreateTxParameter( funding->GetAmount(), account_->GetAddress(), kTokenId ).has_value() );
+
+    // Cleanup must leave a later genuine certificate able to apply exactly once.
+    StoreCertificate( transaction );
+    const auto certificate = blockchain_->GetCertificateBySlot( transaction->GetSlotID() );
+    ASSERT_TRUE( certificate.has_value() );
+    for ( const bool redelivery : { false, true } )
+    {
+        SCOPED_TRACE( redelivery );
+        const auto confirmed = sgns::TransactionManagerPendingLifecycleTestAccess::OnConsensusCertificate(
+            *manager_,
+            transaction_id,
+            certificate.value() );
+        ASSERT_TRUE( confirmed.has_value() );
+        EXPECT_EQ( confirmed.value(), sgns::ConsensusManager::Check::Approve );
+        EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction_id ),
+                   sgns::TransactionManager::TransactionStatus::CONFIRMED );
+        EXPECT_EQ( ledger.GetOutPointSpender( funding_hash, 0 ), std::optional{ transaction_hash } );
+        EXPECT_EQ( ledger.GetOutPointState( transaction_hash, 0 ), sgns::UTXOManager::UTXOState::UTXO_READY );
+        EXPECT_EQ( ledger.GetBalance( params->second.front().dest_address ), funding->GetAmount() );
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P( TransferAndHold,
+                          TransactionManagerUnconfirmedCleanupTest,
+                          testing::Bool(),
+                          []( const testing::TestParamInfo<bool> &info ) { return info.param ? "Hold" : "Transfer"; } );
 
 TEST_F( TransactionManagerPreviousHashTest, PublishFailureRollbackPreservesSubsequentlyCertifiedEffects )
 {
