@@ -2132,6 +2132,21 @@ namespace sgns
 
         m_logger->trace( "{} called", __func__ );
 
+        const auto is_terminal = [this]( const std::shared_ptr<GeniusTransaction> &transaction )
+        {
+            const auto tracked = GetTrackedTxByHash( transaction->GetHash() );
+            return tracked.has_value() && IsTerminalTransactionStatus( tracked->status );
+        };
+        // A caller's atomic writes belong to the whole batch. If CRDT/certificate
+        // ingress finished any member, retire the batch without committing its
+        // staged writes; rollback preserves finality and releases unsent members.
+        if ( std::any_of( transaction_batch.begin(),
+                          transaction_batch.end(),
+                          [&is_terminal]( const auto &entry ) { return is_terminal( entry.first ); } ) )
+        {
+            return RollbackTransactions( item );
+        }
+
         auto crdt_transaction = maybe_crdt_transaction.value_or( nullptr );
         if ( !crdt_transaction )
         {
@@ -2289,6 +2304,10 @@ namespace sgns
 
         for ( auto &transaction : transactions_sent )
         {
+            if ( is_terminal( transaction ) )
+            {
+                continue;
+            }
             const auto &[_, validator]    = SelectInputValidator( *transaction );
             const bool utxo_data_required = validator.RequiresConsensusUTXOData();
 
@@ -2345,6 +2364,10 @@ namespace sgns
                                                                      utxo_commitment,
                                                                      utxo_witness ) );
             BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
+            if ( is_terminal( transaction ) )
+            {
+                continue;
+            }
             BOOST_OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
         }
 
@@ -2356,7 +2379,7 @@ namespace sgns
         auto [transaction_batch, _] = item_to_rollback;
         for ( auto &[transaction, maybe_proof] : transaction_batch )
         {
-            BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::FAILED ) );
+            BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::FAILED, nullptr, true ) );
         }
         return outcome::success();
     }
@@ -5690,7 +5713,8 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                                       TransactionStatus                   new_status,
-                                                                      const CertifiedApplicationEvidence *evidence )
+                                                                      const CertifiedApplicationEvidence *evidence,
+                                                                      bool preserve_terminal )
     {
         static constexpr std::string_view FUNC = __func__;
         m_logger->debug( "{}: Changing transaction state to {} for transaction {}",
@@ -5724,6 +5748,13 @@ namespace sgns
                 {
                     m_logger->error( "{}: Trying to SEND a transaction that doesn't exist {}", FUNC, tx->GetHash() );
                     return outcome::failure( std::errc::no_such_file_or_directory );
+                }
+                if ( it->second.status == TransactionStatus::VERIFYING ||
+                     IsTerminalTransactionStatus( it->second.status ) )
+                {
+                    // A queued local send may already have progressed through CRDT ingress.
+                    // Publishing its proposal must not downgrade or reject that progress.
+                    break;
                 }
                 if ( it->second.status != TransactionStatus::CREATED )
                 {
@@ -5937,6 +5968,13 @@ namespace sgns
             {
                 std::unique_lock tx_lock( tx_mutex_m );
                 auto             it = tx_processed_m.find( key );
+                if ( preserve_terminal && it != tx_processed_m.end() &&
+                     IsTerminalTransactionStatus( it->second.status ) )
+                {
+                    // Send recovery cannot undo a certificate that completed while sending.
+                    // Certified conflict resolution keeps the default reversal behavior.
+                    break;
+                }
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::FAILED )
                 {
                     m_logger->error( "{}: Trying to FAIL a transaction that is already FAILED {}",

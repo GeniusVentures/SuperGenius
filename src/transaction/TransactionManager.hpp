@@ -1167,9 +1167,18 @@ namespace sgns
          */
         outcome::result<void> EraseTransactionEntryPruned( const std::string &tx_hash );
 
+        /**
+         * @brief Applies a tracked transaction transition and its account effects.
+         * @param tx Transaction to transition.
+         * @param new_status Requested lifecycle status.
+         * @param evidence Exact certified evidence for applying finalized effects.
+         * @param preserve_terminal Keep terminal states during send-failure rollback.
+         * @return Success or the transition/persistence error.
+         */
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                       TransactionStatus                         new_status,
-                                                      const CertifiedApplicationEvidence       *evidence = nullptr );
+                                                      const CertifiedApplicationEvidence       *evidence = nullptr,
+                                                      bool preserve_terminal                             = false );
         bool                  HasConfirmedInputConflict( const GeniusTransaction &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
