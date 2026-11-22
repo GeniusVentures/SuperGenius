@@ -5714,7 +5714,7 @@ namespace sgns
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                                       TransactionStatus                   new_status,
                                                                       const CertifiedApplicationEvidence *evidence,
-                                                                      bool preserve_terminal )
+                                                                      bool preserve_confirmed )
     {
         static constexpr std::string_view FUNC = __func__;
         m_logger->debug( "{}: Changing transaction state to {} for transaction {}",
@@ -5968,8 +5968,8 @@ namespace sgns
             {
                 std::unique_lock tx_lock( tx_mutex_m );
                 auto             it = tx_processed_m.find( key );
-                if ( preserve_terminal && it != tx_processed_m.end() &&
-                     IsTerminalTransactionStatus( it->second.status ) )
+                if ( preserve_confirmed && it != tx_processed_m.end() &&
+                     it->second.status == TransactionStatus::CONFIRMED )
                 {
                     // Send recovery cannot undo a certificate that completed while sending.
                     // Certified conflict resolution keeps the default reversal behavior.
@@ -5982,6 +5982,9 @@ namespace sgns
                                      tx->GetHash() );
                     break;
                 }
+                const bool nonce_already_released = it != tx_processed_m.end() &&
+                                                    it->second.status == TransactionStatus::UNCONFIRMED &&
+                                                    tx->GetSrcAddress() == account_m->GetAddress();
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
                     m_logger->debug( "{}: Unconfirming transaction {}", FUNC, tx->GetHash() );
@@ -6029,7 +6032,12 @@ namespace sgns
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );
                 m_logger->info( "{}: Tracking entry failed tx={}", FUNC, tx->GetHash() );
 
-                account_m->ReleaseNonce( tx->GetNonce() );
+                // Inconclusive expiry already released this nonce, which a new
+                // submission may have reserved before queued rollback runs.
+                if ( !nonce_already_released )
+                {
+                    account_m->ReleaseNonce( tx->GetNonce() );
+                }
 
                 m_logger->debug( "{}: Set status of FAILED to transaction {}", FUNC, tx->GetHash() );
                 {
