@@ -4,7 +4,7 @@
   "execution_baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
   "tested_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
   "tested_head_scope": "Latest complete current-source Release build, separate network battery and unfiltered full-suite verification are in resumed_verification. final_phase_verification preserves the original failed56eebbf6a run; local_verification retains originatingPlan07 scope. Technical results do not establish external inventory completeness or operator acceptance.",
-  "activation_status": "pending",
+  "activation_status": "not_requested",
   "validator_inventory": {
     "external_status": "not_provided",
     "external_inventory_complete": false,
@@ -1186,7 +1186,7 @@
     "tested_source_head": "24aeca62b480f7388047299a1aaa0f8809b6641a"
   },
   "escrow_and_pending_disposition": {
-    "status": "pending_external_inventory_and_operator_review",
+    "status": "optional_future_upgrade_reference_not_required_for_current_phase",
     "all_carried_forward_escrows_classified": false,
     "submission_pause_acknowledgements": [],
     "external_escrows_and_intents": [],
@@ -1203,7 +1203,7 @@
     "preservation_rule": "Preserve every database and canonical history; never rewrite signed old bytes, clear votes/certificates, reset nonce history or remove consumed UTXO evidence."
   },
   "historical_finality_boundary": {
-    "status": "unresolved_operator_checkpoint",
+    "status": "documented_optional_future_upgrade_reference",
     "legacy_slot": "source:nonce",
     "v2_slot": "escrow-release-v2:<hold-transaction-hash>:0 (EscrowReleaseTransactionV2::GetSlotID)",
     "certificate_current_time_expiry": false,
@@ -1217,16 +1217,7 @@
     "retrospective_fence": "An authenticated retrospective fence requires a separate explicit protocol decision; this record introduces no cutoff, settlement registry, allowlist or quarantine policy."
   },
   "operator_decision": null,
-  "missing_evidence": [
-    "Complete external participating validator/submitter/passive/offline roster and node identities.",
-    "Deployed build/source/executable/configuration identities and all-validator fixed-build readiness.",
-    "Authorized external registry CID/epoch/full weighted membership and genesis-rooted update ancestry.",
-    "Consistent operator-provided read-only copies of every participating node's GlobalDB, account/nonce and UTXO stores and canonical history.",
-    "Recovered staging certificates, exact historical payment/marker bytes and all per-node hold spender/output/balance evidence.",
-    "Private durable votes and certificate retry records plus any available volatile pending proposals/votes/queues; missing volatile state cannot be reported as empty.",
-    "Complete queued payout intents and unfinished job/result inventory with every carried-forward escrow/intent disposition.",
-    "Coordinated submission-pause acknowledgements and operator acceptance of the documented historical-finality boundary."
-  ],
+  "missing_evidence": [],
   "authorized_operational_changes_performed": false,
   "final_phase_verification": {
     "plan": "08",
@@ -13285,8 +13276,8 @@
   },
   "resumed_verification": {
     "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
-    "scope": "CR-04 cleanup repair and focused lifecycle evidence; broader bridge/network/full-suite gates pending. Original final_phase_verification remains historical at its recorded source head.",
-    "technical_readiness": "passed_current_source_native_gates_operator_checkpoint_pending",
+    "scope": "Complete current-source build, separate network and unfiltered full-suite gates passed; final code-phase verification complete. Network upgrade is outside phase scope per the user clarification on 2026-11-22.",
+    "technical_readiness": "passed",
     "cr04": {
       "baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
       "incoming_head": "4170b7f98",
@@ -13792,7 +13783,7 @@
       "metadata": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release.json",
       "log": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release.log"
     },
-    "activation_unchanged": "pending; operator_decision=null; external inventory/evidence still missing; no operational changes",
+    "activation_unchanged": "Activation not requested by explicit user scope clarification; no operational action or historical acceptance.",
     "registered_target_build": {
       "exit_code": 0,
       "started": "2026-11-22T18:46:18.715881+00:00",
@@ -13874,10 +13865,11 @@
     "operator_checkpoint": {
       "plan": "21.1-08",
       "task": 2,
-      "status": "unresolved",
-      "activation_status": "pending",
+      "status": "superseded_by_user_scope_clarification",
+      "activation_status": "not_requested",
       "operator_decision": null,
-      "remaining_evidence_groups": 8
+      "active_missing_evidence_groups": 0,
+      "optional_future_reference_groups": 8
     },
     "artifact_integrity": {
       "manifest": "/tmp/phase21-1-cr04-final-20261122T184600Z/manifest.json",
@@ -16048,13 +16040,13 @@
     "precise_summary": "/tmp/phase21-1-cr04-final-20261122T184600Z/final-validation-summary.json",
     "network_required_both_gates": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-required-both-gates.json",
     "goal_verification": {
-      "status": "human_needed",
+      "status": "passed",
       "technical_truths_verified": 6,
       "technical_truths_total": 6,
       "new_source_gaps": 0,
       "verified_source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
       "report": "21.1-VERIFICATION.md",
-      "remaining_human_gate": "Task08-2 operator historical-finality/inventory disposition"
+      "remaining_human_gate": null
     },
     "security_closeout": {
       "report": "21.1-SECURITY.md",
@@ -16062,9 +16054,37 @@
       "threats_closed": 28,
       "implementation_threats_open": 0,
       "evidence_threats_pending": 0,
-      "operator_transfers_pending": 3,
-      "activation_status": "pending"
+      "operator_transfers_pending": 0,
+      "activation_status": "not_requested",
+      "operator_transfers_out_of_scope": 3
     },
     "recorded_at_utc": "2026-11-22T19:59:30.220414+00:00"
+  },
+  "optional_future_upgrade_evidence": {
+    "status": "reference_only_outside_current_phase",
+    "former_checkpoint": "21.1-08-2",
+    "previous_activation_status": "pending",
+    "missing_evidence": [
+      "Complete external participating validator/submitter/passive/offline roster and node identities.",
+      "Deployed build/source/executable/configuration identities and all-validator fixed-build readiness.",
+      "Authorized external registry CID/epoch/full weighted membership and genesis-rooted update ancestry.",
+      "Consistent operator-provided read-only copies of every participating node's GlobalDB, account/nonce and UTXO stores and canonical history.",
+      "Recovered staging certificates, exact historical payment/marker bytes and all per-node hold spender/output/balance evidence.",
+      "Private durable votes and certificate retry records plus any available volatile pending proposals/votes/queues; missing volatile state cannot be reported as empty.",
+      "Complete queued payout intents and unfinished job/result inventory with every carried-forward escrow/intent disposition.",
+      "Coordinated submission-pause acknowledgements and operator acceptance of the documented historical-finality boundary."
+    ],
+    "external_evidence_collected": false,
+    "historical_boundary_accepted": false,
+    "note": "Preserve actual missing external data and old-certificate limitations. This optional future-upgrade reference is not a phase-completion gate."
+  },
+  "scope_decision": {
+    "recorded_at_utc": "2026-11-22T22:41:11.768501+00:00",
+    "user_statement": "dont need to upgrade the network",
+    "decision": "network_upgrade_outside_phase_scope",
+    "former_checkpoint_status": "superseded_by_explicit_user_instruction",
+    "phase_deliverable": "Implemented and verified escrow-release V2 code",
+    "deployment_authorized": false,
+    "historical_boundary_accepted": false
   }
 }

@@ -2,39 +2,40 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
-current_phase: 21.1
-status: Plan 08 technical verification passed; CR-04 repaired, review clean, all 163 full-suite targets pass; operator 08-2 pending
-stopped_at: "Plan 21.1-08 technical verification complete at source 1c6dfa69c; awaiting task 08-2 operator historical inventory/boundary disposition"
-last_updated: "2026-11-22T19:59:30.222663+00:00"
-last_activity: "2026-11-22 -- CR-04 fixed at 1c6dfa69c: all 163 builds/full-suite targets and complete separate network pass; 49 required and 250 predecessor cases pass; operator evidence/decision pending"
+current_phase: 22
+status: ready_to_plan
+stopped_at: Phase 21.1 complete (8/8) — ready to discuss Phase 22
+last_updated: 2026-11-22T22:47:31Z
+last_activity: "2026-11-22 -- Phase 21.1 complete (8/8); verification passed 6/6; network upgrade excluded by explicit user scope clarification"
+progress_scope: v1.3 (plan counts include only plans defined so far)
 progress:
-  total_phases: 33
-  completed_phases: 5
-  total_plans: 47
-  completed_plans: 40
-  percent: 15
+  total_phases: 10
+  completed_phases: 2
+  total_plans: 17
+  completed_plans: 17
+  percent: 20
 ---
 
 # State: SuperGenius — Security Remediation & Network Readiness
 
 **Last updated:** 2026-11-22
 **Milestone:** v1.3 — Security Remediation & Network Readiness
-**Current Phase:** 21.1
+**Current Phase:** 22
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-15)
+See: .planning/PROJECT.md (updated 2026-11-22)
 **Core value:** One authorized settlement produces at most one authoritative certificate and one financial effect across arrival orders, sync and restart.
-**Current focus:** Phase 21.1 — escrow-payout-slot-identity-double-payout-prevention
+**Current focus:** Phase 22 — wire & ingestion hardening (fork)
 
 ## Current Position
 
-Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
-Plan: 8 of 8 (task 1 technical gates passed; task 2 pending; 7/8 plans completed)
-Status: Plan 08 technical verification passed; CR-04 repaired, review clean, all 163 full-suite targets pass; operator 08-2 pending
-Last activity: 2026-11-22 -- CR-04 fixed at 1c6dfa69c: all 163 builds/full-suite targets and complete separate network pass; 49 required and 250 predecessor cases pass; operator evidence/decision pending
+Phase: 22 (Wire & Ingestion Hardening) — NOT STARTED
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-22
 
-Progress: [█████████░] 87%
+Progress: [██░░░░░░░░] 20% of v1.3 phases complete (2/10). Phase 21.1 is complete (8/8 plans); 17/17 currently defined v1.3 plans are complete. Remaining phase plans are not yet defined.
 
 ## Historical v1.2 Roadmap Snapshot
 
@@ -63,7 +64,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Notes
 
-- **Active phase branch:** This branch executes v1.3 Phase 21.1 under the user's explicit execution request. Verified Phase 21 was integrated at `8373ed7260aa8d10e5c988a4e205604e87533f13`; all 13 selected integration regression targets passed. The earlier v1.2 position and decisions below are retained as predecessor history; its roadmap snapshot remains in `.planning/milestones/v1.2-ROADMAP.md`.
+- **Active phase branch:** This branch completed v1.3 Phase 21.1 under the user's explicit execution request. Verified Phase 21 was integrated at `8373ed7260aa8d10e5c988a4e205604e87533f13`; all 13 selected integration regression targets passed. The earlier v1.2 position and decisions below are retained as predecessor history; its roadmap snapshot remains in `.planning/milestones/v1.2-ROADMAP.md`.
 - Phase numbering continues across milestones: v1.1's highest phase was 15; v1.2 phases are 16-20. Do not reset or renumber. (Phases 01-07 predate formal GSD milestone tracking — bridge-relayer/consensus-voting work, unrelated.)
 - Research synthesis (`.planning/research/SUMMARY.md`, HIGH confidence) converged the 5-phase structure; the two hard ordering constraints (block-parse gate before block deletion; own-frontier fix before first real prune) are encoded in the roadmap's execution order.
 - Research flags deeper research during planning for Phases 17 (own-frontier mechanism choice, window definition, lock/re-verify protocol), 18 (re-delivery guard placement and state source), and 19 (checkpoint-rebuild guard mechanism); Phases 16 and 20 follow standard patterns (skip research-phase).
@@ -71,9 +72,10 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 - Every pruning test uses a fresh temp DB with three-part assertions (present-before, absent-after in both stores, seal-marker-still-present) plus a negative control.
 - Brownfield codebase map exists at `.planning/codebase/`; v1.2 research at `.planning/research/` (SUMMARY, STACK, ARCHITECTURE, PITFALLS, FEATURES).
 
-## Operator Next Steps
+## Next Step
 
-- Execute Phase 21.1 plans on the current phase branch; retain the explicit final operator activation checkpoint.
+- Phase 21.1 is complete. Phase 22 discussion/planning is next; no Phase 22 work has started.
+- Network upgrade is outside Phase 21.1 scope per the user's 2026-11-22 clarification. Rollout notes remain optional reference.
 
 ### Quick Tasks Completed
 
@@ -84,9 +86,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-22T19:59:30.222663+00:00
-**Stopped At:** Plan 21.1-08 technical verification complete at source 1c6dfa69c; awaiting task 08-2 operator historical inventory/boundary disposition
-**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-08-CONTINUATION.md
+**Last session:** 2026-11-22T22:47:31Z
+**Stopped At:** Phase 21.1 complete (8/8), verified 6/6 at source 1c6dfa69c; network upgrade excluded; Phase 22 next
+**Resume File:** None — Phase 21.1 closed; final evidence in 21.1-08-SUMMARY.md
 
 ## Accumulated Context
 
@@ -104,7 +106,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 - Phase 21.1 edited: User clarified a focused Mint-style escrow payout Slot ID fix: same job escrow across different peers shares one canonical slot; reuse existing transaction duplicate handling; remove assistant-added protocol redesign requirements.
 - Phase 21.1 edited: User selected a dedicated EscrowReleaseTransaction with Mint-style slot identity; replace payout-as-transfer and its generic escrow ownership exception; complete existing release wire scaffolding and plan legacy replay/cutover.
 - Phase 21.1 edited: User clarified legacy release scaffolding was payout-status checking; implement EscrowReleaseTransactionV2 as the funds-moving escrow payout with Mint-style canonical slot identity and distinct versioned dispatch.
-- Phase 21.1 edited: Planning verified: 8 plans, 21 tasks, 7 waves; PAYSAFE-01..05 and D-01..18 covered. Execution requires verified Phase 21; final activation remains subject to blocking historical-finality/pending-escrow checkpoint 08-2.
+- Phase 21.1 planning history: 8 plans, 21 tasks, 7 waves; PAYSAFE-01..05 and D-01..18 covered. The original operational checkpoint was superseded by the user scope clarification on 2026-11-22.
+- Phase 21.1 completed (2026-11-22): 8/8 plans, PAYSAFE-01..05 complete, verification passed 6/6. User: "dont need to upgrade the network"; no upgrade or operational acceptance is a phase-completion condition.
 
 ### v1.0 History
 

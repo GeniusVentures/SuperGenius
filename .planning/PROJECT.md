@@ -54,6 +54,8 @@ This milestone closes all 25 findings from the October 2026 external security as
 - ✓ Local completion, PubSub receipt, CRDT synchronization, and restart recovery converge through one durable canonical-certificate path; honest validators produce one same-slot winner — **Validated in Phases 9–11**
 - ✓ A certified burn is minted exactly once across multi-node contention, delayed propagation, publisher loss, and restart — production-path regression proof via real PubSub/CRDT/RocksDB/consensus/Mint-ingress (TEST-01..TEST-06) — **Validated in Phase 12**
 
+- ✓ Dedicated escrow-release V2 moves actual payout funds with a proposer-independent hold-outpoint slot, exact certified-winner binding and replay/restart/sync duplicate safety (PAYSAFE-01..05) — **Validated in Phase 21.1**. Network upgrade/deployment excluded by explicit user scope clarification on 2026-11-22.
+
 ### Active
 
 <!-- v1.3 scope. Hypotheses until shipped. Detailed REQ-IDs in REQUIREMENTS.md. -->
@@ -122,7 +124,9 @@ No active v1.1 implementation items remain. Phase 13's exact 25/25 HIGH-threat g
 
 ## Context
 
-**Current State:** v3.0 complete — canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery rebuilt from the `develop` baseline, and proven across production-path multi-node faults (contention, propagation disorder, publisher loss, restart, exactly-once mint) by Phase 12's real-socket four-peer fault proof. Phase 12's UAT round-2 gaps closed across six gap-closure rounds (teardown-invariant propagation, stale-fixture db immunity, SameBurn wait-predicate fix, post-restart certificate re-publication with surviving-replica retention + mesh-readiness gating); the publisher-observer meta-test apparatus was removed by developer directive (2026-09-03) — the suite is the six finality scenarios, three-consecutive-serial-pass verified with zero crashes. Exact-once mint held in every run ever recorded. Deferred (STATE.md): thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard. The old exploratory worktree remains forensic reference only.
+**Phase 21.1 completion (2026-11-22):** dedicated escrow-release V2 and canonical same-hold payout identity are verified complete; all 163 Release targets and all 49 required cases pass. Network upgrade is not requested; Phase 22 is next.
+
+**Historical v3.0 state:** v3.0 complete — canonical slot identity, durable one-vote finality, slot-keyed publication, and convergent certificate/Mint recovery rebuilt from the `develop` baseline, and proven across production-path multi-node faults (contention, propagation disorder, publisher loss, restart, exactly-once mint) by Phase 12's real-socket four-peer fault proof. Phase 12's UAT round-2 gaps closed across six gap-closure rounds (teardown-invariant propagation, stale-fixture db immunity, SameBurn wait-predicate fix, post-restart certificate re-publication with surviving-replica retention + mesh-readiness gating); the publisher-observer meta-test apparatus was removed by developer directive (2026-09-03) — the suite is the six finality scenarios, three-consecutive-serial-pass verified with zero crashes. Exact-once mint held in every run ever recorded. Deferred (STATE.md): thirdparty StopImpl hardening, MintRecoveryDiagnostics UAF, WR-02 notify-under-paired-mutex, CRDT equal-priority overwrite guard. The old exploratory worktree remains forensic reference only.
 
 **Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
@@ -200,6 +204,8 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
+*Last updated: 2026-11-22 — Phase 21.1 complete (8/8); PAYSAFE-01..05 verified; network upgrade outside phase scope*
+
 *Last updated: 2026-10-19 after v1.3 milestone start (security remediation & network readiness — all 25 assessment findings; v1.2 continues on its execution branch)*
 *Last updated: 2026-10-16 — Phase 16 (erasure primitives & bookkeeping hardening) complete on the v1.2 branch*
 *Last updated: 2026-10-15 after v1.2 milestone start (light-node transaction pruning — sliding-window disk reclamation)*

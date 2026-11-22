@@ -82,7 +82,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 **Execution order:** strictly 21 → 21.1 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 (numeric order = execution order; no planned overlap). Hard ordering constraints encoded: REL-02 (artifact verification) is satisfied in-phase at Phase 22 — its digest-verification CI step lands as an early plan, with or before that phase's first fork-riding change, because fork changes ride the 4-stage release pipeline (fork commit → thirdparty superproject bump → SuperGenius CI download → integration tests) that today consumes unverified thirdparty/zkLLVM artifacts; the per-phase adversarial+compat test-pair discipline applies to every security-fix phase even though the first-class apparatus (VER-01) and release gating (REL-01) arrive at Phase 25 — Phases 21-24's fixes carry their own adversarial tests in-phase per their criteria; Phase 26 is the dependency sink — GRID-03 consumes GRID-01/02/04 and MINT-01 in-phase plus authenticated transport (23) and mint identities (21); Phase 27 carries the complete-relay-vs-topology-contract decision gate; Phase 29 (return leg) is strictly last — RET-01 requires TRUST-01 (Phase 21) and BRIDGE-01/02 (Phase 24) closed and proven first.
 
 - [x] **Phase 21: Consensus Trust & Mint Authorization** - Registry-CID authorization chain with a grandfather rule that keeps history re-validating; admission/equivocation audit; fail-closed chain-ids; legacy-v1 admission cutover; receipt-to-mint output binding (TRUST-01, TRUST-02, MINT-02, MINT-03, MINT-04)
-- [ ] **Phase 21.1: Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED)** - Dedicated escrow-release V2 payment transaction with transfer-of-funds semantics and a Mint-style canonical Slot ID; replace payout-as-transfer and reuse existing arbitration, certificate binding, and duplicate handling (PAYSAFE-01..05)
+- [x] **Phase 21.1: Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED)** - Dedicated escrow-release V2 payment transaction with transfer-of-funds semantics and a Mint-style canonical Slot ID; replace payout-as-transfer and reuse existing arbitration, certificate binding, and duplicate handling (PAYSAFE-01..05) (completed 2026-11-22)
 - [ ] **Phase 22: Wire & Ingestion Hardening (Fork)** - Length and nesting caps before allocation across the three fork readers; error-result hash parsing with fuzz coverage; thirdparty/zkLLVM digest verification + SHA-pinned actions landing with or before the first fork-riding change; first FORK-DELTA manifest + mixed-version interop-matrix run (WIRE-01, WIRE-02, REL-02)
 - [ ] **Phase 23: Gossip & DHT Authentication (Fork)** - Verify-before-forward on public topics with signing-key↔from binding and per-topic policy as data; DHT record validation with admission limits and request-bound nonces; before/after throughput benchmark (GOSSIP-01, GOSSIP-02)
 - [ ] **Phase 24: Bridge Ingestion Safety** - Per-chain confirmation depth/finality as a restart-durable state machine proven under anvil reorg; content-corroborated multi-operator RPC quorum (BRIDGE-01, BRIDGE-02)
@@ -277,7 +277,7 @@ Plans:
   4. Existing generic duplicate transaction/certificate handling recognizes same-job payout competitors across different peers, including minimal integration fixes where sender/nonce assumptions bypass the canonical slot; no new settlement registry, quarantine policy, or general input-lock/recovery protocol is required (PAYSAFE-04).
   5. Release regressions mirror MintSlotIgnoresProposalEnvelope and SharedMintSlotConfirmsOnlyTheCertifiedTransaction, plus different-escrow, type/serialization/dispatch, transfer-bypass rejection, invalid-release-input, legacy-cutover, and replay/restart/sync cases showing one payout effect. Existing payout contents and Mint/ordinary-transfer regressions stay green; incident scenarios A-E remain relevant validation inputs (PAYSAFE-05).
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans complete
 **Wave 1**
 
 - [x] 21.1-01-PLAN.md — Behavior-preserving shared payment apply/revert contracts
@@ -301,13 +301,15 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [x] 21.1-07-PLAN.md — Real-network payout regressions and coordinated rollout evidence procedure (final local recovery gates pass; activation remains pending; see 21.1-07-SUMMARY.md)
+- [x] 21.1-07-PLAN.md — Real-network payout regressions and rollout evidence procedure (final recovery gates pass; rollout retained as optional reference under the 2026-11-22 scope clarification)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 21.1-08-PLAN.md — Final verification and blocking operator historical-finality checkpoint
+- [x] 21.1-08-PLAN.md — Final verification and user scope closeout; network upgrade excluded
 
-**Evidence and planning input:** `.planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-CONTEXT.md` captures the user's explicit Mint-style Slot ID scope clarification. The adjacent `21.1-BUG-BRIEF.md` preserves the preliminary assessment against `f2910281031a6cd2b4ebc3d264d44480f113b07e` and the unverified staging outcome; its broader candidate mechanisms are not all phase deliverables. Read `src/account/MintTransactionV2.cpp`, `src/transaction/TransactionConsensusHandler.cpp`, and the existing Mint slot/certificate-binding regressions. Use a coordinated validator upgrade. Validator-weight policy, broader Phase 26 authorization work, and the later voter stall remain separate.
+**Evidence and planning input:** `.planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-CONTEXT.md` captures the user's explicit Mint-style Slot ID scope clarification. The adjacent `21.1-BUG-BRIEF.md` preserves the preliminary assessment against `f2910281031a6cd2b4ebc3d264d44480f113b07e` and the unverified staging outcome; its broader candidate mechanisms are not all phase deliverables. Read `src/account/MintTransactionV2.cpp`, `src/transaction/TransactionConsensusHandler.cpp`, and the existing Mint slot/certificate-binding regressions. Validator-weight policy, broader Phase 26 authorization work, and the later voter stall remain separate.
+
+> Phase 21.1 scope clarification (2026-11-22): "dont need to upgrade the network". Completion covers verified code; deployment, live inventory and operator historical-boundary acceptance are outside this phase. Retained rollout notes are optional reference.
 
 ### Phase 22: Wire & Ingestion Hardening (Fork)
 
@@ -450,7 +452,7 @@ Plans:
 | 19. Pruned-Node Survival & Recovery Hardening | v1.2 (this branch) | 7/7 | Complete    | 2026-10-24 |
 | 20. Reclamation Proof & E2E Hardening | v1.2 (this branch) | — | Not started | — |
 | 21. Consensus Trust & Mint Authorization | v1.3 | 9/9 | Complete | 2026-10-21 |
-| 21.1. Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED) | v1.3 | 7/8 | In Progress|  |
+| 21.1. Escrow Payout Slot Identity & Double-Payout Prevention (INSERTED) | v1.3 | 8/8 | Complete    | 2026-11-22 |
 | 22. Wire & Ingestion Hardening (Fork) | v1.3 | 0/? | Not started | — |
 | 23. Gossip & DHT Authentication (Fork) | v1.3 | 0/? | Not started | — |
 | 24. Bridge Ingestion Safety | v1.3 | 0/? | Not started | — |
