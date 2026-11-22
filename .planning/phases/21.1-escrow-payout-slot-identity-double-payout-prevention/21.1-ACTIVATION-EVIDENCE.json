@@ -2,8 +2,8 @@
   "phase": "21.1",
   "plan": "08",
   "execution_baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
-  "tested_head": "56eebbf6a0153bbecc139d03c80ffefc999aa19d",
-  "tested_head_scope": "Plan-08 measured local verification of the recorded source head. Original plan-07 signed bundles and recovery observations retain their originating plan/head. The final-phase record distinguishes passing case groups, failed gates and unavailability; no operator acceptance, deployed history or activation readiness is inferred.",
+  "tested_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+  "tested_head_scope": "Latest complete current-source Release build, separate network battery and unfiltered full-suite verification are in resumed_verification. final_phase_verification preserves the original failed56eebbf6a run; local_verification retains originatingPlan07 scope. Technical results do not establish external inventory completeness or operator acceptance.",
   "activation_status": "pending",
   "validator_inventory": {
     "external_status": "not_provided",
@@ -13279,12 +13279,14 @@
         "bytes": 8174,
         "sha256": "a0f96d7e0752fd66318be05517a9dae3daf07dd5cf05f80b547c0e8e1aded69f"
       }
-    ]
+    ],
+    "current_result": false,
+    "superseded_by": "resumed_verification at source1c6dfa69c; original failed source56eebbf6a evidence retained"
   },
   "resumed_verification": {
     "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
     "scope": "CR-04 cleanup repair and focused lifecycle evidence; broader bridge/network/full-suite gates pending. Original final_phase_verification remains historical at its recorded source head.",
-    "technical_readiness": "pending_unfiltered_full_release_suite",
+    "technical_readiness": "passed_current_source_native_gates_operator_checkpoint_pending",
     "cr04": {
       "baseline": "8373ed7260aa8d10e5c988a4e205604e87533f13",
       "incoming_head": "4170b7f98",
@@ -13658,13 +13660,137 @@
       "manifest": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-artifact-manifest.json"
     },
     "unfiltered_full_release_suite": {
-      "status": "running",
-      "started_utc": "2026-11-22T19:05:45.432403+00:00",
-      "source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
-      "checkout_head_start": "ad406168c99003b77fdf8d9b7e4293339dcc585d",
+      "exit_code": 0,
+      "started": "2026-11-22T19:05:45.432403+00:00",
+      "finished": "2026-11-22T19:49:34.474786+00:00",
+      "elapsed_seconds": 2628.9890966659877,
+      "source_start": {
+        "head": "ad406168c99003b77fdf8d9b7e4293339dcc585d",
+        "last_source_commit": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "source_digest": "32efb7b897117c1298e90d9977245d6ddec6641d6a1d70c66708bcc3022d5a51",
+        "file_count": 967,
+        "gitlinks": [
+          {
+            "path": "ProofSystem",
+            "head": "a107566e745797f821d18d84994d4280b84f1cdc"
+          },
+          {
+            "path": "SGProcessingManager",
+            "head": "89d161b08f7995e924792ecf900c1ed0e50b58aa"
+          }
+        ]
+      },
+      "source_end": {
+        "head": "989de6734e1efa42f344eb327e386ccc76b65b1f",
+        "last_source_commit": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+        "source_digest": "32efb7b897117c1298e90d9977245d6ddec6641d6a1d70c66708bcc3022d5a51",
+        "file_count": 967,
+        "gitlinks": [
+          {
+            "path": "ProofSystem",
+            "head": "a107566e745797f821d18d84994d4280b84f1cdc"
+          },
+          {
+            "path": "SGProcessingManager",
+            "head": "89d161b08f7995e924792ecf900c1ed0e50b58aa"
+          }
+        ]
+      },
+      "source_identity_unchanged": true,
+      "ctest": {
+        "targets": 163,
+        "passed": 163,
+        "failed": 0,
+        "skipped": 0,
+        "not_run": 0
+      },
+      "gtest": {
+        "enabled": 1528,
+        "ran": 1528,
+        "passed": 1521,
+        "failed": 0,
+        "skipped": 7,
+        "disabled": 12,
+        "targets": 162,
+        "complete": true,
+        "incomplete_targets": [],
+        "unclassified_targets": [],
+        "ambiguous_invocations": []
+      },
+      "target_inventory": {
+        "expected_count": 163,
+        "observed_count": 163,
+        "missing": [],
+        "unexpected": [],
+        "duplicates": [],
+        "exact_set_once": true
+      },
+      "non_gtest_targets": [
+        "multi_node_finality_fault_process_ownership_test"
+      ],
+      "zero_enabled_targets": [
+        "bridge_sepolia_e2e_test",
+        "transaction_crash_test"
+      ],
+      "fresh_xunit_accepted_target_count": 149,
+      "runtime_only_without_unique_xunit_argument": [
+        {
+          "target": "CapabilityValidatorTest",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "sgprocmanagerexec_cancellation_test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "sgprocmanagerexec_timeout_test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "sgprocmanagerexec_budget_test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "sgprocmanagerexec_progress_test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "sgprocmanagerexec_checkpoint_test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "sgprocmanagerexec_leak_test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "sgprocmanagerexec_migration_test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "ArtifactSerializerTest",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "QuantizationTest",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "DiffUtilsTest",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "MNNTensorFp4Test",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        },
+        {
+          "target": "MNNLlmTest",
+          "reason": "No unique per-target xUnit output argument; runtime summary used."
+        }
+      ],
+      "summary": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release-case-summary.json",
+      "coverage": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release-required-coverage.json",
       "metadata": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release.json",
-      "log": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release.log",
-      "completed_result": null
+      "log": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release.log"
     },
     "activation_unchanged": "pending; operator_decision=null; external inventory/evidence still missing; no operational changes",
     "registered_target_build": {
@@ -13720,6 +13846,2225 @@
       "rejection_record": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-approval-rejection.json",
       "resolution": "Root inspected unchanged script and Plan08 Task1 network/full-suite commands against existing explicit execute-phase authorization. Root network and full-suite tool calls approved; root owns native sessions. No worker retry or bypass.",
       "network_started_utc": "2026-11-22T19:02:03.612131+00:00"
-    }
+    },
+    "required_behavioral_case_execution": {
+      "required": 49,
+      "passed": 49,
+      "missing": [],
+      "evidence_errors": [],
+      "coverage_passed": true,
+      "source": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release-required-coverage.json"
+    },
+    "predecessor_regression_gate": {
+      "target_count": 13,
+      "targets_passed": 13,
+      "actual_case_totals": {
+        "enabled": 250,
+        "ran": 250,
+        "passed": 250,
+        "failed": 0,
+        "skipped": 0,
+        "disabled": 0,
+        "complete": true
+      },
+      "expected_enabled_cases": 250,
+      "increase_reason": "Lifecycle target grows from 38 to 45 with five send-retirement and two CR-04 cleanup cases."
+    },
+    "debug_twins": "unavailable: configured Debug cache absent; no replacement configured",
+    "operator_checkpoint": {
+      "plan": "21.1-08",
+      "task": 2,
+      "status": "unresolved",
+      "activation_status": "pending",
+      "operator_decision": null,
+      "remaining_evidence_groups": 8
+    },
+    "artifact_integrity": {
+      "manifest": "/tmp/phase21-1-cr04-final-20261122T184600Z/manifest.json",
+      "manifest_sha256": "0d0946bb65370c965218d1abf320c405941032901adde13aa68d658c1f2f59b9",
+      "retained_file_count": 344,
+      "full_gate_manifest": "/tmp/phase21-1-cr04-final-20261122T184600Z/full-release-artifact-manifest.json",
+      "full_gate_manifest_sha256": "6d57da6154e73b6ed10be24441c06b996d3c771774533e41923960a038bbca4a",
+      "full_gate_file_count": 159,
+      "files": [
+        {
+          "path": "__pycache__/case-summary.cpython-314.pyc",
+          "size": 20530,
+          "sha256": "83fa9bbb28a3b2cca247b45c719a95d5ec551dedd0391cf964483465f979a60f"
+        },
+        {
+          "path": "build-all-registered-source-end.json",
+          "size": 184065,
+          "sha256": "0a5b8d8f04b42bd22fbfa21fb6d94bb3292a649db23629ca3b7c7b03b593073e"
+        },
+        {
+          "path": "build-all-registered-source-start.json",
+          "size": 184065,
+          "sha256": "07aa01126cb1550fef9245eec5137e4644988435acaba81859696ce0771fdaf8"
+        },
+        {
+          "path": "build-all-registered.json",
+          "size": 7112,
+          "sha256": "bd1311faa85fda63d08dcca19248bc116665d269c455d3d1641757be65a8ee02"
+        },
+        {
+          "path": "build-all-registered.log",
+          "size": 240496,
+          "sha256": "55bb73199cc27fe6cbd50556890eceab1b573d97b8911bc96d5e6abf027e765a"
+        },
+        {
+          "path": "build-artifact-manifest.json",
+          "size": 2169,
+          "sha256": "5724fc8fe3fbf56bbd17c2c45d0d5e27442d1592f3a6e977ca8803718f29f47f"
+        },
+        {
+          "path": "build-warning-classification.json",
+          "size": 3660,
+          "sha256": "854b60da084ca3000dda6c8a080818a6214ee27abef9ebde84f0165398fb3791"
+        },
+        {
+          "path": "case-summary.py",
+          "size": 13639,
+          "sha256": "4b2e27216b85aea7441199ea33f8c967714d7aca1b3cc22c0d7518a92d1e57fd"
+        },
+        {
+          "path": "coverage-inventory.json",
+          "size": 13702,
+          "sha256": "d625ab767d898270c1bbafca377e1ae38a1bc0a87f9d8e2ee9fcc99c491b48f4"
+        },
+        {
+          "path": "final-validation-summary.json",
+          "size": 49882,
+          "sha256": "50e13e0df4398278112f4e416c2dce6270b478c6249200940e2b6cb76fb6d537"
+        },
+        {
+          "path": "full-release-artifact-manifest.json",
+          "size": 31202,
+          "sha256": "6d57da6154e73b6ed10be24441c06b996d3c771774533e41923960a038bbca4a"
+        },
+        {
+          "path": "full-release-artifacts/LastTest.log",
+          "size": 170810233,
+          "sha256": "0c67d4267c802cd6ca5f05727b44eb5e9d00b0c66405d88f849d6e9852126ea0"
+        },
+        {
+          "path": "full-release-artifacts/LastTestsFailed.log",
+          "size": 46,
+          "sha256": "b03e08f936ff04b191f30f575a99e7a85af9527c8a7371908372fcd70b9aa306"
+        },
+        {
+          "path": "full-release-artifacts/native-freshness.json",
+          "size": 95462,
+          "sha256": "0ec022754c0693083f33ad6abeb522f9825cb73f7cd16eef7d142191b3f0635d"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-account_creation_test.xml",
+          "size": 1706,
+          "sha256": "a8d3ebf318b5782fff277c25c84e49b1871ddcd365ffeedad2cbde37a5f59932"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-account_management_test.xml",
+          "size": 1624,
+          "sha256": "590c2fe2548349f4dcfb1185b972a8b7e2ce7494e5c02e7fa57ec1de676fbe81"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-account_messenger_test.xml",
+          "size": 659,
+          "sha256": "8ee6da7aad48d29a9ad6c09d8c750bef02f998558ac48b6e83275cfef414722f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-account_signature_test.xml",
+          "size": 2464,
+          "sha256": "147fc91c5e4dd455197be93ae09fa72358b6efe09a1b00f42cafd7beafb61a86"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-archive_replication_test.xml",
+          "size": 627,
+          "sha256": "41c0b9d39bb7cffcb4eae1b7c202a8d438c6481cbb0b2106287ff1de10f704db"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-blake2_test.xml",
+          "size": 1151,
+          "sha256": "be2ee7af91d6b9e7c9ce95e58ce140c5762bc59c7a00060248624ae002c2c63d"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-blob_test.xml",
+          "size": 2111,
+          "sha256": "a0371511526a7193889fccb46c09e7386be5b89e598d75ec4c21c6195dbbc9e8"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-blockchain_genesis_test.xml",
+          "size": 1925,
+          "sha256": "16180ceb016714399c21d7a16fabcb62c878746e94ef14c3977f7d5128b78bb3"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bounded_defer_test.xml",
+          "size": 2385,
+          "sha256": "a678bfafcefddac667c086499b2f4f804f4c1b96cc10fb43964dd91c85047932"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_anvil_catchup_e2e_test.xml",
+          "size": 1183,
+          "sha256": "fd067a1df7881febce6a3c3b639e3be2fafc4de95c71c1a1058dbb583501bfd1"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_anvil_e2e_test.xml",
+          "size": 860,
+          "sha256": "406de21e0690d044b448eb44eb0546fe4c262d18cbfa070c00a9eb8aae3f54c2"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_e2e_chainlist_test.xml",
+          "size": 3756,
+          "sha256": "0fdc77c850aaa6915a589077a795631394f15db51a2493e952c0d141ac8f2236"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_e2e_test.xml",
+          "size": 2631,
+          "sha256": "fc4ed64c9eba42fe9377f299e5e492b1486a658ad777df671eaf7e2b14b7d8b1"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_race_batch_test.xml",
+          "size": 604,
+          "sha256": "55ac344b781def690ac9bd6f1915d3ea5aeed229e2ca68a60019cafc50215146"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_race_fault_kill_test.xml",
+          "size": 614,
+          "sha256": "b73013f7969d2501a8089b5528fe2ccc516531cf35afaec1f4fa8c55d7b64b03"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_race_fault_partition_test.xml",
+          "size": 627,
+          "sha256": "b86be46f9e7fd637b295aa5f657b2ecc1256b8fe8cfa8ac663c30cc189400c8f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_race_fault_rpc_test.xml",
+          "size": 893,
+          "sha256": "2ba24c57d7f0c019df830d285796ad7caba7cc29a32546c8678896e7ae481f48"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_race_single_burn_test.xml",
+          "size": 616,
+          "sha256": "fc308bfdf69557c2e2a31a5209dd7473d6d3a529b217dc7494668863fa95a11b"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_relayer_test.xml",
+          "size": 7020,
+          "sha256": "fc8de35eee002a560788368bfc27e5fffc39e6dd6747adf19b753a07d6a656e3"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_rlpx_e2e_test.xml",
+          "size": 825,
+          "sha256": "fc4e54b12fd75544f92a8d4c960a2a59b034867ff8c1d714d6da73b485857a37"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-bridge_sepolia_e2e_test.xml",
+          "size": 606,
+          "sha256": "dc097cf026f26ddbde321eeeee8e119dcf4b0375bfada1aacfbcc29437927c42"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-buffer_test.xml",
+          "size": 966,
+          "sha256": "9f814c90e27730cecabcdd56d6a9e5c3182a3e9eeee191bd837ec8fc5e13d3cc"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-burnconfig_policy_e2e_test.xml",
+          "size": 3799,
+          "sha256": "0ea524758a4615ab2c5d1f1e42a217f70a4d6f07f7f92c7a338a8c2c5e39f989"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-burnconfig_test.xml",
+          "size": 1347,
+          "sha256": "2385e986742ca9fbf1447f4278b79c952d435d02c7b131ccf699b97cce6dff3e"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-chain_rpc_endpoint_provider_test.xml",
+          "size": 3481,
+          "sha256": "cfb060b8d1b4b439589280a7840304804de778595219596860fbe5f8b8369705"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-child_registration_test.xml",
+          "size": 1477,
+          "sha256": "fd87ef1c1d887ae577270d2953547f227aaa2ca1ed4f59dd6c2a1ac4dcbd8c57"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-child_tokens_test.xml",
+          "size": 1933,
+          "sha256": "2f0afa8d8ec0fdb04c29cd464c3ec10ba93b4a943c7f9f908f657d10d5709cb9"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_cache_dir_test.xml",
+          "size": 1373,
+          "sha256": "c045668ae3fe84f1b152d65cf7088da0af49bccc4e7bed3713d970544e904739"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_callback_test.xml",
+          "size": 1141,
+          "sha256": "77686b77c9ac67c971b914b2cc4d25f94657c640bc58fe046c557210cab07cdd"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_config_test.xml",
+          "size": 1125,
+          "sha256": "82f921edb6758e18b87b979195e7b8cbfb695fba8d7485ed6e40ec523db6825f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_content_request_test.xml",
+          "size": 1199,
+          "sha256": "fa361e6bee5fef37460a48d5b482c7826e55cfde3b36d1657d884794a43ffc24"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_get_block_test.xml",
+          "size": 1409,
+          "sha256": "6e8c90dc1c4ff48bb7fb1195bbd1b4b59d0cc17de5161ae274cf11e670db97f1"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_publish_test.xml",
+          "size": 1415,
+          "sha256": "dffb53497c3cc065df27f7697661aebc5c0af2c6277ddcfc8593cdfa22d20a3b"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_request_context_test.xml",
+          "size": 1179,
+          "sha256": "a326bb011270193e057f2988acf535bcc0856e7cbac505266e189c0319133a40"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-concurrency_stress_test.xml",
+          "size": 1625,
+          "sha256": "50f965ba045b1ea69f1ff5e7f5ef886036c0b1ec2f57b98be25f07a66925acb3"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-consensus_bridge_mint_subject_test.xml",
+          "size": 2119,
+          "sha256": "ca89681a898976c1f4f3a12c720d78d022758977e08d1169fb05ad719827c17c"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-consensus_pending_lifecycle_test.xml",
+          "size": 13769,
+          "sha256": "1aace6ff70e3b91de2148c6afd2e00dfaf4d14375d9863f2c4dc0343df246b03"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-consensus_slot_key_test.xml",
+          "size": 2805,
+          "sha256": "8ec11ab5bbd14654d44550032a6e592563b5453197e3c58e78816818ccaa2681"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-consensus_subject_test.xml",
+          "size": 14216,
+          "sha256": "128e0a46ae42f0ac494bf9cf21f08db68d30dea774950c2fdc92c6886a533d99"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-consensus_vote_slot_test.xml",
+          "size": 1170,
+          "sha256": "b12ee19405baefc83a1b0b3d78da5936a2dacb5311aff9561bc75069017ff802"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-crdt_test.xml",
+          "size": 15450,
+          "sha256": "951c3a906fcce12d1b682207f9f972b946efb4505a227169c4eb95bc1ec62402"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-dev_mint_policy_test.xml",
+          "size": 3684,
+          "sha256": "9f62015a4861a7395c3cc587971e17bce9054f221ebb489e4266cab0822c6035"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-escrow_release_v2_test.xml",
+          "size": 8025,
+          "sha256": "81647b0bedcf32f4da7b9c7c4f1706d7f51e38940fd6684d5711c00dc7dbe725"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-full_node_test.xml",
+          "size": 625,
+          "sha256": "5f257f015b31291bd4f87d3398012edb5357a1c416dc05a0e04f84b5d9c2c3ba"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-genesis_manifest_test.xml",
+          "size": 3514,
+          "sha256": "d812505ab0a75563f7ca3c7015d9eebd0abeb5b7d80fa78a8c1a74749d4901a9"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-genius_node_bootstrap_reconnect_test.xml",
+          "size": 696,
+          "sha256": "c8b99d50a7c6e112d80cb2d39494b7fdd5c5e1ee0aba61b91769d3c13b3d3842"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-genius_proofs.xml",
+          "size": 825,
+          "sha256": "3993765575f61ae3093cbbac94a6300ae2e6894b09181a47a3765e6567b3f9e4"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-globaldb_integration_test.xml",
+          "size": 9651,
+          "sha256": "8dc4bc929a89146b1eecb3260fbe6e41e90d0a15d46c7d7ba58b1819b1acf41c"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-hasher_test.xml",
+          "size": 1718,
+          "sha256": "ad3f7f1b5676a74e3d91a2e3f1c2495bf4575978dd7f8a45c7b70859e202c8cd"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-hexutil_test.xml",
+          "size": 1403,
+          "sha256": "2ced339b20f59a7804e0fbbe0ceb3bed56d986269638e3fc9477c381dcf2fdba"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-json_migration_test.xml",
+          "size": 588,
+          "sha256": "ab38d9a6cf15dac884a4a2743a5f943521298bef9999cd408f16cc6456a900ce"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-keccak_test.xml",
+          "size": 547,
+          "sha256": "493cadd3a2d5dc4b8647fa0478d8ffcae2e4a974af2898b41b0b3e1583baa85f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-legacy_mint_admission_test.xml",
+          "size": 2129,
+          "sha256": "8981c336612a1d1cbd4278a67636ad1791604b9831e83b91bef7a57dc582d4fb"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-legacy_mint_sync_admission_test.xml",
+          "size": 2757,
+          "sha256": "c6898ee940eedbcd7bbbb8b740c09d9f75805602a280158088384ae91d34ff68"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-messaging_watcher_test.xml",
+          "size": 1126,
+          "sha256": "6196e416def6898bbaf585a98a8a9de13fefc28f3ba61ff8811f11d61a1142c2"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-migration_sync_test.xml",
+          "size": 2414,
+          "sha256": "2657364d429008bdf887f7e7a4d79c9d0f0a045193ee422f9544282b76806e94"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-mint_evidence_binding_test.xml",
+          "size": 5005,
+          "sha256": "25873998b61dcaf9829964b9e4f2900cd0613eadd26814edda014852e9461183"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-mock_rpc_test.xml",
+          "size": 3773,
+          "sha256": "a740fb6e140d5f823effed77383aa443665c936206d4b10913b7c6727337f4a7"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-multi_account_test.xml",
+          "size": 3271,
+          "sha256": "7cc660b871a02ace8bdb4d02e4896227598ee878bef77bf915babbfd6c9cc772"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-multi_node_finality_fault_compatibility_smoke_test.xml",
+          "size": 711,
+          "sha256": "e4e1761108c35a9f018b4a2ccc9ffeb61bdc198ecd7f075ee5f75ae0ff04ab0e"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-multi_node_finality_fault_test.xml",
+          "size": 16510,
+          "sha256": "30081f80fb2c7f9d50dec954a0dd851c281a9babd70367abe74b2d7910ad627a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-multisig_quorum_test.xml",
+          "size": 2504,
+          "sha256": "b8da6a8cd6e30f5df9043a54b7e0c036ded50fab05342b132a1dea2daf0bbd7c"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-multisig_verify_test.xml",
+          "size": 1385,
+          "sha256": "db7efdb34bc69dd839d4b104b3eb2ae4043cab9c0e267533bc83e442f60e6db4"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-network_config_precedence_test.xml",
+          "size": 2881,
+          "sha256": "6195510c48d9b9df0e69eee997e408ff4a61f911e2ca430893f8ecf967a82e07"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-network_config_private_network_test.xml",
+          "size": 2390,
+          "sha256": "81daf570b074d646e3ef17581a524297baf9c03edec2e7febd37ec5945c24ad2"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-network_membership_filter_test.xml",
+          "size": 4761,
+          "sha256": "a9c9ad80a5eaeffadb0e05584eb733e7453b532c1c144ed0cbed85dc10790ad5"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-network_registry_test.xml",
+          "size": 4979,
+          "sha256": "672da2c1762ecc5228128bcc3ff33dcc99550f8a77d651adfe21e70f6136c282"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-node_initialization_progress.xml",
+          "size": 584,
+          "sha256": "71be5f96621fa265d885e8c31b39fa80bdda80e6b7aaa9ee6b743c2a55219cbe"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-node_shutdown_race_test.xml",
+          "size": 633,
+          "sha256": "1ca38ceebe3b54611594b5541e777d6fbf3b0dc7a09f5f8133a65f2a3c862f89"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-node_startup_test.xml",
+          "size": 2856,
+          "sha256": "1ca4e6021ab7aa09afd4bc4bbf0825bb29712f46f1227eb1bacbc1482d8e0c82"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-node_type_derivation_test.xml",
+          "size": 1426,
+          "sha256": "74d8c54d26883ac2bd33b62f9800b709ed9ff19036a83c8a2e649f7e45240db5"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-operator_approval_test.xml",
+          "size": 2422,
+          "sha256": "796973ecf94d7fd674e080de391a2c44794f39283e2a65d3e1558b446fc9b6b0"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-payout_outputs_test.xml",
+          "size": 1414,
+          "sha256": "a6daa12077ed4b5ef53674fb8d29d4c375ca1b3abd5785d693c0eabc70af6c9a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-peer_registry_test.xml",
+          "size": 1478,
+          "sha256": "afc7f7a55e93177f942c87e4ce009fe94a3f9433126c40ce47ccd4e63a3cfffc"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-policy_lifetime_multi_account_test.xml",
+          "size": 1319,
+          "sha256": "e9636247b95c98b9033fb1aea44942b1cdd8ab12dda4a714e47a8cef99c9e732"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-price_facade_test.xml",
+          "size": 4572,
+          "sha256": "f8c7451eafefdfd184c3c1c8ff19dbe45d61d82ab944a05333e3d040c580f12b"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-price_http_client_test.xml",
+          "size": 3218,
+          "sha256": "f096523d3192746ca9ed27dde644dd60c5d6f7f9a082d4b21efc77c66becccf3"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-price_manager_test.xml",
+          "size": 9582,
+          "sha256": "5244a424c36bc65056050bab573d57fec60d062aaf6582e7d8440ef833ee059a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-price_quote_test.xml",
+          "size": 2485,
+          "sha256": "e8e2a2f458c94a33905540fd0627e31b73c54814dd5176dd66f4007ae6e23872"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-price_retrieval_test.xml",
+          "size": 1751,
+          "sha256": "f20836b0615c526e88a408f4cd13cbc98c76fac96f1267ea12b349eb8a6415f8"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-private_network_registry_binding_test.xml",
+          "size": 1584,
+          "sha256": "55bfb4b3efc8202c166ccdd51063129bfc264b1683e16d06a72ad203446a9aca"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_cancellation_test.xml",
+          "size": 2887,
+          "sha256": "18eabb3594b7ea59d4ea8a184c9558b3d417dc114896a9712d3a7246b7773348"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_capability_test.xml",
+          "size": 3032,
+          "sha256": "3ac788cecf5c5f3cf208c80a3fe4babd78c54bccef296f012a512f6fcc27beec"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_executor_test.xml",
+          "size": 1778,
+          "sha256": "f02d97725f8ee65742759ddba54817355c2df7cba260d4e3c436fc525d98742f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_hashing_test.xml",
+          "size": 2588,
+          "sha256": "25735fd9b3b4e93d67c016e32f2dfa90445d365aa0e7850312da09e552cae9f3"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_migration_test.xml",
+          "size": 1540,
+          "sha256": "9cd4b57dc2c6ea6780cf1e815bfee615402c8d63ea39a27dc4c3267643f981ee"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_regression_test.xml",
+          "size": 3068,
+          "sha256": "fdaca50b533dccae40ed09af993bd61f0e8b0b588f4c66e7d306ca633ded4223"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_schema_test.xml",
+          "size": 3087,
+          "sha256": "060d906b5c39098011c2083db43570c63add1818b7265043ee3b343941fd3daa"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_conformance_security_test.xml",
+          "size": 3345,
+          "sha256": "cc7546ce9909ce52f396fb9ec212150133cf6669448aefd195a0c9de9c142cad"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_core_gating_test.xml",
+          "size": 2001,
+          "sha256": "bd2694bd8dfde5547966868d8a3d9f114dad8caa4daf89b4d10581c1c8f305ef"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_datatypes_test.xml",
+          "size": 11642,
+          "sha256": "fd03feb45fbebec10c85c07cc9b06658a40122f600dec3cf863739f409964496"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_dispatch_test.xml",
+          "size": 3926,
+          "sha256": "65585931a894449939efb5b806178da6e24114a3724c9dd1feba4f67b089916d"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_nodes_test.xml",
+          "size": 1990,
+          "sha256": "a3587e3d0f456ae85206c4e7eb657ed43a9cf80057c53b1319a034d64893ef7a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_payout_metadata_test.xml",
+          "size": 902,
+          "sha256": "aeaf596b562a68e4aac070e753fd3244086e5418bc469eb956bfb296ef09cd1a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_result_durability_test.xml",
+          "size": 2361,
+          "sha256": "6a6e424d13286d95633633141174c25f5738370c2b657fa29350d075ac86411e"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_schema_test.xml",
+          "size": 1128,
+          "sha256": "66b3babd0718a0f682be90d62bd268d5cda812b3b8c846c0c75daa19c1c80e49"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_service_test.xml",
+          "size": 1175,
+          "sha256": "e41e651dc2d909095f3830292f6b1f6bfceeff46630d813554540fe817b26f82"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_subtask_queue_channel_pubsub_test.xml",
+          "size": 2250,
+          "sha256": "e561e052dc22eb3236f24f9dee6cd17902ed5c3447a8022be195ad9637169916"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_validate_result_data_test.xml",
+          "size": 1163,
+          "sha256": "19eebb3f44419356d6e007380ebcd915364017f85d92ac529279929e1079266a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-processing_validation_core_test.xml",
+          "size": 2392,
+          "sha256": "343348ba87d8806ed7e9fdefea944ba66a0af712448b86a2a99d7c432ecb71bd"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-prover_test.xml",
+          "size": 793,
+          "sha256": "72dcd8518e8aecef90eea43c7b378837680edf6b194b17e06555eb03a12ea686"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-prune_eligibility_test.xml",
+          "size": 11671,
+          "sha256": "9236649c5b933a1f402d45b216c66000d66f0df6bbe136827bdd68bebef338f9"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-public_chain_input_validator_slot_test.xml",
+          "size": 4560,
+          "sha256": "880936272f605a22faa42dda5db539376dda57cb1f42568acf26075bf4c45bfa"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-pubsub_counts_test.xml",
+          "size": 1091,
+          "sha256": "fc08655377626a38afc1b65795b65b6d51aacc8a6374e4e54c8af94c8dfed51d"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-pubsub_graphsync_test.xml",
+          "size": 595,
+          "sha256": "65e75b6392ad819505e4c83c012a11a25265e2073b87776b38269517c6cffe2b"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-quorum_policy_test.xml",
+          "size": 2632,
+          "sha256": "f210655a05805fb3e77ff101793786240ad131f2553ce6d1043570895d89e260"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-registration_transaction_test.xml",
+          "size": 11183,
+          "sha256": "3b55d08aad5a25244d738bef954427f09d5b72a64695ed220b184c7e02a4822a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-remove_all_test.xml",
+          "size": 607,
+          "sha256": "c68775358c8b6c80a42f533cbae005fba6e20d84a56ed823de598591f5e37da3"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-result_gc_test.xml",
+          "size": 2292,
+          "sha256": "f9d392bb31e093e63e999b6a1f6aa62ecdaf84b322f3ed8ed2687a426c71430f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-rocksdb_fs_test.xml",
+          "size": 1306,
+          "sha256": "6dd961ae3f432ddcc4266cbc8b054e63f3a953b07b46c910a55d8f39d771c7e7"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-rocksdb_integration_test.xml",
+          "size": 1390,
+          "sha256": "f7b803d9bb12847f34ba9269a33abe01d415aa614715cbe650a79be48948c4ee"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-scaled_integer_test.xml",
+          "size": 38703,
+          "sha256": "553dee40301c4f5ba9546d257b0f889bf00337c76b94ea020489ecb90126ebc6"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-secure_storage_test.xml",
+          "size": 1802,
+          "sha256": "26b9cfa77c531ec5b3b059c1560edd3c200ec053e013f11c7a8f344271268e8a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-securecrdt_candidate_race_test.xml",
+          "size": 1155,
+          "sha256": "c40f8bd95e3643143fe746d5eef95dede7f6b734186859ccbbbbca922eb36c45"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-securecrdt_candidate_test.xml",
+          "size": 4224,
+          "sha256": "d14c96a1066cf0bd2f5022c56604723bc9bd894b840a571ab9ef6e9faa78c17b"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-securecrdt_interface_test.xml",
+          "size": 1418,
+          "sha256": "914716c3d486e8cb6712c428541a7eb560fef9daad258a5e6e94a7ee056a529d"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-securecrdt_propose_sign_quorum_test.xml",
+          "size": 657,
+          "sha256": "8bf6b3ec9dc4ad42d0d4fefdc6b6907a3124bf36c3e4395a50c8e26eda972752"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-securecrdt_quorum_contract_e2e_test.xml",
+          "size": 641,
+          "sha256": "7b7dba782427116d30168312366d890381bceffeeff5d15c705599c5c6167b0e"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-securecrdt_quorum_gate_test.xml",
+          "size": 1830,
+          "sha256": "197e04f1332ea63889933ee3330ebfdebb8b33bb3c16a1545c03ea9ef7ae72c2"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-securecrdt_registry_test.xml",
+          "size": 1723,
+          "sha256": "c36a418cbe7e1d324759bf294edbc6b414c81902a24765080a405e95a62c477d"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-sha256_test.xml",
+          "size": 556,
+          "sha256": "97f74bb42aa49ada5d615538b68cf4e60f47debab0cd3d3f97efafd691e95843"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-shader_compiler_test.xml",
+          "size": 2008,
+          "sha256": "45ced57ad3922268f59b34504c6e372f259ba30d8a7b98bd4505aa9dfe77c33d"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-startup_wiring_test.xml",
+          "size": 7412,
+          "sha256": "a24a4d23fa05703995ff2a4904a19b40e42a1154108bbd5d2abac0c7e197fe7f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-task_keys_scope_test.xml",
+          "size": 3226,
+          "sha256": "51cf28a3a06e36f2ef3752c1539d74bb4b4ca5c15530c62a9b55d1b489e671c4"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-task_queue_test.xml",
+          "size": 5068,
+          "sha256": "456c0a9df0536e9ccdb9b6bd1e994d4d9852db0193f7875ed5de894bfc38dc1b"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-token_amount_test.xml",
+          "size": 15911,
+          "sha256": "dee094026d226acd7e92f14aa1fa0e704ba35c71508e0fc388c49bdfe71039e7"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-token_id_test.xml",
+          "size": 1350,
+          "sha256": "234137e3c45f73a022eac509e985623422f64ca6cbccaa19cd489c11dc076f48"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-transaction_crash_test.xml",
+          "size": 620,
+          "sha256": "ef981b442c8198272e7dffd2f9a62e8fa1be82bd41ebbd0b88ee11dc9081b0c7"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-transaction_manager_certificate_fallback_test.xml",
+          "size": 14419,
+          "sha256": "4639e54236657e3287eb76ddc3dd8779d0380808815d9c6925d5a68cbcf9ec8a"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-transaction_manager_pending_lifecycle_test.xml",
+          "size": 15335,
+          "sha256": "c3a6aa4705fb03e542777aff8d524eef379092010448dfb25c88e5bc1448c718"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-transaction_sync_test.xml",
+          "size": 1966,
+          "sha256": "fbe469e283dbd50e28fca4938d30ed65bf004bf3c6247c827e67d6f754c2fed5"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trust_first_boot_e2e_test.xml",
+          "size": 3292,
+          "sha256": "c51ba04efe4f812b3e0ef19a2d1a00687bc36b5b71ae9dfbe288d1ce1bbb85e8"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trust_genesis_tool_test.xml",
+          "size": 5606,
+          "sha256": "8a124b72ac479f2ed3993e63bd9e82640a1260f166908575ac1e1d8aa55dd9c2"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trust_restart_test.xml",
+          "size": 2023,
+          "sha256": "d3966786e083f84bf8a99679c92073501943400e14cff4bf8d2c8171347eef4f"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trust_state_store_test.xml",
+          "size": 4150,
+          "sha256": "d954d8b4631616915150e24888b9c55d872a12cfa6d9595ca90ef10b0247a6da"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trust_tamper_e2e_test.xml",
+          "size": 918,
+          "sha256": "3040484a06e79b43b12c4f40689f0b4ec00f434b0aa69bd88d46f33ed38fbf62"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trustedpeerregistry_genesis_test.xml",
+          "size": 1982,
+          "sha256": "3f7482e2d37043d4bf244e554c14d22f9e4d0b1f2251cf9068569e47191f44ef"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trustedpeerregistry_quorum_test.xml",
+          "size": 986,
+          "sha256": "bef045418c0a1764e0e27d3207d4b0a847e17d3f54318536d2b7d4ddcaf2b095"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-trustedpeerregistry_threshold_floor_test.xml",
+          "size": 1286,
+          "sha256": "f895c596bc867b171dc874ef9d90f0980cc6d8f70b72472b5fb2ac9615c895ce"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-tx_lookup_tri_state_test.xml",
+          "size": 1724,
+          "sha256": "45dadca72a96e3b68eb67e04286b3f5eb6f1276dcbb5308794a18e6feca9b165"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-tx_pruner_test.xml",
+          "size": 10572,
+          "sha256": "4699a9f3f2bd036f2fb0f61f9f61b86827aede39dd13bbea1e26f7debf740cbc"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-utxo_manager_test.xml",
+          "size": 10530,
+          "sha256": "a81561431d87488592b6a86be74fb6dc4b49431348ef415e161f56d774e107d0"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-validator_admission_equivocation_test.xml",
+          "size": 1904,
+          "sha256": "82a958778b00223dfdcf2e2b2f859e6894e59c86c0b77cf1de8aefb28b0bfe2e"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-validator_registry_batch_slot_test.xml",
+          "size": 4037,
+          "sha256": "eff6f1c8e9b48d095ffcd47d6f20d9ccfe12d76b55d36a0a059c02feefe71454"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-validator_registry_promotion_test.xml",
+          "size": 2913,
+          "sha256": "34ccd788233114a7a4e7af2993ea9a35eef9e05cdfb82dac1e3035a9d0db1777"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-validator_registry_scope_test.xml",
+          "size": 1437,
+          "sha256": "b866e25bb3442ce2c2c9dced9fe1d35d019e0734960feb4c0491b8dde4c27177"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-validator_registry_slot_quorum_test.xml",
+          "size": 2985,
+          "sha256": "978a39d5bf715578bea0522fa3b29545e49f3e4965a991b1b5ea156d9cab4acd"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-validator_registry_verified_load_test.xml",
+          "size": 3360,
+          "sha256": "b064df346d5da910a2b6b4c9ad4bbebf7bd4e43c7a77bc4d22924c890c8e3bda"
+        },
+        {
+          "path": "full-release-artifacts/xunit/xunit-vulkan_init_concurrency_test.xml",
+          "size": 970,
+          "sha256": "c3cdeacb5d7c014e27d6d0914d080b107c3b83de6ad95ff2ed1d8c2255c7b1b1"
+        },
+        {
+          "path": "full-release-case-summary.json",
+          "size": 162476,
+          "sha256": "877daa375d9a64e2586f816a83b03e361356a6466f7d64a6b2156b585b52e1f5"
+        },
+        {
+          "path": "full-release-ctest.xml",
+          "size": 200248,
+          "sha256": "b9a248eca15df63b8bc14ec991dc31eef1def9a758c5478493a1fd5172b23133"
+        },
+        {
+          "path": "full-release-required-coverage.json",
+          "size": 35163,
+          "sha256": "9a2533f46f1422538f1e4560cbfa1b1249573cfec90aa8266a84cf329abb73f7"
+        },
+        {
+          "path": "full-release-source-end.json",
+          "size": 184065,
+          "sha256": "71cdd599a6132905aa16a126c5d175fb98d482c3a793825544a5f2e41d965ce0"
+        },
+        {
+          "path": "full-release-source-start.json",
+          "size": 184065,
+          "sha256": "86741817d28b24ea1197f3a4ee81e2791661fc3276621c49a47c9581aed1f0c0"
+        },
+        {
+          "path": "full-release.json",
+          "size": 1979,
+          "sha256": "8aa16c57521873b55955dc93fb632b6a41591b13273b74463c225904a3d6bfba"
+        },
+        {
+          "path": "full-release.log",
+          "size": 23371,
+          "sha256": "399866a9cca182ad09aa58c24bcd15b9bd2c5b4ae9f608d18624c8d38393af19"
+        },
+        {
+          "path": "historical-five-targets.json",
+          "size": 9682,
+          "sha256": "d267efa8dc13dbf4f12134c544134ca75db7b0f1c2dcf821a4ea52cea96d4d70"
+        },
+        {
+          "path": "native-xml-freshness-reconciliation.json",
+          "size": 13596,
+          "sha256": "2b653b0a05e8d654bdf4317e262d33a6ad868f804a565f9b6162e51b20073af7"
+        },
+        {
+          "path": "network-approval-rejection.json",
+          "size": 1388,
+          "sha256": "3cbb550d66fe24605217846ec71414f41aa6744cc57b7e01e4ac67275083e399"
+        },
+        {
+          "path": "network-approval-resolution.json",
+          "size": 647,
+          "sha256": "13d9c355c524c179c2a10be16e40e6c940906cc2dab5235c813f74bbc3b6ff60"
+        },
+        {
+          "path": "network-artifact-manifest.json",
+          "size": 30518,
+          "sha256": "7ab94112f2efac1c07f741da75e19a37bb1deb56a7f3bf2b2340336e6ce78f05"
+        },
+        {
+          "path": "network-artifacts/LastTest.log",
+          "size": 2949162,
+          "sha256": "f1e5d687e8a261d670c62ca93c27097fd8bb791bd7bb113515b1ece36274486a"
+        },
+        {
+          "path": "network-artifacts/LastTestsFailed.log",
+          "size": 46,
+          "sha256": "b03e08f936ff04b191f30f575a99e7a85af9527c8a7371908372fcd70b9aa306"
+        },
+        {
+          "path": "network-artifacts/native-freshness.json",
+          "size": 95609,
+          "sha256": "52c52bf90e7b2c5f4d56f081a57e7bb74a3f7a70c9c585accc28f233f65bd6bc"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-account_creation_test.xml",
+          "size": 1706,
+          "sha256": "f19c87c4c03ae2184bd53d5f36b9e1603ca961a36b0f657e3dabcf0afb6e1752"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-account_management_test.xml",
+          "size": 1625,
+          "sha256": "215c3d7f501838a9d44194e3e14462da060d3ed9995ec470179b19c4e9af473e"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-account_messenger_test.xml",
+          "size": 659,
+          "sha256": "45e97735ab82c32a8b4ba86626e0113907aef07aebd6c9af0e99a45da8ff8fe7"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-account_signature_test.xml",
+          "size": 2465,
+          "sha256": "d01a10f8b3287b56dcff691e8471fbd2bda1ca8b25dbd503a9d80601386d5c89"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-archive_replication_test.xml",
+          "size": 628,
+          "sha256": "8f542dec3096e7a10df0d2685f72afb595fa219ffa8e0c10e9c91f4c669f6355"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-blake2_test.xml",
+          "size": 1151,
+          "sha256": "7bbc6ca5a600b199f52d282ea31f5c5d5ecd161f0ed7140305e4727ad9b1ff96"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-blob_test.xml",
+          "size": 2111,
+          "sha256": "a57c53bf07845e55eb2226ea8d9b00a4b8f3e61e3f9fa8f113c46e4a092d7027"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-blockchain_genesis_test.xml",
+          "size": 1923,
+          "sha256": "ceeea36de6a415046d4925fe9d79d6d9579726511cfd3f07779a3dfbf5134763"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bounded_defer_test.xml",
+          "size": 2394,
+          "sha256": "44fac5939b234023876568a7f0a820f23e26f753fd52c2a0b133e950a770447b"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_anvil_catchup_e2e_test.xml",
+          "size": 1182,
+          "sha256": "63afcab33b35a9f2d1fd5baf1c0b0d90eb11df14cd2ba58f92a61650ef209dcb"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_anvil_e2e_test.xml",
+          "size": 861,
+          "sha256": "38bbced795912c46d02a40733df3a18ef73cb90104e61ec9fa101ad609f7539f"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_e2e_chainlist_test.xml",
+          "size": 3759,
+          "sha256": "9ef3830d5975152c0e9333fd7191c5acce733a20e661bfeb668b1151062069b4"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_e2e_test.xml",
+          "size": 2631,
+          "sha256": "1cbe7a0f17bed4123296bf12dc46e2f567050f182d2be2b2468dd8b386a47439"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_race_batch_test.xml",
+          "size": 604,
+          "sha256": "8de3d4a79b1d00a2347d3a442895d6968e6e7f26092a7ba940b79bdbe1360d32"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_race_fault_kill_test.xml",
+          "size": 614,
+          "sha256": "45952e80d3be29ba63fc23523caeb13a7de84a4677dd58710ea650d168f9d226"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_race_fault_partition_test.xml",
+          "size": 627,
+          "sha256": "0be8f08e6af947cb30673a7075704c40700d2722bfc9860777700dd93eaf5609"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_race_fault_rpc_test.xml",
+          "size": 893,
+          "sha256": "67fcf4b02c34428005bf40e5c67783f52d0dbd10c326bdefb3c55fdcdd625c38"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_race_single_burn_test.xml",
+          "size": 616,
+          "sha256": "db4ed484696929cafbac9b1450cb60da9f6810ef3b84a8f32bc1f3f99c9c3479"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_relayer_test.xml",
+          "size": 7026,
+          "sha256": "0d58cb6e16cb4757c57d0ab5d71f501cc90c1e7968b02c00c6cd189fc4528f17"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_rlpx_e2e_test.xml",
+          "size": 828,
+          "sha256": "d7ff71570065b6d710a806689ac1950eec7e83e19c46e70d3de028fde63b8c05"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-bridge_sepolia_e2e_test.xml",
+          "size": 606,
+          "sha256": "bfb459f16e2e8ec7f634a920a22c7efbb7604204d863f36dc0dbd5d77f141c1a"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-buffer_test.xml",
+          "size": 966,
+          "sha256": "20fb1bd2de10c886e3f29950bb3395e0811298d2331291d1e6aab463d8bbb465"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-burnconfig_policy_e2e_test.xml",
+          "size": 3800,
+          "sha256": "bbd4f7721056b2185db6ebc462a659d9916ef55b6501edf517d9ae61f69ae265"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-burnconfig_test.xml",
+          "size": 1348,
+          "sha256": "f35dee6fddb76e98b42e8cf9d44b795b714e46e4e121c51621033065efa53f22"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-chain_rpc_endpoint_provider_test.xml",
+          "size": 3478,
+          "sha256": "82e4125b73621535ff457163e7caea346011ed37ab1e13fbe79b5291ba576d36"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-child_registration_test.xml",
+          "size": 1477,
+          "sha256": "3235b18761929ed883a71026dad37e8cc83638063e56a324b08888882cf44bdc"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-child_tokens_test.xml",
+          "size": 1933,
+          "sha256": "e8b7e1fe70807275966191b9cdf3506a15150ca557a2731f85f872b79977432b"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_cache_dir_test.xml",
+          "size": 1372,
+          "sha256": "10401c1f3035950e6f8dff91457d33fc6f8b9592f0713a1b1557c5d18b3cca6e"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_callback_test.xml",
+          "size": 1141,
+          "sha256": "066e212fe8e29e333b40be7812e660b92d7210a643d5e648fa5cc2de27e8cec1"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_config_test.xml",
+          "size": 1122,
+          "sha256": "af97ed8c06a3df7c35a9868497cba91d1175c55e5a887dcc12cb454d088cd11a"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_content_request_test.xml",
+          "size": 1199,
+          "sha256": "c97e03d2ccbf3a1ef67638afdc4439e2a28bb87345b48de5eca803d68d48c477"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_get_block_test.xml",
+          "size": 1409,
+          "sha256": "81c0af9f3b39e037d7fc5f59be43200d283d1ba06b3454d5f0a27c19e9511aab"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_publish_test.xml",
+          "size": 1414,
+          "sha256": "efa211cb6bd9a22843f9476a7a240c2b4724d92ee7d44e4162e55b84749d4d4b"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_request_context_test.xml",
+          "size": 1177,
+          "sha256": "1dfaf8d179e211d82c28085f75342ec67477c72ba285f07191d165d0e520f991"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-concurrency_stress_test.xml",
+          "size": 1626,
+          "sha256": "9e73799f753b76aaa5b9e78fe1daad0a97d3b50934d2344f84fe5ace6e0e46ee"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-consensus_bridge_mint_subject_test.xml",
+          "size": 2119,
+          "sha256": "71f19841f66f19a5be15aa3f5621003aaa6a2f6d78b03a813a40c35cca017e17"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-consensus_pending_lifecycle_test.xml",
+          "size": 13772,
+          "sha256": "cc8131fa123a78fb9d2285e6b36ad02ec9a028d6d738236f851d55add0dd97ab"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-consensus_slot_key_test.xml",
+          "size": 2808,
+          "sha256": "7f0b2929ce6ccb966ce5c786a62901bd2acceffd03f73c26e8feb6fe85833f89"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-consensus_subject_test.xml",
+          "size": 14216,
+          "sha256": "d1b11272f1b47a27b6ea31785f66b00415489d209861e4a94ec4ecdecaefbbf3"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-consensus_vote_slot_test.xml",
+          "size": 1170,
+          "sha256": "eb96b046488a7f0864fd54e58775b4578ee17031437c7122ce63a634ebd8de29"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-crdt_test.xml",
+          "size": 15446,
+          "sha256": "12596b636ae3d7d7eb710785b4ad7880d8438b6496a72ab2c9efc8bb9db4a5ce"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-dev_mint_policy_test.xml",
+          "size": 3683,
+          "sha256": "6b9261888174657984c75f6b7223f71901e0e0891f0de437727d6987498c8885"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-escrow_release_v2_test.xml",
+          "size": 8025,
+          "sha256": "ed247c54a9d843eeae6e341499cc9c5820388198f8be49a7771ab7de288463c2"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-full_node_test.xml",
+          "size": 622,
+          "sha256": "087f4ba5b8c254f31511d91ee6b3fe50ae70d42794d4df93542f0a952e0b16ed"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-genesis_manifest_test.xml",
+          "size": 3511,
+          "sha256": "908e1e5419b487c62ae2d6ef3ab2bb4ef08bba437c38b26c15c63111b2d212f7"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-genius_node_bootstrap_reconnect_test.xml",
+          "size": 693,
+          "sha256": "f1bc38ad31f0250a1e9116e2074d872690efd12b8f5577f002059327f1fb32b9"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-genius_proofs.xml",
+          "size": 825,
+          "sha256": "8eb02105aee6d09188e09015e8b623de48ba9f9c7ea5adc0a3bba7da3877b075"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-globaldb_integration_test.xml",
+          "size": 9653,
+          "sha256": "fee66e26dd61813b9fd08bd63417584fc4d7407d63602807c4a9411b26a57149"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-hasher_test.xml",
+          "size": 1718,
+          "sha256": "104b8a56d21bfe681fda8ec9776ffe31e31ef66904f28cc1f86c486efcd86944"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-hexutil_test.xml",
+          "size": 1403,
+          "sha256": "9d7c984b56ae00597a34d9733e0291dcf1b505537e8393139ff4f6517818e92b"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-json_migration_test.xml",
+          "size": 588,
+          "sha256": "05147b4faa1028ddfc3eada1dd23c8cdcb9f05542e4f06bd180e933e8772deb8"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-keccak_test.xml",
+          "size": 547,
+          "sha256": "a89e8bae5dbc922aafb82da900510e891139add06f5f916aef43019bd1071ddf"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-legacy_mint_admission_test.xml",
+          "size": 2128,
+          "sha256": "864650327ba6e45dafadcce27fed42ed973024f520730afe35b55c17790e1a5a"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-legacy_mint_sync_admission_test.xml",
+          "size": 2756,
+          "sha256": "8595a986b1c311e1b962507f5806ddda431a28a1b449d38181fece76e1a67709"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-messaging_watcher_test.xml",
+          "size": 1127,
+          "sha256": "e1240c2205b4f88ddfd2d6045d620515a9a6fd3caaee08c166c0dc1a8993f5fb"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-migration_sync_test.xml",
+          "size": 2415,
+          "sha256": "f4ed606d9bf1cd79b560008f1f480e6acb674dfe77890762f4d7594c9275d90e"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-mint_evidence_binding_test.xml",
+          "size": 5005,
+          "sha256": "f0dc1cf991ea3932a925a0a79b3e0562a61885a674ff1029220e2313cfe6926e"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-mock_rpc_test.xml",
+          "size": 3779,
+          "sha256": "e1964931c595ebaf70a1d6162e8940a61f58d6e09597ba3df69c8c5611a41e33"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-multi_account_test.xml",
+          "size": 3267,
+          "sha256": "cb45e17c8785eca9d0cb2fd67ae594ba363dbf1d8657e4d71b256f04974ad721"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-multi_node_finality_fault_compatibility_smoke_test.xml",
+          "size": 711,
+          "sha256": "5e5b414dd56bfc70aeff7e195669db766e99a5a7a7d69d84c7fbbded8eb2c23d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-multi_node_finality_fault_test.xml",
+          "size": 16514,
+          "sha256": "59039e7147d4f320f833421700729d172b2e601dd9902c752751b9f668b4093c"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-multisig_quorum_test.xml",
+          "size": 2506,
+          "sha256": "796914678eb1221ea2ba06152a9c9d99dbaa313ea09c9de433a09a39cef4495d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-multisig_verify_test.xml",
+          "size": 1379,
+          "sha256": "2886b9f762674605f3a8d6b29526561216ab30e21e6563465116137ff3ddc5b4"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-network_config_precedence_test.xml",
+          "size": 2879,
+          "sha256": "670c1f5cf495c2978c9761c0348b9cd814be0297c662772ba6035c30290962e3"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-network_config_private_network_test.xml",
+          "size": 2388,
+          "sha256": "db3db037219853b5a11ab864a9261aabd050b57232f5b6c927c806dbf02acefb"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-network_membership_filter_test.xml",
+          "size": 4758,
+          "sha256": "d8c54d10ed50e88f823a3d0936bf2fcd80ece7e0ed7f2f136fa1737963efcfdf"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-network_registry_test.xml",
+          "size": 4977,
+          "sha256": "8382be7e2c720fc1cc39159b58ddac60d147003dc5ab880110b12ffcdfeadf44"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-node_initialization_progress.xml",
+          "size": 584,
+          "sha256": "9fb383d0e425f09fc3c6141f9e2a9a185416d0424440e9625698cac51a390042"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-node_shutdown_race_test.xml",
+          "size": 633,
+          "sha256": "41b01a04758735ee75f20c70b7f08d9e1bae3d421676a9c64a7b17904491e9a6"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-node_startup_test.xml",
+          "size": 2856,
+          "sha256": "51feac73d8be34730662bb96945f64ee47efc588fe092712d653cf93d5e74fcf"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-node_type_derivation_test.xml",
+          "size": 1426,
+          "sha256": "979693413801834ba78a35c039ef12bb8b7d2d91f889f1579cd012108ae456eb"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-operator_approval_test.xml",
+          "size": 2422,
+          "sha256": "4baf98a4786b48fad0f745f0c1fc3b5cc54746b274b14c20d8964542b3f9fe99"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-payout_outputs_test.xml",
+          "size": 1414,
+          "sha256": "808abfdf1b0afd9b9e39fe3cf1aeca6b05b53975ce65afc74e2724ea8fad63e4"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-peer_registry_test.xml",
+          "size": 1478,
+          "sha256": "447fb00848d0bab239d905d8ae74d33f8febe0e5937e5e9b4f62e2b2893cacfe"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-policy_lifetime_multi_account_test.xml",
+          "size": 1319,
+          "sha256": "55b80ac94c212696106f287edcb1cf7f1d50930cea6eeefb40fbc3b58dcf3ac5"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-price_facade_test.xml",
+          "size": 4571,
+          "sha256": "89887281d46daa02fcace23ef7e177dfd6eef605b0cf8e031489f46e3c3f04a0"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-price_http_client_test.xml",
+          "size": 3215,
+          "sha256": "a51b2e0147078059f23bf52f78fc96e0a4d45f0218e4226916762fe0ec742b6f"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-price_manager_test.xml",
+          "size": 9576,
+          "sha256": "0938a27a60e3c93ec7c15fae01417e63e9150f7b221a10f125e241d273d3c587"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-price_quote_test.xml",
+          "size": 2485,
+          "sha256": "5116d5ef3bba9476733a71e8f26cc71a7f19e68d098051f2f1bf5e04215b9ab8"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-price_retrieval_test.xml",
+          "size": 1751,
+          "sha256": "05846c00c3fa47cc9674498ea0fbef0cd4dd4b044cb0f6d57207e459ecdff4dd"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-private_network_registry_binding_test.xml",
+          "size": 1584,
+          "sha256": "f46e520f91d933f05c54678d15212ebfc9f48d6227bb7be5514d1f0b70f96ae3"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_cancellation_test.xml",
+          "size": 2888,
+          "sha256": "0e0820b0415878ca351db00d66511aa5b625eb69e6edbb0862ba46fa13d97bb6"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_capability_test.xml",
+          "size": 3032,
+          "sha256": "9190f0e58542202f13e5c78cc5071599c52fdf02cac485f5f3365c1acfda61f9"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_executor_test.xml",
+          "size": 1778,
+          "sha256": "b57c02884a79d2a2e0f9e001420ca0dcdb3d31dcb90e96d4e3508467c5e4e338"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_hashing_test.xml",
+          "size": 2590,
+          "sha256": "1a19f6efea51bb2d36d67df32500a928bd3a4562cc019ccf4bd3265150e9caab"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_migration_test.xml",
+          "size": 1538,
+          "sha256": "2d8756747e4ac56a682b958caf6842cd560bee250d196b3e1cc378e1f5ac8428"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_regression_test.xml",
+          "size": 3068,
+          "sha256": "710b043a5493ebbe8ff6f9d5294e2b99a65fd88fac47e615b81be3bff0a4ba6e"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_schema_test.xml",
+          "size": 3087,
+          "sha256": "d2337abb31e5d19208936b3138ec658cf2122c482c750e590fcaf9f03965eba3"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_conformance_security_test.xml",
+          "size": 3344,
+          "sha256": "b56b93e4d730af6713594783d6cf87236b4b785e8ca9ae6604e8b1df473a4d31"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_core_gating_test.xml",
+          "size": 2008,
+          "sha256": "fe40acfcd72038778a1c356a560a58476fb422652770e0b3c4274fab50acd3fd"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_datatypes_test.xml",
+          "size": 11642,
+          "sha256": "49c92a88eb04ae3f79403d529e699a6447a214ad3451a00baac91ed9156731d2"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_dispatch_test.xml",
+          "size": 3925,
+          "sha256": "8faa32988c05ceacca2fd7a6c9cc62ebaebe565226916acc82e71ae87828b760"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_nodes_test.xml",
+          "size": 1990,
+          "sha256": "c490bcf942df3c74ff25050acc585ab1ee33ab718ebab33f3f65a2a0a4e44b66"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_payout_metadata_test.xml",
+          "size": 896,
+          "sha256": "e0cd7f4554b286671057226bbee84754fdf77fd27c14495d74a858c465ce36bb"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_result_durability_test.xml",
+          "size": 2361,
+          "sha256": "8f91d18e52d03ab12ec3eb45ee3d5ee1086cc8171ca174464e26adac3e1cab40"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_schema_test.xml",
+          "size": 1125,
+          "sha256": "a7391723a248d5c47c4572eb9139acd9ffb0b29390facf47ca9fed0bf72d5ccf"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_service_test.xml",
+          "size": 1175,
+          "sha256": "d722928019e06277b3fa833ee7c26d67e3d429582468ec70debd2fbcc774489d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_subtask_queue_channel_pubsub_test.xml",
+          "size": 2252,
+          "sha256": "05500a540724eacc979574daa33108ac383211923d3482127b5b035632fadc83"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_validate_result_data_test.xml",
+          "size": 1163,
+          "sha256": "18ded8f1c3429da1de07d045b7fd7da9b3e411c17a97579770be7549fb6b24c5"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-processing_validation_core_test.xml",
+          "size": 2389,
+          "sha256": "912f93c2348e68eff2b4e53d169712d00d782b127772b102aa92d6570c6f576d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-prover_test.xml",
+          "size": 793,
+          "sha256": "a06a68e4e4e6dcb786e972daa696520db61a8d6acb37cbaca00f2c3ee43598f4"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-prune_eligibility_test.xml",
+          "size": 11667,
+          "sha256": "74ae7f9b7c8154906bf49cc22e7984fdd1ef7f200f471e348f3251c65766f71d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-public_chain_input_validator_slot_test.xml",
+          "size": 4563,
+          "sha256": "caf9f7d8f57e914fb2a4bf66ba5414437151f7fb31776f65c524c0df4e2e9869"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-pubsub_counts_test.xml",
+          "size": 1093,
+          "sha256": "f8b63fc41187daa874a61062a3dcf22e616ccb486e2b7238d350c1388733e400"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-pubsub_graphsync_test.xml",
+          "size": 595,
+          "sha256": "4370e9ec05f94d891fcbd6e7277c5fa861e39310d257451d902d741f5a70c4d2"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-quorum_policy_test.xml",
+          "size": 2630,
+          "sha256": "3d1b21944de474279bab27bb77adcc74850c3d0a4d5c3e5d74a384fd0622497a"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-registration_transaction_test.xml",
+          "size": 11182,
+          "sha256": "b32bf25257bae2ba1cd8ee87a0fd8eaa5ae4e269d11befb459c6bb11aa6134ee"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-remove_all_test.xml",
+          "size": 610,
+          "sha256": "385a7e088c80777321d9c8dd2cc299ba3717faf3c8d5e743e2434b3eda440a61"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-result_gc_test.xml",
+          "size": 2290,
+          "sha256": "88066c5de86dd8bf4c5b15d6863459f280b20119b4b04e4b8d563c029d1f0302"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-rocksdb_fs_test.xml",
+          "size": 1305,
+          "sha256": "e537e1cd054c1c649d114f9237c21b76c82d2888f21fbd4ca415cd23bd2195b1"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-rocksdb_integration_test.xml",
+          "size": 1389,
+          "sha256": "936b4c859e22a7e566dcd910101558e796b83bbb21c1a5809793e5d267be0033"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-scaled_integer_test.xml",
+          "size": 38703,
+          "sha256": "d85b405965fb83b0bbfa34302d27d9575e02d99f0459f88ba24a9e774c5e8599"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-secure_storage_test.xml",
+          "size": 1802,
+          "sha256": "ccf276e9fc8b92061c45174f14a76a73de117194ba67b6ab379f134685d3cf10"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-securecrdt_candidate_race_test.xml",
+          "size": 1152,
+          "sha256": "d64eebba26131d91524c9c529f2dac503a873313378495b30922f63c25e3ddfd"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-securecrdt_candidate_test.xml",
+          "size": 4224,
+          "sha256": "9641b793595f0aafdf26a0ac87b289b955922c34ad01800d32316f767b9f092e"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-securecrdt_interface_test.xml",
+          "size": 1418,
+          "sha256": "0c7718631bc7bc636f96bb21c9812b79be7be8ce817a6bf1592ab00057388324"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-securecrdt_propose_sign_quorum_test.xml",
+          "size": 657,
+          "sha256": "d77c8e94c215c3a25084f0a5e4c98274ab4bc0748e99b22ff37f21a592a67983"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-securecrdt_quorum_contract_e2e_test.xml",
+          "size": 641,
+          "sha256": "b8db3e325a17b6e588ee8c679a3818041154525ab8b34416bea2936f828e19df"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-securecrdt_quorum_gate_test.xml",
+          "size": 1830,
+          "sha256": "9d38b6ce4a79c84dbb212a969db707e728e23e58e97e4ade3d28b4e427628047"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-securecrdt_registry_test.xml",
+          "size": 1725,
+          "sha256": "290b1fbed678f8d82125e6468edb7bc6f2ac40faede9b12047a3085f9f5d043d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-sha256_test.xml",
+          "size": 556,
+          "sha256": "f090dc21dc3e1a6edfe946b649451c6da7f3e94faa06c1b54ad2f0b95b1cf86c"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-shader_compiler_test.xml",
+          "size": 2008,
+          "sha256": "9483451a5afacdcc725d6b19896b1aaecefd1ee3ce1ade1d3c5cea0b6a1157bf"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-startup_wiring_test.xml",
+          "size": 7412,
+          "sha256": "f56c522bdd20a2b06fb2d082377e5625603447101f4e752a14b4165166c9cf23"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-task_keys_scope_test.xml",
+          "size": 3226,
+          "sha256": "528840e114aa8a7c2e0767e219395a25c78cdab1932c30fa9c28e28c76480aac"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-task_queue_test.xml",
+          "size": 5070,
+          "sha256": "a4d93e589bf31b4479143d7e316fdd1dee08e7c1ea22f5b0939e4f2825851bdf"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-token_amount_test.xml",
+          "size": 15911,
+          "sha256": "deaad88a3334df5bb6cbc47a5173187393c5717d57cd938d61212a1130de516d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-token_id_test.xml",
+          "size": 1350,
+          "sha256": "641219cbbc0f7e99735dd5c3e521423984b58e24601b3a08d88b5cd3dfbae631"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-transaction_crash_test.xml",
+          "size": 620,
+          "sha256": "d6ed02558614b8435e156df3eb2f43d917c7f0c3a252935b10097711f6d028f4"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-transaction_manager_certificate_fallback_test.xml",
+          "size": 14417,
+          "sha256": "4ba84f9a57dfddb3f6687eba4a9d500ff0f661d63232a49a3b1bdb4b285d1f6c"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-transaction_manager_pending_lifecycle_test.xml",
+          "size": 15342,
+          "sha256": "73212ae31bb4df5e1d41371eaf15ecc12560883f9724733d2cac48abe129fbc3"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-transaction_sync_test.xml",
+          "size": 1967,
+          "sha256": "8926ef21364881379fa14d7c290f43fa16b51a1d4843da62145a764ef33733a9"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trust_first_boot_e2e_test.xml",
+          "size": 3292,
+          "sha256": "439c09ab096332a73a375f19355b50d06b07a33c1b2d77b1bdb6380483fe6bfd"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trust_genesis_tool_test.xml",
+          "size": 5604,
+          "sha256": "973f63eb29500dc0986cb0c409caf7c5765c4fd02bfb96b6401ec6feebd4c65b"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trust_restart_test.xml",
+          "size": 2020,
+          "sha256": "96dce32af2f81af6b9cd437b2609beeecc98d92bfa3decc9cdee9e6b198a907c"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trust_state_store_test.xml",
+          "size": 4152,
+          "sha256": "7113a55cc35cd73c22c2995135c7a367816445d09cf98e4a187e2a1696ae63d0"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trust_tamper_e2e_test.xml",
+          "size": 918,
+          "sha256": "01e5ca05cc7a1b9e5fab86c2b73a04f162a2dd08c64900ee1f82d80a153c125d"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trustedpeerregistry_genesis_test.xml",
+          "size": 1982,
+          "sha256": "c1a3b10016cd7fcdf485421d87201457589e3747eda45592885bce13b80ad181"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trustedpeerregistry_quorum_test.xml",
+          "size": 985,
+          "sha256": "1d7e9ce6b4e134584b8c57e711c29a930e30edf04a957f6d9d7aa100c7d695ea"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-trustedpeerregistry_threshold_floor_test.xml",
+          "size": 1286,
+          "sha256": "f8ca842d2e20c0475189f4b9098ada9178c196d7529b53e187b3c7d7d6d8fb2c"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-tx_lookup_tri_state_test.xml",
+          "size": 1724,
+          "sha256": "8806a4a4e727cd6525e11c1c75555dca1caa99d62188be05b808cd9e3c029eac"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-tx_pruner_test.xml",
+          "size": 10573,
+          "sha256": "ff346c9109e6d2b068bf0fc9d0099455c4466b73b2a32b3e567386485645b465"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-utxo_manager_test.xml",
+          "size": 10535,
+          "sha256": "8518537371e1c7c6ddd1d7d686f108c7e99af4df7db865b35a65b295ec10ed91"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-validator_admission_equivocation_test.xml",
+          "size": 1903,
+          "sha256": "ccfa02ef35969e370b23ca29b947b1acd6d3344b8f5075b6ff5cbb37af90575f"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-validator_registry_batch_slot_test.xml",
+          "size": 4037,
+          "sha256": "314c35eb85d1d7d4eb8101cf73594185409cf823d993c44f979a98ed8cfde1c8"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-validator_registry_promotion_test.xml",
+          "size": 2913,
+          "sha256": "2d9017819016288b86cdc4f9517be6c961e70a1904e281bc3abb3f561e67172a"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-validator_registry_scope_test.xml",
+          "size": 1437,
+          "sha256": "e920b52d3ef2c855be7661fa54277081e2dccf754ebb973274328ac38463dd15"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-validator_registry_slot_quorum_test.xml",
+          "size": 2985,
+          "sha256": "3dc3485517c5601861a8ccb6f83e4e84dcfe0da973e1d79b2a3cc53725c7501f"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-validator_registry_verified_load_test.xml",
+          "size": 3357,
+          "sha256": "8129d4876ce1fa31f95e0e36d891586d5d0cad2cf9059fa0eef300702b370c94"
+        },
+        {
+          "path": "network-artifacts/xunit/xunit-vulkan_init_concurrency_test.xml",
+          "size": 970,
+          "sha256": "be46b2a45e01a1d51ae3be8885d18a30d262ea8a36b986b6f9f2f325661a8240"
+        },
+        {
+          "path": "network-case-summary.json",
+          "size": 4767,
+          "sha256": "b8754676142e9e17a7f6f978c84d0fc567fd7f0efcaa15e0051a761d6b32eaad"
+        },
+        {
+          "path": "network-ctest.xml",
+          "size": 4153,
+          "sha256": "712463d49a5b9cb663db2f58865e72deadb7c3f0803786b0c01e768050cc695b"
+        },
+        {
+          "path": "network-required-both-gates.json",
+          "size": 9141,
+          "sha256": "eee79d560561531636cc733cd77ea1bd964a422d66d4add15372adebe1b230ae"
+        },
+        {
+          "path": "network-required-coverage.json",
+          "size": 5043,
+          "sha256": "a0ef3707e95292e3f59c59cc43c1855e4229789d637d97f5a3ced71bc15ea0c4"
+        },
+        {
+          "path": "network-source-end.json",
+          "size": 184065,
+          "sha256": "9a9f958e2711cedddf9369cbef2adae88618876c47c6a7b8c234136071cd299e"
+        },
+        {
+          "path": "network-source-start.json",
+          "size": 184065,
+          "sha256": "95d33318e5b4a1be314cfea3190b9e761b786cd783d384a225f0c186b67fe31b"
+        },
+        {
+          "path": "network.json",
+          "size": 2111,
+          "sha256": "c509cd1767a8417c8cc996b5044bd84cab3a70ffeefe4fb263fd5135de93953e"
+        },
+        {
+          "path": "network.log",
+          "size": 1012,
+          "sha256": "4d0c356f99aed052f94b3361de70a0eed1924c01439ccffc33716f324d958f82"
+        },
+        {
+          "path": "progress.jsonl",
+          "size": 30471,
+          "sha256": "df284e0339d279416026ec3f12a4cb322958cf2c2a3fe3267a3a9723dc9d2db9"
+        },
+        {
+          "path": "progress.py",
+          "size": 1132,
+          "sha256": "3d54062a2022be965330964d5cb3bf60ad877567451e0228250a0e932d8fb238"
+        },
+        {
+          "path": "registered-targets.json",
+          "size": 5012,
+          "sha256": "d86a880e8668675e6f2bb29cbd0dcea9d5cebd89df85ad9720fb8a0a69d543ac"
+        },
+        {
+          "path": "registration-reconciliation.json",
+          "size": 107970,
+          "sha256": "b89f21958d69dcaae2a85143c58ccdb486abc6ce30702d3766595a96e6fba6f8"
+        },
+        {
+          "path": "registration.json",
+          "size": 146852,
+          "sha256": "81a56449ead55c6ec73e6ef197db294a8674c12cef4ac1b882aeca9c9e1bf494"
+        },
+        {
+          "path": "run.py",
+          "size": 4687,
+          "sha256": "2724f154dfe0bac08e7e0b1aea58bf02beb506d39968fe78be9534dce2f69526"
+        },
+        {
+          "path": "summarize.py",
+          "size": 2318,
+          "sha256": "93de741c265ed03a5ff4f0774a8b3d69f06c04dcd9250112feed4405a967dcec"
+        },
+        {
+          "path": "validation-contract.md",
+          "size": 28619,
+          "sha256": "320a620a770a948bbbf6f872880e404b54005330ad4d1f8d8cc2584c3676a8fe"
+        },
+        {
+          "path": "verify-full-coverage.py",
+          "size": 12676,
+          "sha256": "0b67e6255d8c4db3000e87f630a63c3e37a67aeaa4161a775564694e01a280b8"
+        }
+      ]
+    },
+    "historically_failed_targets_rerun": {
+      "targets": [
+        {
+          "target": "burnconfig_policy_e2e_test",
+          "ctest": {
+            "outcome": "passed",
+            "raw_status": "run",
+            "seconds": 3.91003,
+            "messages": []
+          },
+          "runtime": {
+            "complete": true,
+            "enabled": 11,
+            "ran": 11,
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "disabled": 0,
+            "source": "preserved LastTest.log runtime summary"
+          },
+          "native_xunit_attributes": {
+            "tests": "11",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "2.682",
+            "timestamp": "2026-11-22T16:06:49.290",
+            "name": "AllTests"
+          },
+          "native_xml_fresh_and_matching": true,
+          "cases": [
+            {
+              "full_name": "BurnConfigPolicyE2ETest.GenesisWaitsForTrustedPeerConfirmationAndExactBurnQuorum",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.113,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "BurnConfigPolicyE2ETest.ConfirmedSuccessorChangesActualPayEscrowBurnOutput",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.163,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "BurnConfigPolicyE2ETest.PolicyBindingStalesOldCandidateAndLaterVersionsNeedExplicitApproval",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.165,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "BurnConfigPolicyE2ETest.InvalidAndUnderSignedCandidatesLeavePayEscrowUnchanged",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.12,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "BurnConfigPolicyE2ETest.PersistBeforeCacheLeavesConfirmedValueAndCallbacksUnchangedOnFailure",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.132,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "BurnConfigPolicyE2ETest.PayEscrowUsesExactOverflowSafeBurnForUint64Maximum",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.187,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "GenesisFingerprintPinE2ETest.FreshBootWithCorrectPinProceedsToTrustStartup",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.601,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "GenesisFingerprintPinE2ETest.FreshBootWithTamperedPeerAndOriginalPinFailsClosed",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.207,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "GenesisFingerprintPinE2ETest.FreshBootWithoutPinBootsUnpinned",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.232,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "GenesisFingerprintPinE2ETest.RestartFromConfirmedStateWithConflictingNetworkStillFailsClosed",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.549,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "GenesisFingerprintPinE2ETest.ExampleConfigBootsUnderItsShippedPin",
+              "status": "run",
+              "result": "completed",
+              "seconds": 0.208,
+              "failure_count": 0,
+              "skip_count": 0
+            }
+          ]
+        },
+        {
+          "target": "policy_lifetime_multi_account_test",
+          "ctest": {
+            "outcome": "passed",
+            "raw_status": "run",
+            "seconds": 29.3241,
+            "messages": []
+          },
+          "runtime": {
+            "complete": true,
+            "enabled": 3,
+            "ran": 3,
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "disabled": 0,
+            "source": "preserved LastTest.log runtime summary"
+          },
+          "native_xunit_attributes": {
+            "tests": "3",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "28.091",
+            "timestamp": "2026-11-22T16:29:29.597",
+            "name": "AllTests"
+          },
+          "native_xml_fresh_and_matching": true,
+          "cases": [
+            {
+              "full_name": "PolicyLifetimeMultiAccountTest.ActiveTrustSignerSurvivesAccountSwitchBeforeInitialBurnReadiness",
+              "status": "run",
+              "result": "completed",
+              "seconds": 7.324,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "PolicyLifetimeMultiAccountTest.ActiveTrustSignerSurvivesAccountSwitchAfterReadiness",
+              "status": "run",
+              "result": "completed",
+              "seconds": 11.51,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "PolicyLifetimeMultiAccountTest.PassiveBurnSuccessorChangesPayEscrowWithoutReceiverAdmin",
+              "status": "run",
+              "result": "completed",
+              "seconds": 9.256,
+              "failure_count": 0,
+              "skip_count": 0
+            }
+          ]
+        },
+        {
+          "target": "bridge_race_single_burn_test",
+          "ctest": {
+            "outcome": "passed",
+            "raw_status": "run",
+            "seconds": 64.2773,
+            "messages": []
+          },
+          "runtime": {
+            "complete": true,
+            "enabled": 1,
+            "ran": 1,
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "disabled": 0,
+            "source": "preserved LastTest.log runtime summary"
+          },
+          "native_xunit_attributes": {
+            "tests": "1",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "64.159",
+            "timestamp": "2026-11-22T16:43:55.426",
+            "name": "AllTests"
+          },
+          "native_xml_fresh_and_matching": true,
+          "cases": [
+            {
+              "full_name": "BridgeRaceE2ETest.SingleContestedBurnExactlyOnce",
+              "status": "run",
+              "result": "completed",
+              "seconds": 28.687,
+              "failure_count": 0,
+              "skip_count": 0
+            }
+          ]
+        },
+        {
+          "target": "bridge_race_batch_test",
+          "ctest": {
+            "outcome": "passed",
+            "raw_status": "run",
+            "seconds": 80.2009,
+            "messages": []
+          },
+          "runtime": {
+            "complete": true,
+            "enabled": 1,
+            "ran": 1,
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "disabled": 0,
+            "source": "preserved LastTest.log runtime summary"
+          },
+          "native_xunit_attributes": {
+            "tests": "1",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "80.109",
+            "timestamp": "2026-11-22T16:44:59.682",
+            "name": "AllTests"
+          },
+          "native_xml_fresh_and_matching": true,
+          "cases": [
+            {
+              "full_name": "BridgeRaceE2ETest.BatchBurnsNoInterference",
+              "status": "run",
+              "result": "completed",
+              "seconds": 43.419,
+              "failure_count": 0,
+              "skip_count": 0
+            }
+          ]
+        },
+        {
+          "target": "bridge_race_fault_rpc_test",
+          "ctest": {
+            "outcome": "passed",
+            "raw_status": "run",
+            "seconds": 78.7255,
+            "messages": []
+          },
+          "runtime": {
+            "complete": true,
+            "enabled": 2,
+            "ran": 2,
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "disabled": 0,
+            "source": "preserved LastTest.log runtime summary"
+          },
+          "native_xunit_attributes": {
+            "tests": "2",
+            "failures": "0",
+            "disabled": "0",
+            "errors": "0",
+            "time": "78.635",
+            "timestamp": "2026-11-22T16:46:19.913",
+            "name": "AllTests"
+          },
+          "native_xml_fresh_and_matching": true,
+          "cases": [
+            {
+              "full_name": "BridgeRaceE2ETest.AllSlotsDistinctStillReachesQuorum",
+              "status": "run",
+              "result": "completed",
+              "seconds": 10.953,
+              "failure_count": 0,
+              "skip_count": 0
+            },
+            {
+              "full_name": "BridgeRaceE2ETest.DirectSlotFailureFailClosesMint",
+              "status": "run",
+              "result": "completed",
+              "seconds": 30.195,
+              "failure_count": 0,
+              "skip_count": 0
+            }
+          ]
+        }
+      ],
+      "actual_enabled_cases": 18,
+      "actual_passed_cases": 18,
+      "previous_single_burn_timeout_cause": "unproven",
+      "evidence": "/tmp/phase21-1-cr04-final-20261122T184600Z/historical-five-targets.json"
+    },
+    "full_runtime_skips": [
+      {
+        "target": "bridge_e2e_test",
+        "name": "BridgeE2ETest.BurnToMintPipeline",
+        "reason": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:415\n",
+        "skipped_xml_attributes": {
+          "message": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:415\n"
+        },
+        "skipped_xml_text": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:415\n",
+        "actual_runtime_setup_skip_reason": "Set RUN_E2E_BRIDGE=1 to run E2E bridge tests",
+        "runtime_setup_location": "bridge_e2e_test.cpp:230"
+      },
+      {
+        "target": "bridge_e2e_test",
+        "name": "BridgeE2ETest.SlotKeyCollisionResistance",
+        "reason": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:523\n",
+        "skipped_xml_attributes": {
+          "message": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:523\n"
+        },
+        "skipped_xml_text": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:523\n",
+        "actual_runtime_setup_skip_reason": "Set RUN_E2E_BRIDGE=1 to run E2E bridge tests",
+        "runtime_setup_location": "bridge_e2e_test.cpp:230"
+      },
+      {
+        "target": "bridge_e2e_test",
+        "name": "BridgeE2ETest.ReplayRejection",
+        "reason": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:598\n",
+        "skipped_xml_attributes": {
+          "message": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:598\n"
+        },
+        "skipped_xml_text": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:598\n",
+        "actual_runtime_setup_skip_reason": "Set RUN_E2E_BRIDGE=1 to run E2E bridge tests",
+        "runtime_setup_location": "bridge_e2e_test.cpp:230"
+      },
+      {
+        "target": "bridge_e2e_test",
+        "name": "BridgeE2ETest.MissingEndpointsFailClosed",
+        "reason": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:658\n",
+        "skipped_xml_attributes": {
+          "message": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:658\n"
+        },
+        "skipped_xml_text": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_e2e_test.cpp:658\n",
+        "actual_runtime_setup_skip_reason": "Set RUN_E2E_BRIDGE=1 to run E2E bridge tests",
+        "runtime_setup_location": "bridge_e2e_test.cpp:230"
+      },
+      {
+        "target": "bridge_rlpx_e2e_test",
+        "name": "BridgeRlpxE2ETest.RlpxBurnStreamAutoMints",
+        "reason": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp:595\n",
+        "skipped_xml_attributes": {
+          "message": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp:595\n"
+        },
+        "skipped_xml_text": "/Users/henriqueklein/gnus/SuperGNUS/test/src/bridge_e2e/bridge_rlpx_e2e_test.cpp:595\n",
+        "actual_runtime_setup_skip_reason": "Set RUN_E2E_RLPX=1 to run RLPx E2E bridge tests",
+        "runtime_setup_location": "bridge_rlpx_e2e_test.cpp:270"
+      },
+      {
+        "target": "sgprocmanagerexec_cancellation_test",
+        "name": "CancellationTest.CancelMidRenderPass",
+        "reason_runtime_block": "[ RUN      ] CancellationTest.CancelMidRenderPass\n/Users/henriqueklein/gnus/SuperGNUS/SGProcessingManager/test/execution/cancellation_test.cpp:48: Skipped\nRequires Vulkan device + ProcessingManager with valid render job JSON \u2014 see SuperGenius/test/src/processing_conformance_cancellation/cancellation_conformance_test.cpp's RenderCancelBeforeStartProducesNoSuccessfulResult for real full-pipeline coverage of this exact capability (D-04)\n\n[  SKIPPED ] CancellationTest.CancelMidRenderPass (0 ms)",
+        "source": "preserved current LastTest.log"
+      },
+      {
+        "target": "sgprocmanagerexec_cancellation_test",
+        "name": "CancellationTest.CancelMidMNNInference",
+        "reason_runtime_block": "[ RUN      ] CancellationTest.CancelMidMNNInference\n/Users/henriqueklein/gnus/SuperGNUS/SGProcessingManager/test/execution/cancellation_test.cpp:64: Skipped\nRequires MNN runtime + ProcessingManager with valid inference job JSON \u2014 see SuperGenius/test/src/processing_conformance_cancellation/cancellation_conformance_test.cpp's CancelBeforeStartProducesNoSuccessfulResult for real full-pipeline coverage of this exact capability (D-04)\n\n[  SKIPPED ] CancellationTest.CancelMidMNNInference (0 ms)",
+        "source": "preserved current LastTest.log"
+      }
+    ],
+    "full_disabled_cases": [
+      {
+        "target": "bridge_sepolia_e2e_test",
+        "name": "BridgeSepoliaE2ETest.DISABLED_BurnToMintPipeline"
+      },
+      {
+        "target": "blockchain_genesis_test",
+        "name": "BlockchainGenesisTest.DISABLED_NoAuthorizationNoSync"
+      },
+      {
+        "target": "blockchain_genesis_test",
+        "name": "BlockchainGenesisTest.DISABLED_WrongAuthorizationCannotSync"
+      },
+      {
+        "target": "globaldb_integration_test",
+        "name": "GlobalDBIntegrationTest.DISABLED_CommitFailsForNonexistentTopicTest"
+      },
+      {
+        "target": "processing_service_test",
+        "name": "ProcessingServiceTest.DISABLED_ProcessingSlotsAreAvailable"
+      },
+      {
+        "target": "processing_nodes_test",
+        "name": "ProcessingNodesTest.DISABLED_ProcessNodesAddress"
+      },
+      {
+        "target": "processing_nodes_test",
+        "name": "ProcessingNodesTest.DISABLED_ProcessNodesPubsubs"
+      },
+      {
+        "target": "processing_nodes_test",
+        "name": "ProcessingNodesTest.DISABLED_ProcessNodesTransactionsCount"
+      },
+      {
+        "target": "processing_nodes_test",
+        "name": "ProcessingNodesTest.DISABLED_CalculateProcessingCost"
+      },
+      {
+        "target": "processing_nodes_test",
+        "name": "ProcessingNodesTest.DISABLED_CalculateProcessingCostFail"
+      },
+      {
+        "target": "vulkan_init_concurrency_test",
+        "name": "VulkanConcurrentInitTest.DISABLED_RepeatedConcurrentInitNoRaceOrCrash"
+      },
+      {
+        "target": "transaction_crash_test",
+        "name": "CrashRecoverySyncTest.DISABLED_TransactionSyncAfterCrash"
+      }
+    ],
+    "limits": [
+      "Debug cache is genuinely absent; no reconfiguration or Debug pass is claimed.",
+      "The historical failed gates are preserved; later passing gates do not erase them or establish the previous single-burn timeout cause.",
+      "Seven skipped and twelve disabled cases are not passing executions. Two zero-enabled targets do not demonstrate behavioral coverage.",
+      "The native process-ownership target verifies its pass marker and is not counted as GTest cases.",
+      "Thirteen SGProcessingManager registered targets have no per-target xUnit output argument; their complete current runtime summaries establish counts.",
+      "External validator/history/activation evidence and operator disposition are outside this native verification; no deployment or activation action occurred.",
+      "The initial subagent network launch was automatically rejected on stale delegation scope; root reviewed actual authorization and obtained approval. Subagent performed no native launches after rejection.",
+      "The current RLPx bridge skip is RUN_E2E_RLPX opt-in, directly observed in the fresh LastTest setup output; the historical report used SGNS_E2E_REAL_RPC. Current XML itself records only test declaration locations."
+    ],
+    "precise_summary": "/tmp/phase21-1-cr04-final-20261122T184600Z/final-validation-summary.json",
+    "network_required_both_gates": "/tmp/phase21-1-cr04-final-20261122T184600Z/network-required-both-gates.json",
+    "goal_verification": {
+      "status": "human_needed",
+      "technical_truths_verified": 6,
+      "technical_truths_total": 6,
+      "new_source_gaps": 0,
+      "verified_source_head": "1c6dfa69ce005e7112dc78f06fb8685c29ae1320",
+      "report": "21.1-VERIFICATION.md",
+      "remaining_human_gate": "Task08-2 operator historical-finality/inventory disposition"
+    },
+    "security_closeout": {
+      "report": "21.1-SECURITY.md",
+      "threats_total": 31,
+      "threats_closed": 28,
+      "implementation_threats_open": 0,
+      "evidence_threats_pending": 0,
+      "operator_transfers_pending": 3,
+      "activation_status": "pending"
+    },
+    "recorded_at_utc": "2026-11-22T19:59:30.220414+00:00"
   }
 }
