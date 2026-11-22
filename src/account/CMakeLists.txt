@@ -79,6 +79,7 @@ set(GENIUS_NODE_SOURCES
     EscrowTransaction.cpp
     EscrowReleaseTransactionV2.cpp
     EscrowReleaseTransaction.cpp
+    UTXOManagerEscrow.cpp
     GeniusInputValidator.cpp
     DevMintInputValidator.cpp
     MigrationInputValidator.cpp
