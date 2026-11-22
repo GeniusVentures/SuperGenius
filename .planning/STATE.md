@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Remediation & Network Readiness
 current_phase: 21.1
-status: executing
-stopped_at: Plan 21.1-08 task 1 measurements recorded with failed native gates; technical continuation 08-1 precedes pending operator checkpoint 08-2
-last_updated: "2026-11-22T02:05:44.511Z"
-last_activity: 2026-11-22 -- Plan 21.1-08 measured all 163 Release targets; 158 passed and 5 failed; activation remains pending
+status: Plan 08 technical continuation interrupted; CR-04 UNCONFIRMED reservation cleanup blocks bridge and broad reruns; operator 08-2 pending
+stopped_at: Plan 21.1-08 interrupted at 5d7effc4c; CR-04 cleanup fix and bridge/broad reruns remain
+last_updated: "2026-11-22T18:12:42.552Z"
+last_activity: "2026-11-22 -- Continuation at 5d7effc4c: payout fixtures 14/14, lifecycle 43/43 and focused probe pass; review found reservation cleanup blocker before reruns"
 progress:
   total_phases: 33
   completed_phases: 5
@@ -31,8 +31,8 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 Phase: 21.1 (escrow-payout-slot-identity-double-payout-prevention) — EXECUTING
 Plan: 8 of 8 (task 1 measurements recorded; task 2 pending; 7/8 plans completed)
-Status: Executing plan 08: native verification recorded with failures; technical continuation required; operator 08-2 pending
-Last activity: 2026-11-22 -- Plan 21.1-08 measured all 163 Release targets; 158 passed and 5 failed; activation remains pending
+Status: Plan 08 technical continuation interrupted; CR-04 UNCONFIRMED reservation cleanup blocks bridge and broad reruns; operator 08-2 pending
+Last activity: 2026-11-22 -- Continuation at 5d7effc4c: payout fixtures 14/14, lifecycle 43/43 and focused probe pass; review found reservation cleanup blocker before reruns
 
 Progress: [█████████░] 87%
 
@@ -84,9 +84,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Retained predecessor dec
 
 ## Session
 
-**Last session:** 2026-11-22T02:05:44.293Z
-**Stopped At:** Plan 21.1-08 task 1 measurements recorded with failed native gates; technical continuation 08-1 precedes pending operator checkpoint 08-2
-**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-08-PLAN.md
+**Last session:** 2026-11-22T18:12:42.541Z
+**Stopped At:** Plan 21.1-08 interrupted at 5d7effc4c; CR-04 cleanup fix and bridge/broad reruns remain
+**Resume File:** .planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-08-CONTINUATION.md
 
 ## Accumulated Context
 
@@ -281,6 +281,7 @@ Items acknowledged and deferred at milestone close on 2026-10-05 (v1.1):
 
 ### Blockers
 
+- Latest Plan 08 handoff: `.planning/phases/21.1-escrow-payout-slot-identity-double-payout-prevention/21.1-08-CONTINUATION.md`. Executor stopped with a provider filter error; no native work remains running. Resolve CR-04's UNCONFIRMED ordinary-input reservation cleanup, re-review, then verify bridge/network and broader gates. Current review is not clean; the historical 158/163 full-suite result below predates these continuation commits.
 - Plan 21.1-07 local recovery gates pass at 24aeca62b after a deterministic expired-owner callback RED/GREEN fix; earlier intermittent E sole causality remains unproven and all failed runs are retained in 21.1-07-SUMMARY.md. Whole-phase verification, external historical evidence and operator acceptance remain plan 08 work; PAYSAFE stays pending.
 - Phase 21.1-08 technical readiness is blocked: full Release CTest 158/163 passed, five failed (two stale V2-to-Transfer payout fixture targets, bridge single-burn timeout, two bridge endpoint readiness failures); separate network probe assertion also failed despite the later full-suite pass. Three inline blocker groups were already repaired. Resume technical continuation 08-1 from 21.1-VALIDATION-RESULTS.md; no assertion, timeout or launcher was weakened.
 - Phase 21.1-08-2 remains an explicit blocking-human operator decision: all external validator/history/pending-escrow evidence groups remain missing, operator_decision is null and activation_status is pending. No phase/PAYSAFE completion, acceptance, deployment or operational mutation is authorized by local fixture results.
