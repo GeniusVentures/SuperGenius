@@ -61,6 +61,27 @@ namespace sgns
             manager.TickOnce();
         }
 
+        static outcome::result<void> ProcessIncomingTransaction( TransactionManager                       &manager,
+                                                                 const std::shared_ptr<GeniusTransaction> &transaction )
+        {
+            crdt::GlobalDB::Buffer value;
+            value.put( transaction->SerializeByteVector() );
+            return manager.AddTransactionToProcessedMaps(
+                { TransactionManager::GetTransactionPath( *transaction ), std::move( value ) } );
+        }
+
+        static outcome::result<void> SendQueuedTransaction( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            return manager.SendTransactionItem( manager.tx_queue_m.front() );
+        }
+
+        static outcome::result<void> RollbackQueuedTransaction( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            return manager.RollbackTransactions( manager.tx_queue_m.front() );
+        }
+
         static void RunInitializeUTXOs( TransactionManager &manager )
         {
             ASSERT_TRUE( manager.InitializeUTXOs().has_value() );
@@ -1892,6 +1913,113 @@ TEST_F( TransactionManagerRecoveryTest, PreBroadcastNegativeControlNonTypedFailu
     EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::SYNCING );
     EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
                sgns::TransactionManager::TransactionStatus::FAILED );
+}
+
+TEST_F( TransactionManagerRecoveryTest, IncomingConflictBeforeSendPreservesVerifyingAndManagerReady )
+{
+    const auto nonce       = account_->ReserveNextNonce();
+    const auto transaction = MakeSubmissionTransaction( nonce );
+    const auto competitor  = MakeSubmissionTransaction( nonce, "competing-submission" );
+    ASSERT_NE( transaction->GetHash(), competitor->GetHash() );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
+
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::ProcessIncomingTransaction( *manager_, competitor )
+                     .has_value() );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::VERIFYING );
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::VERIFYING );
+    EXPECT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *transaction ) ).has_value() );
+}
+
+TEST_F( TransactionManagerCertificateHistoryTest, CertifiedQueuedTransactionBeforeSendKeepsFinalizedEffects )
+{
+    const auto transaction = MakeTransaction();
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
+    StoreCertificate( transaction );
+    StoreTransaction( transaction );
+    ASSERT_TRUE(
+        sgns::TransactionManagerPendingLifecycleTestAccess::ProcessIncomingTransaction( *manager_, transaction )
+            .has_value() );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_EQ( account_->GetUTXOManager().GetBalance(), transaction->GetAmount() );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), transaction->GetAmount() );
+    ASSERT_TRUE( account_->GetLocalConfirmedNonce().has_value() );
+    EXPECT_EQ( account_->GetLocalConfirmedNonce().value(), transaction->GetNonce() );
+}
+
+TEST_F( TransactionManagerCertificateHistoryTest, CertifiedCompetitorBeforeSendKeepsQueuedLoserFailed )
+{
+    const auto nonce       = account_->ReserveNextNonce();
+    const auto transaction = MakeSubmissionTransaction( nonce );
+    const auto winner      = MakeTransaction( nonce );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
+    StoreCertificate( winner );
+    StoreTransaction( winner );
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::ProcessIncomingTransaction( *manager_, winner )
+                     .has_value() );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+    ASSERT_EQ( manager_->GetTransactionStatusByTxId( winner->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
+
+    EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::READY );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::FAILED );
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( winner->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), winner->GetAmount() );
+    EXPECT_TRUE( db_->Get( sgns::TransactionManager::GetTransactionPath( *transaction ) ).has_error() );
+}
+
+TEST_F( TransactionManagerPreviousHashTest, PublishFailureRollbackPreservesSubsequentlyCertifiedEffects )
+{
+    const auto hold      = MakeCertifiedHold();
+    const auto hold_hash = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
+    auto      &ledger    = account_->GetUTXOManager();
+    const auto funding   = ledger.GetUnconsumedUTXO( hold_hash, 0 );
+    ASSERT_TRUE( funding.has_value() );
+    const auto transaction           = MakePaymentTransfer( funding.value(),
+                                                            { { hold->GetAmount(), account_->GetAddress(), kTokenId } },
+                                                  funding->GetOwnerAddress() );
+    auto       committed_transaction = MakeCommittedTransaction();
+    ASSERT_TRUE( committed_transaction );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
+                                                                 transaction,
+                                                                 std::move( committed_transaction ) );
+    const auto sent = sgns::TransactionManagerPendingLifecycleTestAccess::SendQueuedTransaction( *manager_ );
+    ASSERT_TRUE( sent.has_error() );
+    ASSERT_NE( sent.error(), sgns::make_error_code( sgns::TransactionManager::Error::PRE_BROADCAST_VALIDATION ) );
+
+    StoreCertificate( transaction );
+    StoreTransaction( transaction );
+    ASSERT_TRUE(
+        sgns::TransactionManagerPendingLifecycleTestAccess::ProcessIncomingTransaction( *manager_, transaction )
+            .has_value() );
+    const auto transaction_hash = sgns::base::Hash256::fromHex( transaction->GetHash() ).value();
+    ASSERT_EQ( ledger.GetBalance(), hold->GetAmount() );
+    ASSERT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ transaction_hash } );
+    ASSERT_TRUE(
+        sgns::TransactionManagerPendingLifecycleTestAccess::RollbackQueuedTransaction( *manager_ ).has_value() );
+
+    EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ( ledger.GetBalance(), hold->GetAmount() );
+    EXPECT_EQ( ledger.GetOutPointSpender( hold_hash, 0 ), std::optional{ transaction_hash } );
+    ASSERT_TRUE( account_->GetLocalConfirmedNonce().has_value() );
+    EXPECT_EQ( account_->GetLocalConfirmedNonce().value(), transaction->GetNonce() );
 }
 
 // D-02 half 2: a SYNCING state with no confirming nonce advance within the
