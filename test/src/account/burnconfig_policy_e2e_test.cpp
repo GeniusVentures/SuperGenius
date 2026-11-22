@@ -1,3 +1,7 @@
+/**
+ * @file burnconfig_policy_e2e_test.cpp
+ * @brief Verifies confirmed burn policy through escrow payout construction.
+ */
 #include "account/GeniusAccount.hpp"
 
 #include <gtest/gtest.h>
@@ -10,12 +14,12 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "account/BurnConfig.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/GeniusSigner.hpp"
 #include "account/TokenID.hpp"
 #include "transaction/TransactionManager.hpp"
-#include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -175,13 +179,13 @@ namespace
 
         uint64_t PayEscrowAndReadBurn( const std::string &escrow_path )
         {
-            auto transfer = PayEscrowAndReadTransfer( escrow_path );
-            if ( !transfer )
+            auto payout = PayEscrowAndReadPayout( escrow_path );
+            if ( !payout )
             {
                 return 0;
             }
             constexpr std::string_view zero    = "0x0000000000000000000000000000000000000000";
-            const auto                 outputs = transfer->GetDstInfos();
+            const auto                 outputs = payout->GetDstInfos();
             const auto                 burn    = std::find_if( outputs.begin(),
                                             outputs.end(),
                                             [zero]( const OutputDestInfo &output )
@@ -190,7 +194,7 @@ namespace
             return burn == outputs.end() ? 0 : burn->encrypted_amount;
         }
 
-        std::shared_ptr<TransferTransaction> PayEscrowAndReadTransfer( const std::string &escrow_path )
+        std::shared_ptr<EscrowReleaseTransactionV2> PayEscrowAndReadPayout( const std::string &escrow_path )
         {
             SGProcessing::TaskResult result;
             auto                    *subtask = result.add_subtask_results();
@@ -206,18 +210,18 @@ namespace
             {
                 return 0;
             }
-            std::shared_ptr<TransferTransaction> transfer;
+            std::shared_ptr<EscrowReleaseTransactionV2> payout;
             for ( auto bytes : manager_->GetOutTransactions() )
             {
                 auto transaction = TransactionManager::DeSerializeTransaction( base::Buffer( std::move( bytes ) ) );
                 if ( transaction.has_value() && transaction.value()->GetHash() == paid.value() )
                 {
-                    transfer = std::dynamic_pointer_cast<TransferTransaction>( transaction.value() );
+                    payout = std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( transaction.value() );
                     break;
                 }
             }
-            EXPECT_TRUE( transfer );
-            return transfer;
+            EXPECT_TRUE( payout );
+            return payout;
         }
 
         void ActivateBurnBasisPoints( uint64_t basis_points )
@@ -260,10 +264,10 @@ namespace
                 {
                     continue;
                 }
-                auto transfer = std::dynamic_pointer_cast<TransferTransaction>( transaction.value() );
-                if ( transfer )
+                auto payout = std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( transaction.value() );
+                if ( payout )
                 {
-                    count += transfer->GetDstInfos().size();
+                    count += payout->GetDstInfos().size();
                 }
             }
             return count;
@@ -449,7 +453,7 @@ TEST_F( BurnConfigPolicyE2ETest, PayEscrowUsesExactOverflowSafeBurnForUint64Maxi
     EXPECT_EQ( PayEscrowAndReadBurn( StoreEscrow( maximum ) ), 184467440737095516ULL );
 
     ActivateBurnBasisPoints( TransactionManager::BASIS_POINTS_TOTAL );
-    auto full_burn = PayEscrowAndReadTransfer( StoreEscrow( maximum ) );
+    auto full_burn = PayEscrowAndReadPayout( StoreEscrow( maximum ) );
     ASSERT_TRUE( full_burn );
     constexpr std::string_view zero    = "0x0000000000000000000000000000000000000000";
     const auto                 outputs = full_burn->GetDstInfos();

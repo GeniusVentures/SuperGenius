@@ -1,3 +1,7 @@
+/**
+ * @file policy_lifetime_multi_account_test.cpp
+ * @brief Verifies policy ownership and passive updates across account lifetimes.
+ */
 #include "account/GeniusAccount.hpp"
 
 #include <gtest/gtest.h>
@@ -14,12 +18,12 @@
 #include <vector>
 
 #include "account/BurnConfig.hpp"
+#include "account/EscrowReleaseTransactionV2.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/GeniusSigner.hpp"
 #include "transaction/TransactionManager.hpp"
 #include "account/TrustStartupController.hpp"
-#include "account/TransferTransaction.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "multisig/MultiSig.hpp"
@@ -180,9 +184,12 @@ namespace sgns
             {
                 auto transaction = TransactionManager::DeSerializeTransaction( base::Buffer( std::move( serialized ) ) );
                 if ( transaction.has_error() || transaction.value()->GetHash() != paid.value() ) continue;
-                auto transfer = std::dynamic_pointer_cast<TransferTransaction>( transaction.value() );
-                if ( !transfer ) return 0;
-                const auto outputs = transfer->GetDstInfos();
+                auto payout = std::dynamic_pointer_cast<EscrowReleaseTransactionV2>( transaction.value() );
+                if ( !payout )
+                {
+                    return 0;
+                }
+                const auto outputs = payout->GetDstInfos();
                 const auto burn = std::find_if( outputs.begin(), outputs.end(), [zero]( const OutputDestInfo &output )
                                                 { return output.dest_address == zero; } );
                 return burn == outputs.end() ? 0 : burn->encrypted_amount;
