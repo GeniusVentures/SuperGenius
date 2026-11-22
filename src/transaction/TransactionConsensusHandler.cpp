@@ -628,7 +628,6 @@ namespace sgns
                 return { ConsensusManager::ValidationResult::Pending(
                     { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
             }
-
         }
 
         auto nonce_result = owner_.account_m->GetPeerNonce( tx.GetSrcAddress() );

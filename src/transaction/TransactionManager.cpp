@@ -2851,7 +2851,7 @@ namespace sgns
         {
             return std::optional<std::string>{};
         }
-        const auto hash = params->first.front().txid_hash_.toReadableString();
+        const auto hash     = params->first.front().txid_hash_.toReadableString();
         const auto resolved = genius_input_validator_.ResolveCertifiedEscrowHold( hash, *blockchain_ );
         if ( resolved.verdict != IInputValidator::WitnessVerdict::kValid || !resolved.producer )
         {

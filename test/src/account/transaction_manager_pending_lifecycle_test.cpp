@@ -2047,8 +2047,8 @@ TEST_F( TransactionDeletionRecoveryTest, V2RestartRebuildPreservesOneSpender )
     // Both consumed hold and payment values can be pruned while canonical certificates survive.
     StorePrunableTransaction( hold );
     StorePrunableTransaction( winner );
-    const auto                   hold_path   = sgns::TransactionManager::GetTransactionPath( *hold );
-    const auto                   winner_path = sgns::TransactionManager::GetTransactionPath( *winner );
+    const auto hold_path   = sgns::TransactionManager::GetTransactionPath( *hold );
+    const auto winner_path = sgns::TransactionManager::GetTransactionPath( *winner );
     ASSERT_TRUE( ConfirmPayment( winner ).has_value() );
     auto      &ledger      = account_->GetUTXOManager();
     const auto hold_hash   = sgns::base::Hash256::fromHex( hold->GetHash() ).value();
