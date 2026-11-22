@@ -3953,24 +3953,71 @@ TEST_F( FinalityFaultNetwork, RestartedFinalCertificateRevalidatesThroughGrandfa
     const auto durable_certificate = network.first.consensus->GetCertificateBySlot( slot );
     ASSERT_TRUE( durable_certificate.has_value() );
 
+    // Quiesce competing certificate publication before the restart probe. A
+    // valid lower-hash envelope may replace our earlier capture; only the
+    // exact currently stored bytes carry grandfather authority.
+    StopPeer( network.second );
+    StopPeer( network.third );
+    StopPeer( network.passive );
+    network.first.consensus->Close();
+    const auto durable_key    = sgns::ConsensusManager::GetExpectedCertificateSlotKey( durable_certificate.value() );
+    const auto before_restart = network.first.db->Get( { durable_key } );
+    ASSERT_TRUE( before_restart.has_value() );
+    const auto before_bytes     = before_restart.value().toString();
+    const auto certificate_hash = []( std::string_view bytes )
+    { return sgns::crypto::sha2_256( bytes.data(), bytes.size() ).toHex(); };
+    RecordProperty( "captured_certificate_hash", certificate_hash( durable_certificate.value().SerializeAsString() ) );
+    RecordProperty( "canonical_before_restart_hash", certificate_hash( before_bytes ) );
+    RecordProperty( "canonical_before_restart_hex", before_restart.value().toHex() );
+
     RestartPeer( network.first );
     ASSERT_TRUE( network.first.consensus );
-    ConnectPeers( Peers( network ) );
+    // Join the recovery timer before checking counter deltas, so unrelated
+    // background validation cannot satisfy either counter assertion.
+    network.first.consensus->Close();
 
-    // Durable finality re-reads Approve on the restarted node...
-    ASSERT_WAIT_FOR_CONDITION( [&] { return network.first.consensus->CheckCertificateForSlot( slot ); },
-                               std::chrono::seconds( 25 ),
-                               "restarted node recovered its durable final certificate",
-                               nullptr );
-    // ...through the grandfather probe (strict rule skipped), proven by the
-    // probe counter on the fresh post-restart manager.
-    const auto probes_before = sgns::MultiNodeFinalityFaultTestAccess::GrandfatheredFinalityProbes(
-        network.first.consensus );
+    const auto after_restart = network.first.db->Get( { durable_key } );
+    ASSERT_TRUE( after_restart.has_value() );
+    const auto after_bytes = after_restart.value().toString();
+    RecordProperty( "canonical_after_restart_hash", certificate_hash( after_bytes ) );
+    RecordProperty( "canonical_after_restart_hex", after_restart.value().toHex() );
+    sgns::ConsensusManager::Certificate current_certificate;
+    ASSERT_TRUE( current_certificate.ParseFromString( after_bytes ) );
+    ASSERT_EQ( current_certificate.SerializeAsString(), after_bytes );
+    ASSERT_EQ( sgns::ConsensusManager::GetExpectedCertificateSlotKey( current_certificate ), durable_key );
+
+    // The earlier valid capture remains valid, even if canonical replacement
+    // means it now needs strict authorization rather than grandfathering.
     EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::ValidateCertificate( network.first.consensus,
                                                                             durable_certificate.value() ),
                sgns::ConsensusManager::Check::Approve );
+
+    const auto probes_before = sgns::MultiNodeFinalityFaultTestAccess::GrandfatheredFinalityProbes(
+        network.first.consensus );
+    EXPECT_EQ(
+        sgns::MultiNodeFinalityFaultTestAccess::ValidateCertificate( network.first.consensus, current_certificate ),
+        sgns::ConsensusManager::Check::Approve );
     EXPECT_GT( sgns::MultiNodeFinalityFaultTestAccess::GrandfatheredFinalityProbes( network.first.consensus ),
                probes_before );
+
+    // Certificate timestamp is an unsigned envelope field: this remains a
+    // valid certificate for the same signed proposal/votes, but its different
+    // exact content must never borrow the canonical record's authority.
+    auto noncanonical_certificate = current_certificate;
+    noncanonical_certificate.set_timestamp( current_certificate.timestamp() ^ uint64_t{ 1 } );
+    ASSERT_NE( noncanonical_certificate.SerializeAsString(), after_bytes );
+    ASSERT_EQ( sgns::ConsensusManager::GetExpectedCertificateSlotKey( noncanonical_certificate ), durable_key );
+    RecordProperty( "noncanonical_certificate_hash", certificate_hash( noncanonical_certificate.SerializeAsString() ) );
+    const auto probes_before_noncanonical = sgns::MultiNodeFinalityFaultTestAccess::GrandfatheredFinalityProbes(
+        network.first.consensus );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::ValidateCertificate( network.first.consensus,
+                                                                            noncanonical_certificate ),
+               sgns::ConsensusManager::Check::Approve );
+    EXPECT_EQ( sgns::MultiNodeFinalityFaultTestAccess::GrandfatheredFinalityProbes( network.first.consensus ),
+               probes_before_noncanonical );
+    const auto canonical_after_validation = network.first.db->Get( { durable_key } );
+    ASSERT_TRUE( canonical_after_validation.has_value() );
+    EXPECT_EQ( canonical_after_validation.value().toString(), after_bytes );
 
     StopNetwork( network );
 }
