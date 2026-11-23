@@ -2294,6 +2294,40 @@ groups:
         // detach is deliberately absent here), so it is NOT a disposal
         // target: drive with include_overlap=false.
         DriveGcToQuiescence( inv, /*include_overlap=*/false );
+        // [19-05 run-45235774034 stabilization] The drive above awaits
+        // the gc-only root's DISPOSED MARKER, and the fixed point's
+        // SECOND disposal (the seeded pruned block, per the posture note
+        // above) was never awaited at all. Worse, a marker-only await can
+        // observe disposed=true from INSIDE the D-16 HALF1->HALF2 window
+        // (the marker commits in HALF1; RunHotCleanup removes the hot
+        // bytes in HALF2) - the snapshot then reads the bytes still
+        // present (before=true) while the re-run window sees them gone
+        // (after=false): exactly the block_present flip the loaded
+        // runners hit at the :2313-class comparison. Await the BYTE-level
+        // fixed point instead: both disposal targets' markers set AND
+        // their bytes gone from every tier the decorator's contains()
+        // consults - unambiguous, half-2-inclusive, and a no-op poll when
+        // convergence already completed (instrument the predicate, never
+        // widen a deadline).
+        {
+            auto pruned_cid  = sgns::CID::fromString( inv.pruned_cid );
+            auto gc_only_cid = sgns::CID::fromString( inv.gc_only_cid );
+            ASSERT_FALSE( pruned_cid.has_error() );
+            ASSERT_FALSE( gc_only_cid.has_error() );
+            auto syncer = syncerOf( *db_ );
+            ASSERT_TRUE( PollUntil(
+                [&] {
+                    auto pruned_bytes = syncer->HasRawBlockBytes( pruned_cid.value() );
+                    auto gc_only_bytes = syncer->HasRawBlockBytes( gc_only_cid.value() );
+                    return db_->IsColdDisposed( pruned_cid.value() )
+                           && db_->IsColdDisposed( gc_only_cid.value() )
+                           && pruned_bytes.has_value() && !pruned_bytes.value()
+                           && gc_only_bytes.has_value() && !gc_only_bytes.value();
+                },
+                std::chrono::milliseconds( 20000 ) ) )
+                << "GC never reached the byte-level disposal fixed point "
+                   "(both disposal targets' markers set AND bytes gone)";
+        }
         MatrixSnapshot before;
         SnapshotOf( inv, before );
 
