@@ -78,7 +78,8 @@ namespace sgns::base {
     return Buffer{std::move(bytes)};
   }
 
-  Buffer::Buffer(std::vector<uint8_t> v) : data_(std::move(v)) {}
+  // Buffer(std::vector<uint8_t>) moved inline into buffer.hpp (the
+  // 19-05 GNU/lld single-pass link find - see the header note).
   Buffer::Buffer(gsl::span<const uint8_t> s) : data_(s.begin(), s.end()) {}
 
   const std::vector<uint8_t> &Buffer::toVector() const {

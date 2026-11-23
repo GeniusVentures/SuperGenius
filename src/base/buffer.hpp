@@ -38,8 +38,16 @@ namespace sgns::base {
 
     /**
      * @brief lvalue construct buffer from a byte vector
+     * @details Defined inline (the 19-05 dispatch find, run 45235774034):
+     *          the out-of-line definition left archive members that
+     *          reference this trivial ctor from late-scanned static
+     *          libraries (GraphsyncDAGSyncer::StageBlockRemoval, 16-02)
+     *          unresolvable under GNU/lld single-pass linking (Linux/
+     *          iOS/Android builds), while the multi-pass MSVC/Apple
+     *          linkers resolved it - a platform-asymmetric link break
+     *          invisible until the first Linux dispatch of the branch.
      */
-    explicit Buffer(std::vector<uint8_t> v);
+    explicit Buffer(std::vector<uint8_t> v) : data_(std::move(v)) {}
     explicit Buffer(gsl::span<const uint8_t> s);
 
     Buffer(const uint8_t *begin, const uint8_t *end);

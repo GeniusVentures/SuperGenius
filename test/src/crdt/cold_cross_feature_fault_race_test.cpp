@@ -4292,6 +4292,27 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_FullWire_RefusalFailoverUnderConcur
         marker_value.put( record.SerializeAsString() );
         ASSERT_TRUE( gdb_b->GetDataStore()->put( marker_key, marker_value ).has_value() );
 
+        // THE TEETH (the run-45235774034 macOS find: B fetched + merged
+        // the evidenced cid while its S3 tier was never crossed - the
+        // refusal leg could pass VACUOUSLY on platforms where the wire
+        // fetch fails for timing): assert B's OWN consult - the exact
+        // production predicate the serve path consults - returns Pruned
+        // BEFORE anything is broadcast. A miss here pinpoints the
+        // consult read; a pass with a later merge pinpoints a
+        // delivery path that bypasses the consult (a production gap).
+        {
+            auto syncer_b = std::static_pointer_cast<GraphsyncDAGSyncer>(
+                gdb_b->GetBroadcaster()->GetDagSyncer() );
+            ASSERT_TRUE( syncer_b != nullptr );
+            auto verdict_b = syncer_b->LookupPruneEvidence( cid_x );
+            ASSERT_TRUE( verdict_b.has_value() )
+                << "X11 teeth: B's consult surface is unavailable (cold hook null)";
+            EXPECT_EQ( *verdict_b, PruneEvidenceClass::Pruned )
+                << "X11 teeth: B's own consult must answer Pruned for the "
+                   "evidenced cid BEFORE any broadcast - the marker row is "
+                   "in B's store";
+        }
+
         // QUIESCE first (run1 find): the propagation drain's trailing
         // S3 traffic would otherwise pollute the zero-Get attribution.
         ASSERT_TRUE( PollUntil( [&] { return gdb_b->GetColdStorageStatus().pending_upload_count == 0; },
