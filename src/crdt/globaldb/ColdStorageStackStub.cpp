@@ -93,6 +93,48 @@ namespace sgns::crdt
         (void)manager; // no manager exists on OFF builds; null-safe no-op
     }
 
+    // COMP-03 (v1.2 Phase 16): the ODR twin of the disposed-marker
+    // bridge - OFF builds have no cold tier, so nothing is ever disposed.
+    // Mirrors the gated TU's null-manager arm exactly (false, never
+    // nullopt - the caller's freeze-safe classification is for read
+    // errors, not absent tiers).
+    // [19-05 run-45252321451 find] This twin (and the three GC-hook twins
+    // below, COMP-02) were MISSING when the forwardings landed - every
+    // OFF-build consumer pulling the GlobalDB unity object (iOS/Android;
+    // the dispatch instrument never gates -DSGNS_COLD_STORAGE onto them)
+    // failed to link with undefined references to exactly these four.
+    std::optional<bool> IsColdDisposed( const std::shared_ptr<ColdStorageManager> &manager,
+                                        const CID                                &cid )
+    {
+        (void)manager;
+        (void)cid; // no manager exists on OFF builds; nothing is disposed
+        return false;
+    }
+
+    // COMP-02 (v1.2 Phase 16): the ODR twins of the TEST-ONLY GC
+    // park-point forwardings - no manager exists on OFF builds, so there
+    // is nothing to park. PRODUCTION CODE MUST NEVER CALL these.
+    void SetGcBetweenHalvesHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                            std::function<void()>                    hook )
+    {
+        (void)manager;
+        (void)hook; // no manager exists on OFF builds; null-safe no-op
+    }
+
+    void SetGcPreHalfOneHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                         std::function<void()>                    hook )
+    {
+        (void)manager;
+        (void)hook; // no manager exists on OFF builds; null-safe no-op
+    }
+
+    void SetGcPreMarkProcessHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                             std::function<void()>                    hook )
+    {
+        (void)manager;
+        (void)hook; // no manager exists on OFF builds; null-safe no-op
+    }
+
     void StartColdReadService( const std::shared_ptr<ColdReadService> &service )
     {
         (void)service; // no service exists on OFF builds; null-safe no-op
