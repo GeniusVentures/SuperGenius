@@ -4234,6 +4234,71 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_FullWire_RefusalFailoverUnderConcur
     gdb_a->AddBroadcastTopic( private_topic ); // A only - B never listens
     gdb_a->Start();
     gdb_b->Start();
+
+    // --- The two private-topic puts BEFORE THE DIAL (the run-45257655488
+    // root cause): A's broadcaster pushes new head CIDs to every
+    // CONNECTED peer at put time through the direct peer-queue path -
+    // TOPIC-AGNOSTIC, so a "private" topic does not isolate once the
+    // wire is up, and the push is QUEUED, not dropped, when no peer is
+    // connected: it FLUSHES the moment the dial completes (local-rerun
+    // find - Requests 1/2 for the private cids fired immediately after
+    // AddPeers, ahead of the prologue). No put-time ordering alone can
+    // therefore keep cid_x off B; the evidence row must be ARMED BEFORE
+    // THE DIAL so the flushed push arrives at a consult that refuses.
+    CID cid_x, cid_y;
+    {
+        // keyY FIRST, keyX second (the local-rerun find): each Put links
+        // the topic's prior heads, so cid_y (published first) carries a
+        // LINK-FREE delta while cid_x links cid_y. The flushed push
+        // delivers both; the ARMED consult refuses cid_x at its root
+        // (never processed - its link walk never runs), and cid_y
+        // processes cleanly with no descent toward the evidenced cid.
+        // The reverse order made cid_y's walk onto cid_x fail -> the
+        // root job's retry-with-backoff loop queued the prologue
+        // tombstone's merge behind it (the prologue read alive).
+        sgns::crdt::GlobalDB::Buffer value_y;
+        value_y.put( std::string( "y-value" ) );
+        auto put_y = gdb_a->Put( sgns::crdt::HierarchicalKey( "x11/served/key" ), value_y, { private_topic } );
+        ASSERT_TRUE( put_y.has_value() );
+        cid_y = put_y.value();
+        sgns::crdt::GlobalDB::Buffer value_x;
+        value_x.put( std::string( "x-value" ) );
+        auto put_x = gdb_a->Put( sgns::crdt::HierarchicalKey( "x11/refused/key" ), value_x, { private_topic } );
+        ASSERT_TRUE( put_x.has_value() );
+        cid_x = put_x.value();
+    }
+
+    // ARM B FIRST: the /prune/blk evidence row for cid_x (sanctioned
+    // builder key + production record shape - the light node's own
+    // policy state), seeded the moment the cid exists and BEFORE the
+    // wire can carry it. THE TEETH (the run-45235774034 macOS find):
+    // assert B's OWN consult - the exact production predicate the serve
+    // path consults - returns Pruned BEFORE anything is broadcast. A
+    // miss here pinpoints the consult read; a pass with a later merge
+    // pinpoints a delivery path that bypasses the consult.
+    {
+        const auto cid_x_string = cid_x.toString();
+        ASSERT_TRUE( cid_x_string.has_value() );
+        sgns::crdt::GlobalDB::Buffer marker_key;
+        marker_key.put( sgns::PruneEligibility::BuildPruneBlockMarkerKey( cid_x_string.value() ) );
+        SGTransaction::PrunedBlockRecord record;
+        record.set_pruning_tx_hash( "x11-test-pruning-tx-hash" );
+        record.set_has_erased_at_generation( true );
+        record.set_erased_at_generation( 1 );
+        sgns::crdt::GlobalDB::Buffer marker_value;
+        marker_value.put( record.SerializeAsString() );
+        ASSERT_TRUE( gdb_b->GetDataStore()->put( marker_key, marker_value ).has_value() );
+        auto syncer_b = std::static_pointer_cast<GraphsyncDAGSyncer>(
+            gdb_b->GetBroadcaster()->GetDagSyncer() );
+        ASSERT_TRUE( syncer_b != nullptr );
+        auto verdict_b = syncer_b->LookupPruneEvidence( cid_x );
+        ASSERT_TRUE( verdict_b.has_value() )
+            << "X11 teeth: B's consult surface is unavailable (cold hook null)";
+        EXPECT_EQ( *verdict_b, PruneEvidenceClass::Pruned )
+            << "X11 teeth: B's own consult must answer Pruned for the "
+               "evidenced cid BEFORE the dial - the marker row is in B's store";
+    }
+
     pubs1->AddPeers( { pubs2->GetInterfaceAddress() } );
 
     // --- PROPAGATION PROLOGUE: put + delete on the shared topic - the
@@ -4255,64 +4320,33 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_FullWire_RefusalFailoverUnderConcur
             << "X11: node B never received+drained both prologue deltas; "
             << dump_status( "B", *gdb_b );
         auto q_a = gdb_a->QueryKeyValues( prologue_key );
-        auto q_b = gdb_b->QueryKeyValues( prologue_key );
-        ASSERT_TRUE( q_a.has_value() && q_b.has_value() );
+        ASSERT_TRUE( q_a.has_value() );
         EXPECT_TRUE( q_a.value().empty() ) << "X11: A's prologue value is dead";
-        EXPECT_TRUE( q_b.value().empty() ) << "X11: B's prologue value is dead after propagation";
+        // B's tombstone merge is ASYNC on the dag worker and - with the
+        // private puts now pre-dial - its job sits BEHIND the flushed
+        // private-head arrivals (blocks-arrived != merge-applied, the
+        // resurrection suite's SC4 round-11 lesson): wait for the
+        // OBSERVABLE (value dead), bounded and latched, never a fixed
+        // sleep.
+        ASSERT_TRUE( PollUntil(
+            [&] {
+                auto q = gdb_b->QueryKeyValues( prologue_key );
+                return q.has_value() && q.value().empty();
+            },
+            std::chrono::milliseconds( 30000 ) ) )
+            << "X11: B's prologue value never died after propagation; "
+            << dump_status( "B", *gdb_b );
     }
 
-    // --- The two private-topic puts (B never receives these blocks).
-    CID cid_x, cid_y;
+    // (The private-topic puts moved ABOVE the dial - see the comment at
+    // their new home; this slot previously raced the evidence seeding.)
+
+    // --- REFUSAL TERMINALITY ON THE WIRE: the evidence row + teeth ran
+    // PRE-DIAL (their new home above) - B was armed before the wire
+    // ever carried cid_x; the queued put-time push flushes into an
+    // armed consult and is refused on arrival. What remains here is
+    // the observation window over the armed state.
     {
-        sgns::crdt::GlobalDB::Buffer value_x;
-        value_x.put( std::string( "x-value" ) );
-        auto put_x = gdb_a->Put( sgns::crdt::HierarchicalKey( "x11/refused/key" ), value_x, { private_topic } );
-        ASSERT_TRUE( put_x.has_value() );
-        cid_x = put_x.value();
-        sgns::crdt::GlobalDB::Buffer value_y;
-        value_y.put( std::string( "y-value" ) );
-        auto put_y = gdb_a->Put( sgns::crdt::HierarchicalKey( "x11/served/key" ), value_y, { private_topic } );
-        ASSERT_TRUE( put_y.has_value() );
-        cid_y = put_y.value();
-    }
-
-    // --- REFUSAL TERMINALITY ON THE WIRE: B carries the /prune/blk
-    // evidence row for cid_x (sanctioned builder key + production
-    // record shape - the light node's own policy state).
-    {
-        const auto cid_x_string = cid_x.toString();
-        ASSERT_TRUE( cid_x_string.has_value() );
-        sgns::crdt::GlobalDB::Buffer marker_key;
-        marker_key.put( sgns::PruneEligibility::BuildPruneBlockMarkerKey( cid_x_string.value() ) );
-        SGTransaction::PrunedBlockRecord record;
-        record.set_pruning_tx_hash( "x11-test-pruning-tx-hash" );
-        record.set_has_erased_at_generation( true );
-        record.set_erased_at_generation( 1 );
-        sgns::crdt::GlobalDB::Buffer marker_value;
-        marker_value.put( record.SerializeAsString() );
-        ASSERT_TRUE( gdb_b->GetDataStore()->put( marker_key, marker_value ).has_value() );
-
-        // THE TEETH (the run-45235774034 macOS find: B fetched + merged
-        // the evidenced cid while its S3 tier was never crossed - the
-        // refusal leg could pass VACUOUSLY on platforms where the wire
-        // fetch fails for timing): assert B's OWN consult - the exact
-        // production predicate the serve path consults - returns Pruned
-        // BEFORE anything is broadcast. A miss here pinpoints the
-        // consult read; a pass with a later merge pinpoints a
-        // delivery path that bypasses the consult (a production gap).
-        {
-            auto syncer_b = std::static_pointer_cast<GraphsyncDAGSyncer>(
-                gdb_b->GetBroadcaster()->GetDagSyncer() );
-            ASSERT_TRUE( syncer_b != nullptr );
-            auto verdict_b = syncer_b->LookupPruneEvidence( cid_x );
-            ASSERT_TRUE( verdict_b.has_value() )
-                << "X11 teeth: B's consult surface is unavailable (cold hook null)";
-            EXPECT_EQ( *verdict_b, PruneEvidenceClass::Pruned )
-                << "X11 teeth: B's own consult must answer Pruned for the "
-                   "evidenced cid BEFORE any broadcast - the marker row is "
-                   "in B's store";
-        }
-
         // QUIESCE first (run1 find): the propagation drain's trailing
         // S3 traffic would otherwise pollute the zero-Get attribution.
         ASSERT_TRUE( PollUntil( [&] { return gdb_b->GetColdStorageStatus().pending_upload_count == 0; },

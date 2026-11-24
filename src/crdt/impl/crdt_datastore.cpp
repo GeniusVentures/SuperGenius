@@ -1288,6 +1288,64 @@ namespace sgns::crdt
     outcome::result<void> CrdtDatastore::HandleRootCIDBlock( const CID &aCid )
     {
         logger_->debug( "{}: begin for root CID {}", __func__, aCid.toString().value() );
+
+        // [fix(19-05), run-45257655488 find] The evidence guard for
+        // NEVER-SEALED blocks: the HandleCIDBroadcast seal guard covers
+        // roots this node processed and erased (the seal is retained by
+        // design), but an evidenced CID this node never sealed fell
+        // through to the fetch lane - and getNode only consults evidence
+        // on cold-chain MISSES (its cache/DAG-service steps precede the
+        // consult), so a block already stored by any background fetcher
+        // merged WITHOUT a consult: the resurrection surface X11 caught
+        // on the wire (the direct peer-queue announcement push is
+        // topic-agnostic, so a "private" topic does not isolate). ONE
+        // consult at the top of the worker-side merge gate - the exact
+        // thread context the production evidence lambda already runs on
+        // (never the HandleNext broadcaster thread, whose GetRaw would
+        // deadlock ShutdownNow's lifecycle join): the same single
+        // predicate the serve path uses (SC3/D-02 source consistency,
+        // the GraphsyncDAGSyncer cast - the D-05 pattern). EVERY merged
+        // node passes through this gate (FetchNodes re-enqueues each
+        // fetched link as a job), so the guard covers roots AND ancestry.
+        // Pruned is TERMINAL (the evidence row never disappears - a
+        // retry can never succeed, so the failure is marked WITHOUT the
+        // retry schedule: the retry storm on evidenced-but-unsealed
+        // erased deltas starved the workers in local verification);
+        // Malformed fails closed the same way (re-reading corrupt bytes
+        // cannot fix them); NoEvidence and the cold-disabled nullopt
+        // proceed unchanged.
+        {
+            const auto graphsync_syncer = std::dynamic_pointer_cast<GraphsyncDAGSyncer>( dagSyncer_ );
+            if ( graphsync_syncer != nullptr )
+            {
+                auto evidence = graphsync_syncer->LookupPruneEvidence( aCid );
+                if ( evidence.has_value()
+                     && ( *evidence == PruneEvidenceClass::Pruned
+                          || *evidence == PruneEvidenceClass::Malformed ) )
+                {
+                    if ( *evidence == PruneEvidenceClass::Malformed )
+                    {
+                        logger_->warn( "{}: prune evidence malformed for block {} - failing closed, refusing merge",
+                                       __func__,
+                                       aCid.toString().value() );
+                    }
+                    else
+                    {
+                        logger_->debug( "{}: evidenced block {} - terminal, refusing merge",
+                                        __func__,
+                                        aCid.toString().value() );
+                    }
+                    {
+                        std::lock_guard lock( dagWorkerMutex_ );
+                        MarkJobFailedLocked( aCid, /*schedule_retry=*/false );
+                        ClearFailedRootRetryLocked( aCid );
+                    }
+                    dagWorkerCv_.notify_all();
+                    return outcome::failure( Error::NODE_DESERIALIZATION );
+                }
+            }
+        }
+
         auto root_job_result = CreateRootJob( aCid );
         if ( root_job_result.has_failure() )
         {
