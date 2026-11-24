@@ -1962,11 +1962,22 @@ groups:
         // Durable journals while the GC is parked), park the erase at
         // the observer, THEN release the GC - its passes dispose the
         // detached targets while the erase sits parked pre-commit.
+        // [19-05 dispatch-4 tart find] The park rides the MID-PASS hook,
+        // not PreMarkProcess: the pre-mark hook fires only per DUE MARK,
+        // so arming it before DetachT2Chain (before any new eligibility
+        // exists) races the background GC having already quiesced the
+        // seeded targets during the fixture - on the slow tart runner
+        // under -j load the race lost (dispatches 3+4: the leg passed
+        // the FULL lane and failed the Tier-1 lane on the same machine,
+        // minutes apart). The mid-pass hook fires UNCONDITIONALLY every
+        // pass (after the scan, before any marking - the journals are
+        // untouched at that point, the same protection the pre-mark
+        // park gave), so the park always engages.
         auto        gc_gate = std::make_shared<WindowGate>();
         std::thread gc_park_watcher;
-        db_->SetGcPreMarkProcessHookForTest( [gc_gate] { gc_gate->Enter(); } );
+        db_->SetGcMidPassHookForTest( [gc_gate] { gc_gate->Enter(); } );
         ASSERT_TRUE( gc_gate->WaitInside( std::chrono::milliseconds( 20000 ) ) )
-            << "GC never parked pre-mark";
+            << "GC never parked mid-pass";
 
         DetachT2Chain();
 
@@ -1981,7 +1992,7 @@ groups:
         // Release the GC: its passes run to quiescence while the erase
         // is parked (the real concurrent disposal).
         gc_gate->Release();
-        db_->SetGcPreMarkProcessHookForTest( nullptr );
+        db_->SetGcMidPassHookForTest( nullptr );
         DriveGcToQuiescence( inv, /*include_overlap=*/true );
 
         erase_window.Release();

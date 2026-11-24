@@ -135,6 +135,17 @@ namespace sgns::crdt
         (void)hook; // no manager exists on OFF builds; null-safe no-op
     }
 
+    // [v1.2 Phase 19, the dispatch-4 tart find] The ODR twin of the
+    // unconditional mid-pass park forwarding - no manager exists on OFF
+    // builds, so there is nothing to park. PRODUCTION CODE MUST NEVER
+    // CALL this.
+    void SetGcMidPassHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                     std::function<void()>                    hook )
+    {
+        (void)manager;
+        (void)hook; // no manager exists on OFF builds; null-safe no-op
+    }
+
     void StartColdReadService( const std::shared_ptr<ColdReadService> &service )
     {
         (void)service; // no service exists on OFF builds; null-safe no-op

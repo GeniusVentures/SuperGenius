@@ -414,6 +414,19 @@ namespace sgns::crdt
         }
     }
 
+    void SetGcMidPassHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                     std::function<void()>                    hook )
+    {
+        // TEST-ONLY (v1.2 Phase 19, the dispatch-4 tart find): the
+        // unconditional mid-pass park - fires every pass regardless of
+        // mark state, so parking legs cannot race background
+        // quiescence. Observation scaffolding ONLY - never coordination.
+        if ( manager )
+        {
+            manager->SetGcMidPassHookForTesting( std::move( hook ) );
+        }
+    }
+
     void RequestColdStorageDrain( const std::shared_ptr<ColdStorageManager> &manager )
     {
         if ( manager )

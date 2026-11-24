@@ -666,6 +666,14 @@ namespace sgns::crdt
         /// park point (before the eligibility scan). See above.
         void SetGcPreMarkProcessHookForTest( std::function<void()> hook );
 
+        /// TEST-ONLY forwarding to the retention-GC's MID-PASS park point
+        /// (v1.2 Phase 19, the dispatch-4 tart find): fires UNCONDITIONALLY
+        /// every pass - after the eligibility scan, before the heads
+        /// re-check and any marking - so parking legs cannot race
+        /// background quiescence the way the mark-dependent hooks can.
+        /// PRODUCTION CODE MUST NEVER CALL these.
+        void SetGcMidPassHookForTest( std::function<void()> hook );
+
         /**
          * @brief      Cold-tier presence signal (v1.2 Phase 14, PRUNE-01):
          *             true iff this GlobalDB was constructed with a cold

@@ -261,6 +261,21 @@ namespace sgns::crdt
                                              std::function<void()>                    hook );
 
     /**
+     * @brief      Null-safe TEST-ONLY mid-pass park-point forwarding
+     *             (v1.2 Phase 19, the dispatch-4 tart find): fires
+     *             UNCONDITIONALLY at every GC pass's mid-point (inside
+     *             EvaluatePass, after the eligibility scan, BEFORE the
+     *             heads re-check and any marking) - unlike the three
+     *             hooks above, engagement does not depend on a DUE MARK
+     *             existing, so a leg parking before creating new
+     *             eligibility cannot race background quiescence. No-op
+     *             on a null manager. PRODUCTION CODE MUST NEVER CALL
+     *             this.
+     */
+    void SetGcMidPassHookForTesting( const std::shared_ptr<ColdStorageManager> &manager,
+                                     std::function<void()>                    hook );
+
+    /**
      * @brief      Enqueue an ops-triggered drain (flag + notify only - the
      *             drain body NEVER runs on the caller's thread; SC2).
      * @param[in]  manager the bundle's manager (may be null)

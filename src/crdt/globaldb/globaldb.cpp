@@ -1569,6 +1569,17 @@ namespace sgns::crdt
         sgns::crdt::SetGcPreMarkProcessHookForTesting( cold_manager_, std::move( hook ) );
     }
 
+    void GlobalDB::SetGcMidPassHookForTest( std::function<void()> hook )
+    {
+        // TEST-ONLY (v1.2 Phase 19, the dispatch-4 tart find): the
+        // UNCONDITIONAL mid-pass park - fires every pass regardless of
+        // mark state (the pre-mark hook needs a DUE MARK to exist, so a
+        // leg parking before creating new eligibility races background
+        // quiescence). Observation scaffolding ONLY - never coordination.
+        std::lock_guard<std::mutex> lock( lifecycle_mutex_ );
+        sgns::crdt::SetGcMidPassHookForTesting( cold_manager_, std::move( hook ) );
+    }
+
     outcome::result<void> GlobalDB::EraseEntry(
         const std::string                                              &key,
         const CID                                                      &cid,
