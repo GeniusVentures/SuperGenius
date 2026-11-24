@@ -3488,9 +3488,13 @@ TEST_F( ColdCrossFeatureFaultRaceTest, Cross_ExemptionConsultVsConcurrentPrune_F
         gc_thread.join();
         timing_->ClearTimings();
 
-        EXPECT_EQ( manager->GetStatus().gc_last_pass_candidates, 1u )
-            << "X7 seam: the canary is nominated - the concurrent write "
-               "aborted nothing";
+        EXPECT_GE( manager->GetStatus().gc_last_pass_candidates, 1u )
+            << "X7 seam: the pass COMPLETED with a nomination - the concurrent "
+               "write aborted nothing (an abort would read 0; the dispatch-5 "
+               "tart find: on a 12 s wall-clock case, earlier-seeded journal "
+               "records cross the 5 s retention mid-case and legitimately "
+               "join the candidate set - the exact count is wall-time-"
+               "sensitive, the exemption count below is the claim)";
         EXPECT_EQ( manager->GetStatus().gc_last_pass_exempted, 1u )
             << "X7 seam: the pass exempts EXACTLY the evidenced gap "
                "(counted-continue; the concurrent write on the other cid "
