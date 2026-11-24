@@ -164,18 +164,18 @@ namespace
     const sgns::TokenID kTestTokenId = sgns::TokenID::FromBytes( { 0x00 } );
 
     /// The second topic (the two-class topology: T1 carries the
-    /// never-detached chain â€” TxPruner-only groups stay walk-reachable;
-    /// T2 carries the detachables â€” RemoveHead orphans only T2 chains).
+    /// never-detached chain — TxPruner-only groups stay walk-reachable;
+    /// T2 carries the detachables — RemoveHead orphans only T2 chains).
     constexpr char kSeedTopic2[] = "CRDT.Datastore.TEST.Channel2";
 
     /// The matrix's fixed transfer timestamp base (twin determinism:
     /// identical op sequences over twin dirs must produce identical
-    /// delta CIDs â€” wall-clock timestamps would fork them). Both twins
+    /// delta CIDs — wall-clock timestamps would fork them). Both twins
     /// receive the SAME base from the builder parameter.
     constexpr int64_t kMatrixTxTsBaseMs = 1760000000000;
 
     /// Unsigned env override with fallback (copied VERBATIM from
-    /// cold_storage_fault_race_test.cpp â€” NAMED EXCEPTION to CLAUDE.md
+    /// cold_storage_fault_race_test.cpp — NAMED EXCEPTION to CLAUDE.md
     /// hard invariant 2, named in the 16-03 commit messages). The
     /// compose race knobs: SGNS_COMPOSE_RACE_JITTER_SEED (0 = random) /
     /// SGNS_COMPOSE_RACE_JITTER_ITERS (default 3).
@@ -540,7 +540,7 @@ groups:
                 sgns::TransferTransaction::New( {}, std::move( destinations ), std::move( dag ) ) );
         }
 
-        /// The MATRIX transfer shape: FIXED timestamp (twin determinism â€”
+        /// The MATRIX transfer shape: FIXED timestamp (twin determinism —
         /// identical sequences over twin dirs produce identical delta
         /// CIDs; wall-clock timestamps would fork them).
         std::shared_ptr<sgns::TransferTransaction> MakeMatrixTransfer( uint64_t nonce, size_t output_count )
@@ -740,7 +740,7 @@ groups:
         /// enumeration over the set root's t/, k/ namespaces + the heads
         /// namespace (GetKeysPrefix-derived, no trailing slash), the
         /// /prune/tx/ and /prune/blk/ maps, and per-CID presence/seal/
-        /// disposed/LRU state (the inventory-scoped keyspaces â€” binary
+        /// disposed/LRU state (the inventory-scoped keyspaces — binary
         /// CID keys and seal rows are per-CID reads, never namespace
         /// substring scans; seal state via isResolved only).
         struct MatrixSnapshot
@@ -858,7 +858,7 @@ groups:
             inv.pruned_tx_path = sgns::TransactionManager::GetTransactionPath( *pruned_tx );
             // The raw map row was ERASED by the cycle - the /prune/blk
             // recovery block below is the CID source.
-            // The map row was erased by the cycle â€” recover the CID from
+            // The map row was erased by the cycle — recover the CID from
             // the /prune/blk row's key (the marker the cycle staged).
             {
                 auto found = db_->QueryRaw( crdt::GlobalDB::Buffer{}.put(
@@ -883,7 +883,7 @@ groups:
             }
 
             // (2) The TxPruner-only group: mid-chain on T1 (stays
-            // walk-reachable forever â€” GC-ineligible).
+            // walk-reachable forever — GC-ineligible).
             auto spender_t = MakeMatrixTransfer( 201, 0 );
             auto txonly_tx = MakeMatrixTransfer( 202, 1 );
             SeedTransactionOn( spender_t, kSeedTopic );
@@ -895,7 +895,7 @@ groups:
             ASSERT_NE( inv.txonly_cid, "absent" );
 
             // (3) The GC-only CID: a value put on T2 (head), awaited to
-            // Durable, then detached (RemoveHead) â€” past-retention
+            // Durable, then detached (RemoveHead) — past-retention
             // unreachable, belongs to no group.
             PutSeedValueOn( "/matrix/gc-only", "G", kSeedTopic2 );
             {
@@ -943,7 +943,7 @@ groups:
 
             // (5) The T1 driver puts: regrow T1's max_height past the
             // TxPruner-only group's spend_height + window (T1 was never
-            // detached â€” its chain is intact; the puts are fresh
+            // detached — its chain is intact; the puts are fresh
             // continues on T1's chain).
             PutSeedValueOn( "/matrix/driver-1", "d1", kSeedTopic );
             PutSeedValueOn( "/matrix/driver-2", "d2", kSeedTopic );
@@ -1761,7 +1761,7 @@ groups:
     // SEMANTIC RE-SCOPING (recorded as this plan's primary deviation):
     // the literal "both orders converge to ONE fixed point" is not
     // attainable on a live-stack topology because two DESIGNED
-    // order-dependencies intervene â€” (1) a mid-chain erase creates a
+    // order-dependencies intervene — (1) a mid-chain erase creates a
     // walk gap that ABORTS every later GC pass (Phase-15 evidence
     // refusal -> under-eviction, by design), and (2) a disposal
     // STRANDS a later cycle's overlap group (the D-10/D-12 starvation
@@ -1774,14 +1774,14 @@ groups:
     // exactly which surfaces are order-invariant and what each order's
     // terminal state IS. (D-03 standing instruction: a divergence that
     // is NOT a designed admission/order dependency would be an
-    // idempotence bug â€” none was found.)
+    // idempotence bug — none was found.)
     //
 
 
     /**
      * LEG M1 (Converge_TxPrunerThenGC_Matches_GCThenTxPruner on the
      * order-invariant projection): twin fixtures, order A (cycle then
-     * GC quiescence) vs order B (GC quiescence then cycle) â€” the
+     * GC quiescence) vs order B (GC quiescence then cycle) — the
      * invariant classes converge byte-for-byte; the interacting classes
      * land in their DESIGNED per-order terminal states.
      */
@@ -1944,7 +1944,7 @@ groups:
     /**
      * LEG M2 (Interleave_EraseParkedWhileGCCompletes): the cycle's
      * overlap erase parks immediately before its commit (the 16-01
-     * observer) while the GC thread's passes run to quiescence â€” the
+     * observer) while the GC thread's passes run to quiescence — the
      * designed third terminal combination: the overlap group ends
      * ERASED AND DISPOSED (both pruners acted, each idempotently).
      */
@@ -2014,7 +2014,7 @@ groups:
     /**
      * LEG M3 (Interleave_GCParkedBetweenHalves_EraseDefersAtGuard):
      * GC parked between its halves (journal record deleted, marker
-     * written, hot cleanup pending) while the erase runs â€” the erase's
+     * written, hot cleanup pending) while the erase runs — the erase's
      * in-compose durability re-check (Phase 14 D-06) reads NoRecord and
      * DEFERS: the Interaction-C serialization made visible. End state =
      * order B's terminal combination (disposed-not-erased).
@@ -2071,7 +2071,7 @@ groups:
     /**
      * LEG M4 (Interleave_GCParkedPreHalfOne_EraseAdmits): GC parked
      * BEFORE its disposal half (journal still Durable) while the erase
-     * completes â€” the erase admits and commits; the resumed disposal
+     * completes — the erase admits and commits; the resumed disposal
      * lands idempotently on the already-erased CID. End state = the
      * erased-AND-disposed combination (M2's).
      */
@@ -2127,7 +2127,7 @@ groups:
 
     /**
      * LEG M5 (Crossfire_MarkerMapsByteIdentical_AcrossRepeatsOfTheSameOrder):
-     * twin determinism of the full run â€” repeating the SAME order over
+     * twin determinism of the full run — repeating the SAME order over
      * a third identically-seeded stack reproduces the marker maps
      * key-for-key, value-for-value (the reproducibility floor the
      * crossfire guard rides on).
@@ -2182,7 +2182,7 @@ groups:
 
     /**
      * LEG M6 (Crossfire_NoUntouchedKeysAppear): the exact-prefix
-     * discipline itself â€” after a full order-A run, the set-row
+     * discipline itself — after a full order-A run, the set-row
      * keyspaces contain EXACTLY the expected survivors: no sibling
      * namespace eats (every key enumerated under the derived roots),
      * the erased groups' rows are gone, and the untouched classes'
@@ -2222,7 +2222,7 @@ groups:
 
     /**
      * LEG M7 (Seals_NeverTouched_ByEitherPruner_AnyInterleave): the
-     * seal invariant across the full matrix surface â€” after order A AND
+     * seal invariant across the full matrix surface — after order A AND
      * order B AND the parked interleaves' terminal states, isResolved
      * answers true for every inventory CID (neither pruner stages seal
      * rows anywhere).
