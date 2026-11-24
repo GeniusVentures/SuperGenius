@@ -991,6 +991,22 @@ groups:
             ASSERT_FALSE( victim_cid.has_error() );
             ASSERT_TRUE( WaitDurable( victim_cid.value() ) ) << "victim block never reached Durable";
         }
+        // [19-05 dispatch-7 tart find] The victim wait alone does NOT
+        // imply the seed set finished uploading: four blocks exist at
+        // this point (spender, victim, driver-1, driver-2) and on a
+        // slow Debug runner the LAST seed's drain can lag the victim's
+        // by a drain interval - the keys capture then took a 3-key
+        // baseline and EVERY later unchurned comparison failed against
+        // it (run 45489840538: current=4 keys vs t0=3). Gate the
+        // capture on the full deterministic fact: nothing pending, all
+        // four records Durable.
+        ASSERT_TRUE( PollUntil(
+            [&] {
+                auto status = db_->GetColdStorageStatus();
+                return status.pending_upload_count == 0 && status.durable_upload_count >= 4;
+            },
+            std::chrono::milliseconds( 20000 ) ) )
+            << "t0: the seeded blocks never all reached Durable before the keys capture";
         t0_object_keys = fake_s3_->ObjectKeys();
         ASSERT_FALSE( t0_object_keys.empty() ) << "the fake S3 must hold the seeded objects";
 
