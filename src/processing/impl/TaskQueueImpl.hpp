@@ -7,6 +7,9 @@
 #ifndef TASK_QUEUE_IMPL_HPP
 #define TASK_QUEUE_IMPL_HPP
 
+#include <chrono>
+#include <mutex>
+#include <unordered_map>
 #include <unordered_set>
 #include <string>
 #include <utility>
@@ -60,8 +63,31 @@ namespace sgns::processing
         std::vector<std::string> ListTaskKeys() override;
         outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId ) override;
 
+        outcome::result<void> HandlePayoutResult( const std::string              &taskId,
+                                                  const SGProcessing::TaskResult &taskResult,
+                                                  bool                            payoutSucceeded,
+                                                  const std::string              &errorMessage ) override;
+
+        outcome::result<std::string> GetPayoutFailure( const std::string &taskId ) override;
+
     private:
         static constexpr auto LOCK_TIMEOUT = std::chrono::seconds( 10 );
+        /// Consecutive escrow-payout failures before the task moves to the terminal payout-failed state
+        static constexpr size_t MAX_PAYOUT_FAILURES = 5;
+        /// First payout-retry backoff; doubles per failure ...
+        static constexpr auto PAYOUT_BACKOFF_BASE = std::chrono::seconds( 30 );
+        /// ... up to this ceiling
+        static constexpr auto PAYOUT_BACKOFF_CAP = std::chrono::minutes( 10 );
+
+        /**
+         * @brief      Per-node payout-retry tracking. Deliberately not persisted: the durable
+         *             stop is the CRDT payout-failed marker written when the cap is reached.
+         */
+        struct PayoutRetryState
+        {
+            size_t                                attempts = 0;
+            std::chrono::system_clock::time_point not_before{};
+        };
         /**
          * @brief       Constructs a task queue implementation with the given database and processing topic.
          * @param[in]   db The database instance to use for storing tasks and subtasks
@@ -95,6 +121,29 @@ namespace sgns::processing
          */
 
         bool MoveExpiredTaskLock( const std::string &taskKey, SGProcessing::Task &task );
+
+        /**
+         * @brief       True while a payout-failed task is inside its retry backoff window.
+         * @param[in]   taskId The ID of the task to check
+         * @return      true when GrabTask must skip the task for now
+         */
+        bool IsPayoutBackoffActive( const std::string &taskId );
+
+        /**
+         * @brief       Commits the terminal payout-failed state: task result recorded,
+         *              payout-failed marker written, claimable entry removed. The escrow
+         *              itself is never touched, so its funds stay refundable/claimable.
+         * @param[in]   taskId The ID of the task going terminal
+         * @param[in]   taskResult The task's processing result to record
+         * @param[in]   attempts Consecutive payout failures that led here
+         * @param[in]   errorMessage Failure cause stored in the marker
+         * @return      Success, or the CRDT failure that prevented the commit
+         */
+        outcome::result<void> CommitPayoutFailure( const std::string              &taskId,
+                                                   const SGProcessing::TaskResult &taskResult,
+                                                   size_t                          attempts,
+                                                   const std::string              &errorMessage );
+
         /// The CRDT database instance used for storing tasks and subtasks
         std::shared_ptr<sgns::crdt::GlobalDB> db_;
         /// The topic used by CRDT to share tasks and subtasks across the network
@@ -104,6 +153,10 @@ namespace sgns::processing
         std::string network_scope_;
         /// Jobs (tasks) that are incompatible with ProcessingManager
         std::unordered_set<std::string> incompatible_jobs_;
+        /// Guards payout_retries_ (HandlePayoutResult runs on the transaction strand, GrabTask on the processing loop)
+        std::mutex payout_retry_mutex_;
+        /// In-flight payout retry state per task id
+        std::unordered_map<std::string, PayoutRetryState> payout_retries_;
     };
 }
 #endif // TASK_QUEUE_IMPL_HPP

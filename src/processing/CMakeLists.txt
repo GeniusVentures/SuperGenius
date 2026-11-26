@@ -71,6 +71,7 @@ target_link_libraries(processing_service
     ipfs-bitswap-cpp
     rapidjson
     sha
+    Boost::json
 )
 
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})

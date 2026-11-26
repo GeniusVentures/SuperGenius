@@ -349,3 +349,78 @@ TEST_F( TaskQueueImplTest, ListTaskKeysSkipsEmptyEntries )
     ASSERT_EQ( keys.size(), 1u );
     EXPECT_EQ( keys[0], "task_valid" );
 }
+
+// ---------------------------------------------------------------------------
+// Payout failure handling — bounded retry, then terminal payout-failed state.
+// Reproduces the stranded-payout loop shape: a completed task whose escrow
+// payout fails must not be regrabbed forever.
+// ---------------------------------------------------------------------------
+
+TEST_F( TaskQueueImplTest, PayoutFailureBacksOffThenGoesTerminal )
+{
+    const std::string taskId = "task_payout_fail";
+
+    auto task = MakeTask( taskId );
+    std::string subJson = R"({"source":"input:test_input"})";
+    auto sub  = MakeSubTask( taskId, "sub_pf", subJson );
+    ASSERT_TRUE( queue_->EnqueueTask( task, { sub } ).has_value() );
+
+    SGProcessing::TaskResult taskResult;
+    *taskResult.add_subtask_results() = MakeSubTaskResult( "sub_pf", "ipfs://QmPayoutFail" );
+
+    // First failure: task enters backoff, must not be grabbable, not terminal yet.
+    for ( size_t i = 0; i < 4; ++i )
+    {
+        auto handled = queue_->HandlePayoutResult( taskId, taskResult, false, "Missing input UTXO" );
+        ASSERT_TRUE( handled.has_value() );
+    }
+    EXPECT_FALSE( queue_->GrabTask().has_value() );
+    EXPECT_FALSE( queue_->IsTaskCompleted( taskId ) );
+    EXPECT_FALSE( queue_->GetPayoutFailure( taskId ).has_value() );
+
+    // Fifth failure reaches the cap: terminal payout-failed state.
+    auto terminal = queue_->HandlePayoutResult( taskId, taskResult, false, "Missing input UTXO" );
+    ASSERT_TRUE( terminal.has_value() );
+
+    // Claimable entry is gone: no node can grab and reprocess the task.
+    EXPECT_FALSE( queue_->GrabTask().has_value() );
+
+    // The task counts as completed (its result is recorded) ...
+    EXPECT_TRUE( queue_->IsTaskCompleted( taskId ) );
+    auto retrieved = queue_->GetTaskResult( taskId );
+    ASSERT_TRUE( retrieved.has_value() );
+    ASSERT_EQ( retrieved.value().subtask_results_size(), 1 );
+    EXPECT_EQ( retrieved.value().subtask_results( 0 ).subtaskid(), "sub_pf" );
+
+    // ... and the payout-failed marker carries attempts and last error for the wallet.
+    auto marker = queue_->GetPayoutFailure( taskId );
+    ASSERT_TRUE( marker.has_value() );
+    EXPECT_NE( marker.value().find( "\"attempts\":5" ), std::string::npos );
+    EXPECT_NE( marker.value().find( "Missing input UTXO" ), std::string::npos );
+}
+
+TEST_F( TaskQueueImplTest, PayoutSuccessClearsRetryStateWithoutMarker )
+{
+    const std::string taskId = "task_payout_ok";
+
+    auto task = MakeTask( taskId );
+    std::string subJson = R"({"source":"input:test_input"})";
+    auto sub  = MakeSubTask( taskId, "sub_ok", subJson );
+    ASSERT_TRUE( queue_->EnqueueTask( task, { sub } ).has_value() );
+
+    SGProcessing::TaskResult taskResult;
+    *taskResult.add_subtask_results() = MakeSubTaskResult( "sub_ok", "ipfs://QmPayoutOk" );
+
+    // A failure followed by a success must not leave retry state behind.
+    ASSERT_TRUE( queue_->HandlePayoutResult( taskId, taskResult, false, "transient" ).has_value() );
+    ASSERT_TRUE( queue_->HandlePayoutResult( taskId, taskResult, true, "" ).has_value() );
+
+    // No terminal marker: the payout path itself commits the completion.
+    EXPECT_FALSE( queue_->GetPayoutFailure( taskId ).has_value() );
+    EXPECT_FALSE( queue_->IsTaskCompleted( taskId ) );
+
+    // The task is claimable again immediately (no lingering backoff).
+    auto grabbed = queue_->GrabTask();
+    ASSERT_TRUE( grabbed.has_value() );
+    EXPECT_EQ( grabbed.value().first, taskId );
+}

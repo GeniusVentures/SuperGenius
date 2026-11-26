@@ -154,6 +154,19 @@ namespace
             return outcome::failure( boost::system::error_code{} );
         }
 
+        outcome::result<void> HandlePayoutResult( const std::string &,
+                                                  const SGProcessing::TaskResult &,
+                                                  bool,
+                                                  const std::string & ) override
+        {
+            return outcome::success();
+        }
+
+        outcome::result<std::string> GetPayoutFailure( const std::string & ) override
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
     private:
         std::list<SGProcessing::Task>                           m_tasks;
         std::map<std::string, std::list<SGProcessing::SubTask>> m_subTasks;

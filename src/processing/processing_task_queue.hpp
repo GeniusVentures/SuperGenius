@@ -103,6 +103,33 @@ namespace sgns::processing
          * @return      The TaskResult if the task is completed, or failure otherwise.
          */
         virtual outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId ) = 0;
+
+        /**
+        * @brief       Records the outcome of a task's escrow payout attempt and applies the
+        *              retry policy for failures.
+        * @details     A success clears this node's failure tracking. A failure backs off the
+        *              next GrabTask of the task exponentially; once the consecutive-failure
+        *              cap is reached the task is committed to a terminal payout-failed state
+        *              (result recorded, payout-failed marker written, claimable entry removed)
+        *               so no node reprocesses it again. The escrow itself is never consumed
+        *              by this path: its funds stay locked and refundable/claimable.
+        * @param[in]   taskId The ID of the task whose payout attempt finished
+        * @param[in]   taskResult The task's processing result, recorded when going terminal
+        * @param[in]   payoutSucceeded True when the payout transaction reached CONFIRMED
+        * @param[in]   errorMessage Human-readable failure cause for the terminal marker
+        * @return      Success, or the CRDT commit failure when the terminal write fails
+        */
+        virtual outcome::result<void> HandlePayoutResult( const std::string              &taskId,
+                                                          const SGProcessing::TaskResult &taskResult,
+                                                          bool                            payoutSucceeded,
+                                                          const std::string              &errorMessage ) = 0;
+
+        /**
+        * @brief       Retrieves the payout-failed marker value for a task, if present.
+        * @param[in]   taskId The ID of the task to check
+        * @return      The stored marker value (JSON: attempts, last_error) or failure when absent
+        */
+        virtual outcome::result<std::string> GetPayoutFailure( const std::string &taskId ) = 0;
     };
 }
 

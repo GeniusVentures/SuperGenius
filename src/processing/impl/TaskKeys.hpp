@@ -169,6 +169,22 @@ namespace sgns::processing
         }
 
         /**
+         * @brief       Builds the payout-failed marker key for a task whose escrow payout
+         *              permanently failed after bounded retries. Key existence is the
+         *              terminal signal; the value carries the attempt count and last error.
+         */
+        static std::string PayoutFailedTaskKey( std::string_view taskId )
+        {
+            return ProcessingPrefix() + std::string( PAYOUT_FAILED_SUFFIX ) + std::string( TASK_LIST_SUFFIX ) +
+                   std::string( taskId );
+        }
+
+        static std::string PayoutFailedTaskKey( const std::string &private_network_id, std::string_view taskId )
+        {
+            return ScopePrefix( private_network_id ) + PayoutFailedTaskKey( taskId );
+        }
+
+        /**
      * @brief       Builds a task-lock key. Scope-agnostic by design: @p taskKey already carries
      *              the network scope when produced by the scoped TaskKey overload.
      */
@@ -183,6 +199,7 @@ namespace sgns::processing
         static constexpr std::string_view SUBTASK_LIST_SUFFIX    = "/subtasks";
         static constexpr std::string_view CLAIMABLE_LIST_SUFFIX  = "/claimable";
         static constexpr std::string_view RESULTS_SUFFIX         = "/task_results";
+        static constexpr std::string_view PAYOUT_FAILED_SUFFIX   = "/payout_failed";
         static constexpr std::string_view LOCK_KEY_PREFIX        = "/lock_";
     };
 }

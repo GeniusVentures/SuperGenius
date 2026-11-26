@@ -2,6 +2,8 @@
 #include <chrono>
 #include <set>
 
+#include <boost/json.hpp>
+
 #include "base/logger.hpp"
 #include "processing/impl/TaskQueueImpl.hpp"
 #include <processingbase/ProcessingManager.hpp>
@@ -150,6 +152,14 @@ namespace sgns::processing
             if ( incompatible_jobs_.find( taskId ) != incompatible_jobs_.end() )
             {
                 TaskQueueImplLogger()->debug( "Skipping incompatible task with ID: {}", taskId );
+                continue;
+            }
+            // Checked before the lock so a backed-off task is neither locked nor
+            // recoverable through MoveExpiredTaskLock (the lock of a failed payout
+            // attempt expires well before the backoff does).
+            if ( IsPayoutBackoffActive( taskId ) )
+            {
+                TaskQueueImplLogger()->debug( "Skipping task with ID: {} in payout-retry backoff", taskId );
                 continue;
             }
             const auto taskKey = TaskKeys::TaskKey( network_scope_, taskId );
@@ -359,5 +369,111 @@ namespace sgns::processing
 
         TaskQueueImplLogger()->debug( "Successfully fetched result for task: {}", taskId );
         return result;
+    }
+
+    bool TaskQueueImpl::IsPayoutBackoffActive( const std::string &taskId )
+    {
+        std::lock_guard<std::mutex> lock( payout_retry_mutex_ );
+        const auto                  retryIt = payout_retries_.find( taskId );
+        if ( retryIt == payout_retries_.end() )
+        {
+            return false;
+        }
+        return std::chrono::system_clock::now() < retryIt->second.not_before;
+    }
+
+    outcome::result<void> TaskQueueImpl::HandlePayoutResult( const std::string              &taskId,
+                                                             const SGProcessing::TaskResult &taskResult,
+                                                             bool                            payoutSucceeded,
+                                                             const std::string              &errorMessage )
+    {
+        if ( payoutSucceeded )
+        {
+            {
+                std::lock_guard<std::mutex> lock( payout_retry_mutex_ );
+                payout_retries_.erase( taskId );
+            }
+            TaskQueueImplLogger()->debug( "Payout succeeded for task: {}", taskId );
+            return outcome::success();
+        }
+
+        size_t attempts = 0;
+        {
+            std::lock_guard<std::mutex> lock( payout_retry_mutex_ );
+            attempts = ++payout_retries_[taskId].attempts;
+        }
+
+        if ( attempts >= MAX_PAYOUT_FAILURES )
+        {
+            TaskQueueImplLogger()->error(
+                "Payout for task: {} failed {} times, moving to terminal payout-failed state (last error: {})",
+                taskId,
+                attempts,
+                errorMessage );
+            {
+                std::lock_guard<std::mutex> lock( payout_retry_mutex_ );
+                payout_retries_.erase( taskId );
+            }
+            return CommitPayoutFailure( taskId, taskResult, attempts, errorMessage );
+        }
+
+        const auto baseSeconds = std::chrono::duration_cast<std::chrono::seconds>( PAYOUT_BACKOFF_BASE ).count();
+        const auto capSeconds  = std::chrono::duration_cast<std::chrono::seconds>( PAYOUT_BACKOFF_CAP ).count();
+        // attempts >= 1 here, so the shift is well-defined; the cap guards overflow if the constants grow
+        const auto backoffSeconds = std::min( baseSeconds << ( attempts - 1 ), capSeconds );
+        {
+            std::lock_guard<std::mutex> lock( payout_retry_mutex_ );
+            payout_retries_[taskId].not_before = std::chrono::system_clock::now() + std::chrono::seconds( backoffSeconds );
+        }
+        TaskQueueImplLogger()->warn( "Payout for task: {} failed (attempt {}/{}): {}, retrying in {} s",
+                                     taskId,
+                                     attempts,
+                                     MAX_PAYOUT_FAILURES,
+                                     errorMessage,
+                                     backoffSeconds );
+        return outcome::success();
+    }
+
+    outcome::result<void> TaskQueueImpl::CommitPayoutFailure( const std::string              &taskId,
+                                                              const SGProcessing::TaskResult &taskResult,
+                                                              size_t                          attempts,
+                                                              const std::string              &errorMessage )
+    {
+        auto terminalTransaction = db_->BeginTransaction();
+
+        sgns::base::Buffer resultData;
+        resultData.put( taskResult.SerializeAsString() );
+        BOOST_OUTCOME_TRY( terminalTransaction->Put(
+            sgns::crdt::HierarchicalKey( TaskKeys::ResultTaskKey( network_scope_, taskId ) ),
+            std::move( resultData ) ) );
+
+        boost::json::object marker;
+        marker["task_id"]    = taskId;
+        marker["attempts"]   = attempts;
+        marker["last_error"] = errorMessage;
+        sgns::base::Buffer markerData;
+        markerData.put( boost::json::serialize( marker ) );
+        BOOST_OUTCOME_TRY( terminalTransaction->Put(
+            sgns::crdt::HierarchicalKey( TaskKeys::PayoutFailedTaskKey( network_scope_, taskId ) ),
+            std::move( markerData ) ) );
+
+        BOOST_OUTCOME_TRY( terminalTransaction->Remove(
+            sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( network_scope_, taskId ) ) ) );
+        BOOST_OUTCOME_TRY( terminalTransaction->AddTopic( processing_topic_ ) );
+        BOOST_OUTCOME_TRY( terminalTransaction->Commit( { processing_topic_ } ) );
+
+        // The escrow CRDT entry is deliberately left as-is: its funds stay locked and
+        // refundable/claimable by the escrow participants.
+        TaskQueueImplLogger()->info( "Task: {} committed to terminal payout-failed state, escrow left untouched", taskId );
+        return outcome::success();
+    }
+
+    outcome::result<std::string> TaskQueueImpl::GetPayoutFailure( const std::string &taskId )
+    {
+        TaskQueueImplLogger()->debug( "Fetching payout-failed marker for task: {}", taskId );
+        BOOST_OUTCOME_TRY( auto markerBuffer,
+                           db_->Get( sgns::crdt::HierarchicalKey( TaskKeys::PayoutFailedTaskKey( network_scope_,
+                                                                                                  taskId ) ) ) );
+        return std::string( reinterpret_cast<const char *>( markerBuffer.data() ), markerBuffer.size() );
     }
 }

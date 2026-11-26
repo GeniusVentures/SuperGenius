@@ -4167,8 +4167,26 @@ namespace sgns
             taskresult,
             std::move( complete_task_result.value() ),
             TIMEOUT_ESCROW_PAY,
-            [logger = node_logger_, account_tag, task_id]( TransactionManager::TransactionCompletion completion )
+            // taskresult is a reference into the caller's frame and the callback runs later:
+            // copy it. task_queue_ is kept alive so the terminal payout-failed state can
+            // still be committed after this node's shutdown has started.
+            [logger      = node_logger_,
+             account_tag,
+             task_id,
+             task_result = taskresult,
+             task_queue  = task_queue_]( TransactionManager::TransactionCompletion completion )
             {
+                const auto recordOutcome = [&]( bool payoutSucceeded, const std::string &errorMessage )
+                {
+                    auto handleResult = task_queue->HandlePayoutResult( task_id, task_result, payoutSucceeded, errorMessage );
+                    if ( handleResult.has_failure() )
+                    {
+                        logger->error( "[{}]ProcessingDone: Failed to record payout outcome for task {}: {}",
+                                       account_tag,
+                                       task_id,
+                                       handleResult.error().message() );
+                    }
+                };
                 if ( completion.error == boost::asio::error::operation_aborted )
                 {
                     logger->debug( "[{}]ProcessingDone: Escrow payout cancelled during shutdown for task {}",
@@ -4183,6 +4201,7 @@ namespace sgns
                                    task_id,
                                    completion.elapsed.count(),
                                    completion.error.message() );
+                    recordOutcome( false, completion.error.message() );
                     return;
                 }
                 if ( completion.status != TransactionManager::TransactionStatus::CONFIRMED )
@@ -4192,6 +4211,9 @@ namespace sgns
                                    completion.transaction_id,
                                    static_cast<int>( completion.status ),
                                    task_id );
+                    recordOutcome(
+                        false,
+                        "transaction ended in state " + std::to_string( static_cast<int>( completion.status ) ) );
                     return;
                 }
 
@@ -4200,6 +4222,7 @@ namespace sgns
                               task_id,
                               completion.transaction_id,
                               completion.elapsed.count() );
+                recordOutcome( true, "" );
             } );
     }
 
