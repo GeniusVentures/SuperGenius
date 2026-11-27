@@ -1177,13 +1177,31 @@ namespace sgns
             auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
             if ( handler_it == subject_handlers_.end() )
             {
-                logger_->error(
-                    "{}: rejected: subject handler missing type_hash={} reason={}",
+                // The retry already removed this entry from the pending pool,
+                // so a bare return here would drop the proposal for good.
+                // Re-defer until the consumer registers its handler.
+                logger_->warn(
+                    "{}: deferred: subject handler missing type_hash={} proposal_id={} reason={}",
                     __func__,
                     base::hex_lower( gsl::span<const uint8_t>(
                         reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
                         proposal.subject().subject_type_hash().hash().size() ) ),
+                    proposal.proposal_id().substr( 0, 8 ),
                     reason );
+                auto subject_hash_result = GetSubjectHash( proposal.subject() );
+                if ( subject_hash_result.has_error() )
+                {
+                    logger_->error( "{}: rejected: subject hash missing proposal_id={} reason={}",
+                                     __func__,
+                                     proposal.proposal_id().substr( 0, 8 ),
+                                     reason );
+                    return;
+                }
+                AddPendingProposal( proposal,
+                                    subject_hash_result.value(),
+                                    ValidationResult::Pending(),
+                                    scheduled_retry_count,
+                                    last_retry_at );
                 return;
             }
             subject_handler = handler_it->second;
@@ -2908,12 +2926,31 @@ namespace sgns
             auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
             if ( handler_it == subject_handlers_.end() )
             {
-                logger_->error(
-                    "{}: rejected: subject handler missing type_hash={}",
+                // The subject consumer (e.g. the transaction manager for
+                // sgns.nonce.v1) registers its handler only after its
+                // construction completes, which can trail gossip joining.
+                // Dropping here would strand the sender in VERIFYING, so keep
+                // the proposal pending for the retry/resume path instead.
+                logger_->warn(
+                    "{}: deferred: subject handler missing type_hash={} proposal_id={}. Keeping proposal pending",
                     __func__,
                     base::hex_lower( gsl::span<const uint8_t>(
                         reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
-                        proposal.subject().subject_type_hash().hash().size() ) ) );
+                        proposal.subject().subject_type_hash().hash().size() ) ),
+                    proposal.proposal_id().substr( 0, 8 ) );
+
+                {
+                    std::lock_guard lock( proposals_mutex_ );
+                    if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
+                    {
+                        ProposalState state;
+                        state.proposal = proposal;
+                        state.slot_key = GetSlotKey( proposal );
+                        proposals_.emplace( proposal.proposal_id(), std::move( state ) );
+                    }
+                }
+
+                AddPendingProposal( proposal, subject_hash.value() );
                 return;
             }
             subject_handler = handler_it->second;
@@ -2991,12 +3028,25 @@ namespace sgns
                 auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
                 if ( handler_it == subject_handlers_.end() )
                 {
-                    logger_->error(
-                        "{}: rejected: subject handler missing type_hash={}",
+                    // Taking the proposal out of the pending pool already
+                    // happened, so skipping here would drop it for good;
+                    // re-defer until the consumer registers its handler.
+                    logger_->warn(
+                        "{}: deferred: subject handler missing type_hash={} proposal_id={}",
                         __func__,
                         base::hex_lower( gsl::span<const uint8_t>(
                             reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
-                            proposal.subject().subject_type_hash().hash().size() ) ) );
+                            proposal.subject().subject_type_hash().hash().size() ) ),
+                        proposal.proposal_id().substr( 0, 8 ) );
+                    auto proposal_hash = GetSubjectHash( proposal.subject() );
+                    if ( proposal_hash.has_error() )
+                    {
+                        logger_->error( "{}: rejected: subject hash missing proposal_id={}",
+                                         __func__,
+                                         proposal.proposal_id().substr( 0, 8 ) );
+                        continue;
+                    }
+                    AddPendingProposal( proposal, proposal_hash.value() );
                     continue;
                 }
                 subject_handler = handler_it->second;

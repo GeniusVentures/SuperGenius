@@ -2066,6 +2066,55 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
 
+TEST_F( ConsensusPendingLifecycleTest, MissingSubjectHandlerKeepsProposalPendingUntilHandlerRegisters )
+{
+    auto account = MakeSigningAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeSigningRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeSigningManager( registry, account );
+    ASSERT_TRUE( manager );
+
+    sgns::ConsensusManager::PendingLifecycleConfig config;
+    config.pending_ttl            = std::chrono::seconds( 10 );
+    config.scheduled_retry_delays = { std::chrono::seconds( 1 ) };
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig( manager, config );
+
+    // Startup ordering: gossip delivers a nonce proposal before the
+    // transaction manager registers its sgns.nonce.v1 subject handler.
+    auto proposal    = MakeSigningProposal( manager, registry, account, 61, "0xhandler-deferred" );
+    auto proposal_id = proposal.proposal_id();
+
+    sgns::ConsensusPendingLifecycleTestAccess::HandleProposal( manager, proposal );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, proposal_id ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, proposal_id ) );
+
+    // A scheduled retry while the handler is still absent must defer again,
+    // not drop the proposal out of the pending pool.
+    sgns::ConsensusPendingLifecycleTestAccess::ForcePendingRetryDue( manager, proposal_id );
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessDuePendingRetries( manager );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, proposal_id ) );
+
+    std::atomic<int> handler_calls{ 0 };
+    ASSERT_TRUE( manager->RegisterSubjectHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&handler_calls]( const sgns::ConsensusManager::Subject & )
+        {
+            ++handler_calls;
+            return sgns::ConsensusManager::ValidationResult::Approve();
+        } ) );
+
+    // Sender-side resume (transaction re-verification) must find the deferred
+    // proposal once the handler exists.
+    auto subject_hash = sgns::ConsensusPendingLifecycleTestAccess::GetSubjectHash( proposal.subject() );
+    ASSERT_TRUE( subject_hash.has_value() );
+    auto resumed = manager->ResumeProposalHandling( subject_hash.value() );
+    ASSERT_TRUE( resumed.has_value() );
+    EXPECT_GE( handler_calls.load(), 1 );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, proposal_id ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
+}
+
 TEST_F( ConsensusPendingLifecycleTest, ActiveVoteFreezesEligibleCandidatesBeforePublishingOneWinner )
 {
     auto account = MakeSigningAccount();
