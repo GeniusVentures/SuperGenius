@@ -1545,6 +1545,12 @@ namespace sgns
         void ScheduleMigrationRetry();
 
         /**
+         * @brief Schedules a delayed GlobalDB creation retry after InitDatabase failed.
+         * @param[in] delay Delay before retrying INITIALIZING_DATABASE.
+         */
+        void ScheduleDatabaseRetry( std::chrono::seconds delay = std::chrono::seconds( 10 ) );
+
+        /**
          * @brief Schedules a delayed blockchain initialization retry.
          * @param[in] delay Delay before retrying blockchain initialization.
          */
@@ -1715,6 +1721,7 @@ namespace sgns
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
         std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
         std::atomic_uint blockchain_retry_count_{ 0 }; ///< Number of blockchain retries scheduled (test observable).
+        std::atomic_uint database_retry_count_{ 0 };   ///< Number of GlobalDB creation retries scheduled (test observable).
 
         // ── Bootstrap fullnode reconnection ──
         struct BootstrapReconnectConfig

@@ -31,6 +31,12 @@
 
 #include <boost/dll.hpp>
 #include <boost/json.hpp>
+#include <boost/filesystem/operations.hpp>
+
+#include <rocksdb/db.h>
+#include <libp2p/multi/content_identifier_codec.hpp>
+
+#include "base/sgns_version.hpp"
 
 #include "account/AccountMessenger.hpp"
 #include "account/GeniusAccount.hpp"
@@ -153,7 +159,12 @@ protected:
                             bool                                isFullNode           = false,
                             std::optional<std::chrono::seconds> trust_sync_interval  = std::nullopt,
                             bool                                force_bootstrap_walk = false,
-                            boost::json::object                 settings_overrides   = {} )
+                            boost::json::object                 settings_overrides   = {},
+                            // Runs after the account/config exist but before the node is
+                            // constructed, so a test can obstruct the node's first
+                            // GlobalDB open (NW-17 lock-hold harness).
+                            std::function<void( const std::filesystem::path &, const std::string & )>
+                                                 before_node_start    = {} )
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
@@ -221,6 +232,10 @@ protected:
             input.close();
             std::ofstream output( config_path );
             output << boost::json::serialize( config );
+        }
+        if ( before_node_start )
+        {
+            before_node_start( outPath, authority->GetAddress() );
         }
         return { GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } ),
                  std::move( authority ),
@@ -1057,6 +1072,70 @@ TEST_F( NodeStartupTest, OwnAccountCreationBeforeGenesisDefersUntilGenesisArrive
     EXPECT_FALSE( BlockchainStartupOrderingAccess::AccountCreationPendingGenesis( *chainB ) );
 
     std::cout << "=== Own Account-Creation Before Genesis Test Completed ===" << std::endl;
+}
+
+// ---------------------------------------------------------------------------
+// 4. GLOBALDB INIT RETRY (NW-17)
+// ---------------------------------------------------------------------------
+
+// A node whose GlobalDB open fails (here: a live RocksDB lock on the DB path,
+// the stress-run specimen was a stale instance holding the same lock) must
+// retry INITIALIZING_DATABASE and recover once the lock frees, instead of
+// logging the failure once and running on with no database forever.
+TEST_F( NodeStartupTest, GlobalDBInitFailureIsRetriedAndRecovers )
+{
+    rocksdb::DB *lock_db = nullptr;
+
+    auto fixture = CreateNode( "globaldb_init_retry",
+                               "0xcafe",
+                               "1.0",
+                               TokenID::FromBytes( { 0x00 } ),
+                               /*isFullNode=*/false,
+                               std::nullopt,
+                               false,
+                               {},
+                               [&]( const std::filesystem::path &path, const std::string &address )
+                               {
+                                   // Mirrors the node's own DB-path derivation
+                                   // (GeniusNode: write_base_path_ + GNUS_NETWORK_PATH +
+                                   // version appendix + base58 CID of the address).
+                                   const auto hash = crypto::sha2_256( address.data(), address.size() );
+                                   const auto key  = libp2p::multi::ContentIdentifierCodec::encodeCIDV0(
+                                       hash.data(), hash.size() );
+                                   auto cid = libp2p::multi::ContentIdentifierCodec::decode( key );
+                                   ASSERT_TRUE( cid.has_value() );
+                                   auto base58 = libp2p::multi::ContentIdentifierCodec::toString( cid.value() );
+                                   ASSERT_TRUE( base58.has_value() );
+                                   const auto db_path = path.string() + "SuperGNUSNode.Node"
+                                                      + version::GetNetAndVersionAppendix() + base58.value();
+
+                                   boost::filesystem::create_directories( db_path );
+                                   rocksdb::Options options;
+                                   options.create_if_missing = true;
+                                   ASSERT_TRUE( rocksdb::DB::Open( options, db_path, &lock_db ).ok() )
+                                       << "test could not hold the RocksDB lock";
+                               } );
+    ASSERT_TRUE( fixture.node );
+    ASSERT_TRUE( lock_db ) << "lock setup failed; test harness broken";
+
+    // While the lock is held: init fails, but retries must keep coming.
+    test::assertWaitForCondition(
+        [&]() { return GeniusNodeTestAccess::DatabaseRetryCountOf( fixture.node ) >= 1; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "GlobalDB init failure was never retried" );
+    EXPECT_EQ( fixture.node->GetState(), GeniusNode::NodeState::INITIALIZING_DATABASE )
+        << "node must not advance past database init while the DB is unavailable";
+
+    // Free the lock (the stale instance exits): the next retry must recover.
+    delete lock_db;
+    lock_db = nullptr;
+    test::assertWaitForCondition(
+        [&]()
+        { return fixture.node->GetState() != GeniusNode::NodeState::INITIALIZING_DATABASE; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "GlobalDB init never recovered after the lock was freed" );
+
+    std::cout << "=== GlobalDB Init Retry Test Completed ===" << std::endl;
 }
 
 // ---------------------------------------------------------------------------

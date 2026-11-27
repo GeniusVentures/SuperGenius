@@ -273,6 +273,13 @@ namespace sgns
         {
             return node ? node->blockchain_ : nullptr;
         }
+
+        /// GlobalDB-init retry (NW-17) accessor: how many INITIALIZING_DATABASE
+        /// retries have been scheduled. Zero forever on code without the retry.
+        static unsigned DatabaseRetryCountOf( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->database_retry_count_.load() : 0u;
+        }
     };
 
     /// RAII teardown for TEST-body (non-fixture) node lifetimes.

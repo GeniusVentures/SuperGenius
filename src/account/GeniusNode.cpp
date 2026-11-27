@@ -810,6 +810,11 @@ namespace sgns
                 if ( !InitDatabase() )
                 {
                     node_logger_->error( "GlobalDB initialization error" );
+                    // GlobalDB creation fails transiently (a stale instance can
+                    // still hold the RocksDB lock); without a retry the node
+                    // keeps running with no database until a manual restart.
+                    node_logger_->info( "Scheduling database retry after failure" );
+                    ScheduleDatabaseRetry();
                     return;
                 }
                 account_->ConfigureDatabaseDependencies( tx_globaldb_ );
@@ -2486,6 +2491,31 @@ namespace sgns
                 if ( auto strong = weak_self.lock() )
                 {
                     strong->StateTransition( NodeState::MIGRATING_DATABASE );
+                }
+            } )
+            .detach();
+    }
+
+    void GeniusNode::ScheduleDatabaseRetry( std::chrono::seconds delay )
+    {
+        ++database_retry_count_;
+        std::thread(
+            [weak_self = weak_from_this(), delay]
+            {
+                std::this_thread::sleep_for( delay );
+                if ( auto strong = weak_self.lock() )
+                {
+                    if ( strong->shutdown_started_.load() )
+                    {
+                        return;
+                    }
+                    auto current_state = strong->state_.load();
+                    if ( current_state != NodeState::INITIALIZING_DATABASE )
+                    {
+                        strong->node_logger_->debug( "Skipping database retry, unexpected state: {}", current_state );
+                        return;
+                    }
+                    strong->StateTransition( NodeState::INITIALIZING_DATABASE );
                 }
             } )
             .detach();
