@@ -77,6 +77,14 @@ target_link_libraries(account_signature_test
     ProofSystem
 )
 
+addtest(account_storage_file_test
+    account_storage_file_test.cpp
+)
+
+target_link_libraries(account_storage_file_test
+    sgns_genius_account
+)
+
 addtest(burnconfig_test
     burnconfig_test.cpp
 )

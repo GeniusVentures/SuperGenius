@@ -16,6 +16,10 @@
 #include <sstream>
 #include <string>
 #include <unordered_set>
+#include <fstream>
+
+#include <boost/filesystem/operations.hpp>
+#include <boost/system/error_code.hpp>
 
 #include "base/hexutil.hpp"
 #include "local_secure_storage/impl/JSONBackend.hpp"
@@ -144,10 +148,15 @@ namespace
     outcome::result<void> WritePublicKeysToFile( const boost::filesystem::path  &file_path,
                                                  const std::vector<std::string> &keys )
     {
-        std::ofstream file( file_path.string() );
+        // Write-and-swap: the live file is only replaced by rename() after a fully
+        // successful write, so a crash or full disk mid-write cannot truncate the
+        // account list.
+        const auto temp_path = file_path.string() + ".tmp";
+
+        std::ofstream file( temp_path );
         if ( !file.is_open() )
         {
-            genius_account_logger()->error( "Could not open ID file for writing: {}", file_path.string() );
+            genius_account_logger()->error( "Could not open ID file for writing: {}", temp_path );
             return std::errc::bad_file_descriptor;
         }
 
@@ -155,7 +164,27 @@ namespace
         {
             file << key << '\n';
         }
+        file.flush();
+
+        if ( !file.good() )
+        {
+            file.close();
+            boost::system::error_code discard_ec;
+            boost::filesystem::remove( temp_path, discard_ec );
+            genius_account_logger()->error( "Failed writing ID file: {}", temp_path );
+            return std::errc::io_error;
+        }
         file.close();
+
+        boost::system::error_code rename_ec;
+        boost::filesystem::rename( temp_path, file_path, rename_ec );
+        if ( rename_ec )
+        {
+            boost::system::error_code discard_ec;
+            boost::filesystem::remove( temp_path, discard_ec );
+            genius_account_logger()->error( "Could not move ID file into place: {}", file_path.string() );
+            return std::errc::io_error;
+        }
 
         return outcome::success();
     }
