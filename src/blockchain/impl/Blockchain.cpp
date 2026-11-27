@@ -1053,6 +1053,33 @@ namespace sgns
             }
             logger_->debug( "[{}] Genesis CID stored: {}", account_->GetAddress().substr( 0, 8 ), cid );
 
+            // F21 recovery: an own-address account-creation block that arrived
+            // before genesis was stored deferred its verification. Genesis is
+            // known now, so verify the stashed block instead of re-requesting it.
+            if ( account_creation_pending_genesis_.exchange( false ) )
+            {
+                base::Buffer deferred_block;
+                {
+                    std::lock_guard lock( deferred_account_creation_mutex_ );
+                    deferred_block = deferred_account_creation_block_;
+                }
+                if ( !deferred_block.empty() )
+                {
+                    logger_->info( "[{}] Retrying deferred own account creation block now that genesis is known",
+                                   account_->GetAddress().substr( 0, 8 ) );
+                    auto deferred_validation_result = OnAccountCreationBlockReceived( deferred_block );
+                    if ( deferred_validation_result.has_error() )
+                    {
+                        new_genesis_return = deferred_validation_result;
+                        break;
+                    }
+                    logger_->info( "[{}] Deferred account creation block verified", account_->GetAddress().substr( 0, 8 ) );
+                    return InformBlockchainResult( outcome::success() );
+                }
+                logger_->warn( "[{}] Deferred account creation block no longer stashed; requesting via pubsub",
+                               account_->GetAddress().substr( 0, 8 ) );
+            }
+
         } while ( 0 );
 
         if ( new_genesis_return.has_error() )
@@ -1798,6 +1825,33 @@ namespace sgns
             auto account_creation_validation_result = OnAccountCreationBlockReceived( serialized_account_creation );
             if ( account_creation_validation_result.has_error() )
             {
+                // Wiped-DB rejoin ordering race (F21): the own-address block can
+                // arrive before genesis is processed; verification fails on the
+                // missing genesis link and informing the failure would abort
+                // startup with no retry, wedging the node until an app restart.
+                // The block is already stored in the CRDT, so record its CID and
+                // let GenesisReceivedCallback retry it once genesis is known.
+                if ( notify_blockchain && !cids_.hasGenesis()
+                     && account_creation_validation_result.error()
+                            == Error::ACCOUNT_CREATION_BLOCK_INVALID_GENESIS_LINK )
+                {
+                    auto save_deferred_cid_result = SaveAccountCreationCID( account_->GetAddress(), cid );
+                    if ( !save_deferred_cid_result.has_error() )
+                    {
+                        {
+                            std::lock_guard lock( deferred_account_creation_mutex_ );
+                            deferred_account_creation_block_ = serialized_account_creation;
+                        }
+                        account_creation_pending_genesis_.store( true );
+                        logger_->warn( "[{}] Own account creation block arrived before genesis; "
+                                       "deferring verification until genesis is processed",
+                                       account_->GetAddress().substr( 0, 8 ) );
+                        return outcome::success();
+                    }
+                    logger_->error( "[{}] Could not save deferred account creation CID: {}",
+                                    account_->GetAddress().substr( 0, 8 ),
+                                    save_deferred_cid_result.error().message() );
+                }
                 logger_->error( "[{}] Account creation block validation failed",
                                 account_->GetAddress().substr( 0, 8 ) );
                 new_account_return = account_creation_validation_result;

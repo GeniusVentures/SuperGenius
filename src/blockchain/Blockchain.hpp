@@ -334,6 +334,7 @@ namespace sgns
         friend class MultiAccountTestAccess;
         friend class CertificateFallbackTestAccess;
         friend class MultiNodeFinalityFaultTestAccess;
+        friend class BlockchainStartupOrderingAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.
@@ -619,6 +620,13 @@ namespace sgns
             {} }; ///< When the last direct registry-CID request went out; default = never.
         std::atomic<bool> start_deferred_{
             false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
+
+        /// Own-address account-creation block arrived before genesis was known
+        /// (wiped-DB rejoin ordering race); GenesisReceivedCallback must retry
+        /// it once genesis is processed instead of leaving startup aborted.
+        std::atomic<bool> account_creation_pending_genesis_{ false };
+        mutable std::mutex deferred_account_creation_mutex_; ///< Guards deferred_account_creation_block_.
+        base::Buffer deferred_account_creation_block_; ///< Block stashed by the defer path above.
 
         /// Signals CID-watch threads to exit; set by Stop() so they cannot
         /// poll the GlobalDB or fire result callbacks during node teardown.

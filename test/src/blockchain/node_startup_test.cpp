@@ -37,6 +37,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/MintTransactionV2.hpp"
 #include "base/hexutil.hpp"
+#include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "transaction/TransactionManager.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
@@ -931,6 +932,131 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
         << "ms after the genesis node was ready — startup latency is too high.";
 
     std::cout << "=== Regular Node Ready Quickly After Genesis Ready Test Completed ===" << std::endl;
+}
+
+// ---------------------------------------------------------------------------
+// 2b. STARTUP ORDERING (F21): own account-creation block before genesis
+// ---------------------------------------------------------------------------
+
+/// Reads the CRDT-stored account-creation payload and the defer state from
+/// outside Blockchain (declared friend in Blockchain.hpp). Inside namespace
+/// sgns so the friend declaration in sgns::Blockchain names THIS class.
+namespace sgns
+{
+    class BlockchainStartupOrderingAccess
+    {
+    public:
+        static base::Buffer StoredAccountCreationBlock( Blockchain &blockchain, const std::string &address )
+        {
+            auto stored = blockchain.db_->Get(
+                crdt::HierarchicalKey( std::string( Blockchain::ACCOUNT_CREATION_KEY_PREFIX ) + address ) );
+            if ( stored.has_error() )
+            {
+                return {};
+            }
+            return stored.value();
+        }
+
+        static bool AccountCreationPendingGenesis( Blockchain &blockchain )
+        {
+            return blockchain.account_creation_pending_genesis_.load();
+        }
+
+        static bool HasGenesisCid( Blockchain &blockchain )
+        {
+            return blockchain.cids_.hasGenesis();
+        }
+
+        /// Delivers an account-creation payload exactly as the CRDT callback
+        /// dispatcher would (key + serialized block + stored CID).
+        static outcome::result<void> DeliverAccountCreation( Blockchain                                           &blockchain,
+                                                             const std::string                                    &address,
+                                                             const base::Buffer                                    &serialized_block,
+                                                             const std::string                                    &cid )
+        {
+            const std::string delivery_key = std::string( Blockchain::ACCOUNT_CREATION_KEY_PREFIX ) + address;
+            return blockchain.AccountCreationReceivedCallback( { delivery_key, serialized_block }, cid );
+        }
+    };
+} // namespace sgns
+
+// Wiped-DB rejoin of an existing account: the CRDT can deliver the
+// own-address account-creation block BEFORE the genesis block. The old code
+// failed verification on the missing genesis link and informed a terminal
+// startup failure, wedging the node until an app restart (F21: the block was
+// already fetched; restart recovered in 6 s). The defer path must instead keep
+// the block pending and complete the start once genesis arrives.
+TEST_F( NodeStartupTest, OwnAccountCreationBeforeGenesisDefersUntilGenesisArrives )
+{
+    std::cout << "=== Starting Own Account-Creation Before Genesis Test ===" << std::endl;
+
+    auto genesisNode = CreateNode( "genesis_node_f21_order", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), true );
+    ASSERT_TRUE( genesisNode.node );
+    Blockchain::SetAuthorizedFullNodeAddress( genesisNode.node->GetAddress() );
+    test::assertWaitForCondition(
+        [&]() { return genesisNode.node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "genesis node never reached restricted first boot" );
+    ASSERT_NO_FATAL_FAILURE( SubmitReviewedTrustAndAwaitReady( genesisNode ) );
+
+    // Node A reaches READY, so its account-creation block exists on the net and
+    // is stored in its CRDT.
+    auto nodeA = CreateNode( "node_f21_order", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), false );
+    ASSERT_TRUE( nodeA.node );
+    nodeA.node->AddPeer( genesisNode.node->GetPubSub()->GetInterfaceAddress() );
+    test::assertWaitForCondition(
+        [&]() { return nodeA.node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "node A never reached restricted first boot" );
+    ASSERT_NO_FATAL_FAILURE( SubmitReviewedTrustAndAwaitReady( nodeA ) );
+
+    auto                chainA          = GeniusNodeTestAccess::BlockchainOf( nodeA.node );
+    ASSERT_TRUE( chainA );
+    const auto          addressA        = nodeA.node->GetAddress();
+    auto                serializedBlock = BlockchainStartupOrderingAccess::StoredAccountCreationBlock( *chainA, addressA );
+    ASSERT_FALSE( serializedBlock.empty() ) << "node A has no stored account-creation block to deliver";
+    auto                creationCid = chainA->GetAccountCreationCID();
+    ASSERT_TRUE( creationCid.has_value() ) << "node A has no account-creation CID";
+
+    // Node B uses the same deterministic key (same address) with a fresh
+    // working directory: the wiped-DB existing-account shape. It stays
+    // unconnected, so no genesis can arrive before the injection. Its startup
+    // parks in INITIALIZING_BLOCKCHAIN (existing account, empty DB waits on
+    // network data), so wait for the blockchain service, not for a boot state.
+    auto nodeB = CreateNode( "node_f21_order", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), false );
+    ASSERT_TRUE( nodeB.node );
+    EXPECT_EQ( nodeB.node->GetAddress(), addressA );
+    auto chainB = GeniusNodeTestAccess::BlockchainOf( nodeB.node );
+    test::assertWaitForCondition(
+        [&]() { return GeniusNodeTestAccess::BlockchainOf( nodeB.node ) != nullptr; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "node B never constructed its blockchain service" );
+    chainB = GeniusNodeTestAccess::BlockchainOf( nodeB.node );
+    ASSERT_TRUE( chainB );
+    ASSERT_FALSE( BlockchainStartupOrderingAccess::HasGenesisCid( *chainB ) )
+        << "precondition violated: node B already knows genesis";
+
+    // Deliver the own-address account-creation block before genesis. The old
+    // behavior returned ACCOUNT_CREATION_BLOCK_INVALID_GENESIS_LINK and fired
+    // the terminal startup-failure callback.
+    auto delivered = BlockchainStartupOrderingAccess::DeliverAccountCreation(
+        *chainB, addressA, serializedBlock, creationCid.value() );
+    EXPECT_FALSE( delivered.has_error() ) << "own account-creation block before genesis must defer, not fail: "
+                                          << delivered.error().message();
+    EXPECT_TRUE( BlockchainStartupOrderingAccess::AccountCreationPendingGenesis( *chainB ) )
+        << "deferred block must be marked pending-genesis";
+
+    // Genesis arrives through the normal path; the deferred block must be
+    // retried and the node must still reach READY (the old code wedged here).
+    nodeB.node->AddPeer( genesisNode.node->GetPubSub()->GetInterfaceAddress() );
+    test::assertWaitForCondition(
+        [&]() { return nodeB.node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
+        std::chrono::milliseconds( kReadyPollTimeoutMs ),
+        "node B never reached restricted first boot after genesis arrived" );
+    ASSERT_NO_FATAL_FAILURE( SubmitReviewedTrustAndAwaitReady( nodeB ) );
+    EXPECT_FALSE( BlockchainStartupOrderingAccess::AccountCreationPendingGenesis( *chainB ) );
+
+    std::cout << "=== Own Account-Creation Before Genesis Test Completed ===" << std::endl;
 }
 
 // ---------------------------------------------------------------------------

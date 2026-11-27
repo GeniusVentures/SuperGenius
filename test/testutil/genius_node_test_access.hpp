@@ -266,6 +266,13 @@ namespace sgns
                 (void)node->trust_startup_controller_->Refresh();
             }
         }
+
+        /// Startup-ordering (F21) accessor: the node's blockchain service (null
+        /// until DB init completes). Only requires a forward-declared Blockchain.
+        static std::shared_ptr<class Blockchain> BlockchainOf( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->blockchain_ : nullptr;
+        }
     };
 
     /// RAII teardown for TEST-body (non-fixture) node lifetimes.
