@@ -653,33 +653,7 @@ namespace sgns
             break;
         }
 
-        auto time_since_last_sync = std::chrono::duration_cast<std::chrono::seconds>( now - last_periodic_sync_time_ );
-        bool should_sync          = received_first_periodic_sync_response_.load()
-                                        ? time_since_last_sync >= PERIODIC_SYNC_INTERVAL
-                                        : time_since_last_sync >= INITIAL_PERIODIC_SYNC_INTERVAL;
-
-        if ( should_sync )
-        {
-            auto interval_desc = received_first_periodic_sync_response_.load() ? "10 minutes" : "30 seconds";
-            m_logger->debug( "Periodic sync - requesting heads (interval: {})", interval_desc );
-            auto topics_result = globaldb_m->GetMonitoredTopics();
-            if ( topics_result.has_value() )
-            {
-                if ( account_m->RequestHeads( topics_result.value() ) )
-                {
-                    last_periodic_sync_time_ = now;
-                    m_logger->debug( "Periodic sync head request sent for {} topics", topics_result.value().size() );
-                }
-                else
-                {
-                    m_logger->warn( "Periodic sync head request failed" );
-                }
-            }
-            else
-            {
-                m_logger->warn( "Could not get monitored topics for head request" );
-            }
-        }
+        RunPeriodicHeadSync( now );
 
         std::unique_lock lock( cv_mutex_ );
         cv_.wait_for( lock,
@@ -701,6 +675,40 @@ namespace sgns
                                    instance->TickOnce();
                                }
                            } );
+    }
+
+    void TransactionManager::RunPeriodicHeadSync( std::chrono::steady_clock::time_point now )
+    {
+        auto time_since_last_sync = std::chrono::duration_cast<std::chrono::seconds>( now - last_periodic_sync_time_ );
+        bool should_sync          = received_first_periodic_sync_response_.load()
+                                        ? time_since_last_sync >= PERIODIC_SYNC_INTERVAL
+                                        : time_since_last_sync >= INITIAL_PERIODIC_SYNC_INTERVAL;
+
+        if ( !should_sync )
+        {
+            return;
+        }
+
+        auto interval_desc = received_first_periodic_sync_response_.load() ? "10 minutes" : "30 seconds";
+        m_logger->debug( "Periodic sync - requesting heads (interval: {})", interval_desc );
+        // Record the attempt before dispatching: a failure (no request-topic
+        // peers, empty topics, send error) must also back off a full interval,
+        // or the 300 ms TickOnce loop re-fires it ~3x/s.
+        last_periodic_sync_time_ = now;
+        auto topics_result       = globaldb_m->GetMonitoredTopics();
+        if ( topics_result.has_error() )
+        {
+            m_logger->warn( "Could not get monitored topics for head request: {}", topics_result.error().message() );
+            return;
+        }
+        auto head_request_result = account_m->RequestHeads( topics_result.value() );
+        if ( head_request_result.has_error() )
+        {
+            m_logger->warn( "Periodic sync head request failed: {}",
+                            head_request_result.error().message() );
+            return;
+        }
+        m_logger->debug( "Periodic sync head request sent for {} topics", topics_result.value().size() );
     }
 
     outcome::result<std::string> TransactionManager::TransferFunds( uint64_t    amount,

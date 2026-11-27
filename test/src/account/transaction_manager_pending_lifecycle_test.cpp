@@ -55,6 +55,27 @@ namespace sgns
             manager.TickOnce();
         }
 
+        static void RunPeriodicHeadSync( TransactionManager &manager, std::chrono::steady_clock::time_point now )
+        {
+            manager.RunPeriodicHeadSync( now );
+        }
+
+        static std::chrono::steady_clock::time_point PeriodicSyncLastAttempt( TransactionManager &manager )
+        {
+            return manager.last_periodic_sync_time_;
+        }
+
+        static void SetPeriodicSyncLastAttempt( TransactionManager                      &manager,
+                                                std::chrono::steady_clock::time_point when )
+        {
+            manager.last_periodic_sync_time_ = when;
+        }
+
+        static outcome::result<std::unordered_set<std::string>> MonitoredTopics( TransactionManager &manager )
+        {
+            return manager.globaldb_m->GetMonitoredTopics();
+        }
+
         static void RunInitializeUTXOs( TransactionManager &manager )
         {
             ASSERT_TRUE( manager.InitializeUTXOs().has_value() );
@@ -554,6 +575,33 @@ TEST_F( TransactionManagerRecoveryTest, AsyncOutgoingWaitTimesOutWithoutPollingT
     EXPECT_EQ( completion->transaction_id, transaction->GetHash() );
     EXPECT_EQ( completion->status, sgns::TransactionManager::TransactionStatus::CREATED );
     EXPECT_EQ( completion->error, boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+}
+
+TEST_F( TransactionManagerRecoveryTest, PeriodicSyncFailureBacksOffUntilNextInterval )
+{
+    // The fixture pubsub has no peers, so the head request fails at the
+    // request-topic peer gate. A failed attempt must still advance the
+    // schedule, or the 300 ms TickOnce loop re-fires it ~3x/s.
+    const auto topics = sgns::TransactionManagerPendingLifecycleTestAccess::MonitoredTopics( *manager_ );
+    ASSERT_TRUE( topics.has_value() );
+    ASSERT_FALSE( topics.value().empty() );
+
+    const auto t0 = std::chrono::steady_clock::now() - std::chrono::seconds( 60 );
+    sgns::TransactionManagerPendingLifecycleTestAccess::SetPeriodicSyncLastAttempt( *manager_, t0 );
+
+    sgns::TransactionManagerPendingLifecycleTestAccess::RunPeriodicHeadSync( *manager_, t0 );
+    // Attempt recorded despite the request failure.
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::PeriodicSyncLastAttempt( *manager_ ), t0 );
+
+    // 5 s later, inside the 30 s initial interval: not due again yet.
+    sgns::TransactionManagerPendingLifecycleTestAccess::RunPeriodicHeadSync( *manager_,
+                                                                             t0 + std::chrono::seconds( 5 ) );
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::PeriodicSyncLastAttempt( *manager_ ), t0 );
+
+    // Past the interval: due again, the attempt timestamp advances.
+    const auto t1 = t0 + std::chrono::seconds( 31 );
+    sgns::TransactionManagerPendingLifecycleTestAccess::RunPeriodicHeadSync( *manager_, t1 );
+    EXPECT_EQ( sgns::TransactionManagerPendingLifecycleTestAccess::PeriodicSyncLastAttempt( *manager_ ), t1 );
 }
 
 TEST_F( TransactionManagerPreviousHashTest, UsesPersistedConfirmedHeadWhenPreviousTransactionIsNotTracked )

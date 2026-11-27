@@ -768,6 +768,17 @@ namespace sgns
          */
         void TickOnce();
 
+        /**
+         * @brief One periodic head-sync scheduling decision.
+         *
+         * Requests monitored-topic heads when the interval elapsed. The
+         * attempt timestamp advances on EVERY attempt, including failures
+         * (no request-topic peers, empty topic list, send error): without
+         * that, TickOnce's 300 ms loop re-fires a failing request ~3x/s.
+         * @param now current steady clock, injected for testability
+         */
+        void RunPeriodicHeadSync( std::chrono::steady_clock::time_point now );
+
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
