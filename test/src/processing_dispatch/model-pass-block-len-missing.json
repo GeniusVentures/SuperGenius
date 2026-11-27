@@ -1,0 +1,58 @@
+{
+  "name": "model-pass-block-len-missing",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "description": "NW-20: inference input with dimensions but no block_len",
+  "inputs": [
+    {
+      "name": "inputA",
+      "source_uri_param": "file://processing_datatypes/float_input.bin",
+      "type": "tensor",
+      "dimensions": {
+        "width": 16,
+        "chunk_stride": 16
+      },
+      "format": "FLOAT32"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "outputA",
+      "source_uri_param": "file://processing_datatypes/model-pass-block-len-missing_output.raw",
+      "type": "tensor"
+    }
+  ],
+  "passes": [
+    {
+      "name": "pass_A",
+      "type": "inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/float_model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputA",
+            "shape": [
+              1,
+              16
+            ]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:outputA",
+            "shape": [
+              1,
+              16
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -128,6 +128,34 @@ namespace sgns
             << "Model-less pass should contribute 0 to block_total_len";
     }
 
+    // NW-20: the job-cost path (ParseBlockSize feeds GetProcessCost) treated a
+    // malformed job definition as an exception or as arithmetic: a missing
+    // block_len threw bad_optional_access out of an outcome-based API, a
+    // negative block_len wrapped into a ~2^64 cost, and the uint64 sum could
+    // silently wrap. All three shapes must return INVALID_BLOCK_PARAMETERS.
+    TEST_F( ProcessingDispatchTest, ParseBlockSizeRejectsMalformedBlockParameters )
+    {
+        for ( const auto *fixture : { "model-pass-block-len-missing.json",
+                                      "model-pass-block-len-negative.json",
+                                      "model-pass-block-len-overflow.json" } )
+        {
+            std::string json_data = LoadJson( fixture );
+            ASSERT_FALSE( json_data.empty() ) << "Could not load fixture " << fixture;
+
+            auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+            ASSERT_TRUE( mgr_result.has_value() )
+                << "ProcessingManager::Create should succeed for fixture " << fixture << ": "
+                << mgr_result.error().message();
+
+            auto block_size_result = mgr_result.value()->ParseBlockSize();
+            ASSERT_FALSE( block_size_result.has_value() )
+                << fixture << ": malformed block parameters must fail, not produce a size";
+            ASSERT_EQ( block_size_result.error(),
+                      sgns::sgprocessing::ProcessingManager::Error::INVALID_BLOCK_PARAMETERS )
+                << fixture << ": wrong error for malformed block parameters";
+        }
+    }
+
     TEST_F( ProcessingDispatchTest, RenderPassValidGlslShadersCompileAndValidateEndToEnd )
     {
         std::string json_data = LoadJson( "render-pass-valid-definition.json" );

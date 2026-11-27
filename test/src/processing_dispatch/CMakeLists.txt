@@ -40,6 +40,9 @@ add_custom_command(TARGET processing_dispatch_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/texturing_vertex_shader.glsl"
     "${CMAKE_CURRENT_SOURCE_DIR}/texturing_fragment_shader.glsl"
     "${CMAKE_CURRENT_SOURCE_DIR}/texturing-vertex-data.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/model-pass-block-len-missing.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/model-pass-block-len-negative.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/model-pass-block-len-overflow.json"
     "$<TARGET_FILE_DIR:processing_dispatch_test>/processing_dispatch/"
     COMMENT "Copying dispatch test fixtures"
 )
